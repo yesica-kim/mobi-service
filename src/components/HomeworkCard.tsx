@@ -126,7 +126,7 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
             />
             {/* 보상 태그 입력 */}
             <div>
-              <span className="text-xs text-slate-500 mb-1 block">🎁 보상</span>
+              <span className="text-xs text-slate-500 mb-1 block">보상</span>
               <div className="flex flex-wrap gap-1.5 mb-1.5">
                 {editRewardTags.map((tag, idx) => (
                   <span key={idx} className="inline-flex items-center gap-1 border border-slate-500/40 text-slate-300 text-[11px] px-2 py-1 rounded-lg">
@@ -206,7 +206,7 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
             className="flex-shrink-0 text-slate-600 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
             title="드래그하여 순서 변경"
           >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 24 24">
               <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
               <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
               <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
@@ -216,7 +216,7 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
           {/* 즐겨찾기 */}
           <button
             onClick={() => onToggleFavorite(item.id)}
-            className={`flex-shrink-0 text-lg transition-all ${
+            className={`flex-shrink-0 text-[18px] leading-none transition-all ${
               item.isFavorite ? "text-yellow-400" : "text-slate-600 hover:text-slate-400"
             }`}
           >
@@ -227,16 +227,16 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               {showPeriodLabel && (
-                <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                <span className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${
                   item.period === "daily"
-                    ? "bg-blue-600/20 text-blue-400"
-                    : "bg-purple-600/20 text-purple-400"
+                    ? "bg-orange-600/20 text-orange-400"
+                    : "bg-green-600/20 text-green-400"
                 }`}>
                   {item.period === "daily" ? "일일" : "주간"}
                 </span>
               )}
               {scope === "server" && (
-                <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-600/20 text-teal-400">
+                <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-teal-600/20 text-teal-400">
                   서버
                 </span>
               )}
@@ -246,9 +246,8 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
             </div>
             {rewardTags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1.5">
-                <span className="text-xs text-slate-500">🎁</span>
                 {rewardTags.map((tag, idx) => (
-                  <span key={idx} className={`text-[10px] px-1.5 py-0.5 rounded-md border border-slate-600/50 ${fullyDone ? "text-slate-600 line-through" : "text-slate-400"}`}>
+                  <span key={idx} className={`text-[11px] px-1.5 py-0.5 rounded-md border border-slate-600/50 ${fullyDone ? "text-slate-600 line-through" : "text-slate-400"}`}>
                     {tag}
                   </span>
                 ))}
@@ -258,21 +257,21 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
 
           {/* 체크박스 + 수정/삭제 아이콘 */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="flex flex-wrap justify-end gap-1.5" style={{ maxWidth: `${4 * 28 + 3 * 6}px` }}>
+            <div className="flex flex-wrap justify-end gap-1.5" style={{ maxWidth: `${4 * 24 + 3 * 6}px` }}>
               {Array.from({ length: totalCount }, (_, i) => {
                 const checked = i < completedCount;
                 return (
                   <button
                     key={i}
                     onClick={() => onToggle(item.id, i)}
-                    className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all ${
+                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
                       checked
                         ? scope === "server" ? "bg-teal-600 border-teal-600" : "bg-blue-600 border-blue-600"
                         : "border-slate-600 hover:border-blue-500"
                     }`}
                   >
                     {checked && (
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     )}
@@ -282,14 +281,14 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
             </div>
             {onUpdate && (
               <button onClick={() => setEditing(true)} className="text-slate-600 hover:text-slate-400 transition-colors" title="수정">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
               </button>
             )}
             {onDelete && (
               <button onClick={() => setShowDeleteConfirm(true)} className="text-slate-600 hover:text-red-400 transition-colors" title="삭제">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>

@@ -18,8 +18,10 @@ export function useAuth() {
 
   useEffect(() => {
     // 게스트 모드 체크
-    if (typeof window !== "undefined" && localStorage.getItem("mobimobi_guest") === "true") {
+    const guest = typeof window !== "undefined" && localStorage.getItem("mobimobi_guest") === "true";
+    if (guest) {
       setIsGuest(true);
+      setLoading(false);
     }
     // 항상 auth 리스너 등록 (게스트→로그인 전환 감지)
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -31,7 +33,9 @@ export function useAuth() {
       }
       setLoading(false);
     });
-    return unsub;
+    // Firebase 연결 타임아웃 안전장치 (5초)
+    const timeout = setTimeout(() => setLoading(false), 5000);
+    return () => { unsub(); clearTimeout(timeout); };
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
@@ -52,12 +56,15 @@ export function useAuth() {
 
   const signOut = useCallback(async () => {
     try {
-      if (isGuest) {
-        localStorage.removeItem("mobimobi_guest");
-        setIsGuest(false);
-      } else {
+      // 로컬 데이터 완전 초기화 (로그아웃 시 깨끗한 상태)
+      localStorage.removeItem("mabimobi_data");
+      localStorage.removeItem("mobimobi_guest");
+      setIsGuest(false);
+
+      if (!isGuest) {
         await firebaseSignOut(auth);
       }
+      setUser(null);
     } catch (err) {
       console.error("로그아웃 실패:", err);
     }

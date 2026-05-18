@@ -116,7 +116,7 @@ export default function Home() {
           <div className="flex items-center gap-2">
             {isGuest ? (
               <>
-                {/* 데이터 내보내기 */}
+                {/* 계정 데이터 내보내기 */}
                 <button
                   onClick={() => {
                     const raw = localStorage.getItem("mabimobi_data");
@@ -125,17 +125,55 @@ export default function Home() {
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     a.href = url;
-                    const now = new Date(); a.download = `mobimobi_backup_${now.toISOString().slice(0, 10)}-${String(now.getHours()).padStart(2,"0")}-${String(now.getMinutes()).padStart(2,"0")}.json`;
+                    const now = new Date(); a.download = `mobi-account-data-${now.toISOString().slice(0, 10)}.json`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                   }}
                   className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                  title="데이터 내보내기"
+                  title="계정 데이터 내보내기"
                 >
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+                  </svg>
+                </button>
+                {/* 계정 데이터 가져오기 */}
+                <button
+                  onClick={() => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = ".json";
+                    input.onchange = (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        try {
+                          const importedData = JSON.parse(ev.target?.result as string);
+                          if (importedData.characters && importedData.homework) {
+                            if (confirm("계정 데이터를 가져오시겠습니까?\n현재 데이터가 덮어씌워집니다.")) {
+                              localStorage.setItem("mabimobi_data", JSON.stringify(importedData));
+                              window.location.reload();
+                            }
+                          } else {
+                            alert("올바른 mobimobi 백업 파일이 아닙니다.");
+                          }
+                        } catch {
+                          alert("파일을 읽는 중 오류가 발생했습니다.");
+                        }
+                      };
+                      reader.readAsText(file);
+                    };
+                    input.click();
+                  }}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                  title="계정 데이터 가져오기"
+                >
+                  <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0l-4 4m4-4l4 4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
                   </svg>
                 </button>
                 {/* 설정 */}
@@ -144,7 +182,7 @@ export default function Home() {
                   className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
                   title="설정"
                 >
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
@@ -156,12 +194,12 @@ export default function Home() {
                   <img
                     src={user.photoURL}
                     alt=""
-                    className="w-10 h-10 rounded-full"
+                    className="w-7 h-7 rounded-full"
                     referrerPolicy="no-referrer"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.innerHTML = '<div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center"><svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></div>'; }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.innerHTML = '<div class="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center"><svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></div>'; }}
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center">
                     <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
@@ -197,6 +235,8 @@ export default function Home() {
               onSavePreset={state.savePreset}
               onLoadPreset={state.loadPreset}
               onDeletePreset={state.deletePreset}
+              onExportPreset={state.exportCurrentPreset}
+              onImportPreset={state.importPreset}
             />
             <WeeklyCountdown />
             <ProgressBar
@@ -229,7 +269,7 @@ export default function Home() {
                   <>
                     {state.currentHomework.some((hw) => hw.period === "daily") && (
                       <div className="space-y-3">
-                        <h3 className="text-base font-bold text-blue-400 tracking-wide pt-1">일일 숙제</h3>
+                        <h3 className="text-base font-bold text-orange-400 tracking-wide pt-1">일일 숙제</h3>
                         <SortableList
                           items={state.currentHomework.filter((hw) => hw.period === "daily")}
                           onReorder={(oldIdx, newIdx) => {
@@ -250,7 +290,7 @@ export default function Home() {
                     )}
                     {state.currentHomework.some((hw) => hw.period === "weekly") && (
                       <div className="space-y-3">
-                        <h3 className="text-base font-bold text-purple-400 tracking-wide pt-3">주간 숙제</h3>
+                        <h3 className="text-base font-bold text-green-400 tracking-wide pt-3">주간 숙제</h3>
                         <SortableList
                           items={state.currentHomework.filter((hw) => hw.period === "weekly")}
                           onReorder={(oldIdx, newIdx) => {
@@ -271,7 +311,7 @@ export default function Home() {
                     )}
                     {filteredPurchase(state).length > 0 && (
                       <div className="space-y-3">
-                        <h3 className="text-base font-bold text-green-400 tracking-wide pt-3">구매</h3>
+                        <h3 className="text-base font-bold text-purple-400 tracking-wide pt-3">구매</h3>
                         <SortableList
                           items={filteredPurchase(state)}
                           onReorder={(oldIdx, newIdx) => state.reorderShopItem("purchase", oldIdx, newIdx)}
@@ -291,7 +331,7 @@ export default function Home() {
                     )}
                     {filteredTrade(state).length > 0 && (
                       <div className="space-y-3">
-                        <h3 className="text-base font-bold text-orange-400 tracking-wide pt-3">물물교환</h3>
+                        <h3 className="text-base font-bold text-pink-400 tracking-wide pt-3">물물교환</h3>
                         <SortableList
                           items={filteredTrade(state)}
                           onReorder={(oldIdx, newIdx) => state.reorderShopItem("trade", oldIdx, newIdx)}
@@ -311,7 +351,7 @@ export default function Home() {
                     )}
                     {filteredScroll(state).length > 0 && (
                       <div className="space-y-3">
-                        <h3 className="text-base font-bold text-indigo-400 tracking-wide pt-3">임무게시판</h3>
+                        <h3 className="text-base font-bold text-yellow-400 tracking-wide pt-3">임무게시판</h3>
                         <SortableList
                           items={filteredScroll(state)}
                           onReorder={(oldIdx, newIdx) => state.reorderScrollItem(oldIdx, newIdx)}

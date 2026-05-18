@@ -77,7 +77,7 @@ function SortableCharTab({
             : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300"
         }`}
       >
-        <div className="text-[10px] opacity-70">{char.subClass}</div>
+        <div className="text-[11px] opacity-70">{char.subClass}</div>
         <div className="font-bold">{char.name}</div>
       </button>
     </div>

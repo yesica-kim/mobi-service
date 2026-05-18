@@ -656,6 +656,59 @@ export function useAppState(uid?: string | null) {
     [persist]
   );
 
+  // ── 프리셋 내보내기 (현재 캐릭터의 설정을 HomeworkPreset 형태로 반환) ──
+  const exportCurrentPreset = useCallback((): HomeworkPreset | null => {
+    if (!selectedCharId || !data) return null;
+    const hw = data.homework[selectedCharId] ?? [];
+    const pur = data.purchaseItems[selectedCharId] ?? [];
+    const trd = data.tradeItems[selectedCharId] ?? [];
+    const char = data.characters.find((c) => c.id === selectedCharId);
+    return {
+      id: `preset_export_${Date.now()}`,
+      name: char ? `${char.name}의 설정` : "내보낸 설정",
+      createdAt: new Date().toISOString(),
+      homework: hw.map(({ id, completedCount, ...rest }) => rest),
+      purchaseItems: pur.map(({ id, completed, ...rest }) => rest),
+      tradeItems: trd.map(({ id, completed, ...rest }) => rest),
+    };
+  }, [selectedCharId, data]);
+
+  // ── 프리셋 가져오기 (외부 JSON에서 불러온 프리셋 적용) ──
+  const importPreset = useCallback(
+    (preset: HomeworkPreset) => {
+      if (!selectedCharId) return;
+      persist((prev) => ({
+        ...prev,
+        homework: {
+          ...prev.homework,
+          [selectedCharId]: preset.homework.map((hw, i) => ({
+            ...hw,
+            id: `${selectedCharId}_hw_${i}`,
+            completedCount: 0,
+            totalCount: hw.totalCount || parseTotalCount(hw.title),
+          })),
+        },
+        purchaseItems: {
+          ...prev.purchaseItems,
+          [selectedCharId]: preset.purchaseItems.map((item, i) => ({
+            ...item,
+            id: `${selectedCharId}_pur_${i}`,
+            completed: false,
+          })),
+        },
+        tradeItems: {
+          ...prev.tradeItems,
+          [selectedCharId]: preset.tradeItems.map((item, i) => ({
+            ...item,
+            id: `${selectedCharId}_trd_${i}`,
+            completed: false,
+          })),
+        },
+      }));
+    },
+    [persist, selectedCharId]
+  );
+
   // (defaultPreset은 위에서 정의됨)
 
   const presets = useMemo(() => [defaultPreset, ...(data?.presets ?? [])], [data, defaultPreset]);
@@ -754,11 +807,11 @@ export function useAppState(uid?: string | null) {
       done,
       pct: makePct(done, total),
       categories: [
-        { label: "일일 숙제", done: dailyDone, total: dailyTotal, pct: makePct(dailyDone, dailyTotal), color: "bg-blue-500" },
-        { label: "주간 숙제", done: weeklyDone, total: weeklyTotal, pct: makePct(weeklyDone, weeklyTotal), color: "bg-purple-500" },
-        { label: "구매", done: purDone, total: purTotal, pct: makePct(purDone, purTotal), color: "bg-green-500" },
-        { label: "물물교환", done: trdDone, total: trdTotal, pct: makePct(trdDone, trdTotal), color: "bg-orange-500" },
-        { label: "임무게시판", done: scrDone, total: scrTotal, pct: makePct(scrDone, scrTotal), color: "bg-indigo-500" },
+        { label: "일일 숙제", done: dailyDone, total: dailyTotal, pct: makePct(dailyDone, dailyTotal), color: "bg-orange-500" },
+        { label: "주간 숙제", done: weeklyDone, total: weeklyTotal, pct: makePct(weeklyDone, weeklyTotal), color: "bg-green-500" },
+        { label: "구매", done: purDone, total: purTotal, pct: makePct(purDone, purTotal), color: "bg-purple-500" },
+        { label: "물물교환", done: trdDone, total: trdTotal, pct: makePct(trdDone, trdTotal), color: "bg-pink-500" },
+        { label: "임무게시판", done: scrDone, total: scrTotal, pct: makePct(scrDone, scrTotal), color: "bg-yellow-500" },
       ].filter((c) => c.total > 0),
     };
   }, [allHomework, allPurchaseItems, allTradeItems, allScrollItems, favoriteOnly]);
@@ -824,5 +877,7 @@ export function useAppState(uid?: string | null) {
     updateScrollItem,
     deleteScrollItem,
     reorderScrollItem,
+    exportCurrentPreset,
+    importPreset,
   };
 }

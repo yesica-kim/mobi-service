@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import type { HomeworkPreset } from "@/types";
 
 interface Props {
@@ -9,16 +9,30 @@ interface Props {
   onSavePreset: (name: string) => void;
   onLoadPreset: (presetId: string) => void;
   onDeletePreset: (presetId: string) => void;
+  onExportPreset: () => HomeworkPreset | null;
+  onImportPreset: (preset: HomeworkPreset) => void;
 }
 
-export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, onDeletePreset }: Props) {
+export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, onDeletePreset, onExportPreset, onImportPreset }: Props) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<HomeworkPreset | null>(null);
   const [showLoadConfirm, setShowLoadConfirm] = useState<HomeworkPreset | null>(null);
+  const [showImportConfirm, setShowImportConfirm] = useState<HomeworkPreset | null>(null);
   const [presetName, setPresetName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const tooltipTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const openTooltip = useCallback(() => {
+    if (tooltipTimeout.current) clearTimeout(tooltipTimeout.current);
+    setShowTooltip(true);
+  }, []);
+  const closeTooltip = useCallback(() => {
+    tooltipTimeout.current = setTimeout(() => setShowTooltip(false), 200);
+  }, []);
 
   const handleSave = () => {
     if (!presetName.trim()) return;
@@ -39,41 +53,158 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
     }
   };
 
+  const handleExport = () => {
+    const preset = onExportPreset();
+    if (!preset) return;
+    const exportData = {
+      _type: "mobimobi_preset",
+      name: preset.name,
+      createdAt: preset.createdAt,
+      homework: preset.homework,
+      purchaseItems: preset.purchaseItems,
+      tradeItems: preset.tradeItems,
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const now = new Date();
+    a.download = `mobi-quests-list-${now.toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        if (data._type === "mobimobi_preset" && data.homework && data.purchaseItems && data.tradeItems) {
+          const preset: HomeworkPreset = {
+            id: `preset_import_${Date.now()}`,
+            name: data.name || "가져온 설정",
+            createdAt: data.createdAt || new Date().toISOString(),
+            homework: data.homework,
+            purchaseItems: data.purchaseItems,
+            tradeItems: data.tradeItems,
+          };
+          setShowImportConfirm(preset);
+        } else {
+          alert("올바른 mobimobi 설정 파일이 아닙니다.");
+        }
+      } catch {
+        alert("파일을 읽는 중 오류가 발생했습니다.");
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   return (
     <>
-      <div className="px-4 pt-3 pb-1 flex items-center gap-2">
-        {/* 숙제 설정 저장 */}
-        <button
-          onClick={() => { setPresetName(""); setShowSaveModal(true); }}
-          className="flex-1 flex items-center justify-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-          </svg>
-          설정 저장
-        </button>
+      <div className="px-4 pt-3 pb-1">
+        <div className="flex items-center gap-1.5 mb-1.5 relative">
+          <p className="text-sm text-white font-bold">숙제 설정</p>
+          <button
+            onMouseEnter={openTooltip}
+            onMouseLeave={closeTooltip}
+            onClick={() => setShowTooltip((v) => !v)}
+            className="text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <circle cx="12" cy="12" r="10" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+              <circle cx="12" cy="17" r="0.5" fill="currentColor" />
+            </svg>
+          </button>
+          {showTooltip && (
+            <div
+              onMouseEnter={openTooltip}
+              onMouseLeave={closeTooltip}
+              className="absolute left-0 top-full mt-1 z-50 w-72 bg-slate-700 rounded-xl p-3 shadow-xl text-[11px] text-slate-300 leading-relaxed space-y-1.5"
+            >
+              <p className="text-slate-200 font-semibold">숙제 설정은 전체 서버와 캐릭터 모두 동일하게 적용됩니다.</p>
+              <p><span className="text-slate-200 font-medium">설정 저장</span> : 현재 숙제 리스트 설정을 저장합니다.</p>
+              <p><span className="text-slate-200 font-medium">설정 리스트</span> : 저장된 숙제 리스트 설정을 선택하여 불러올 수 있습니다.</p>
+              <p><span className="text-slate-200 font-medium">숙제 초기화</span> : 체크 항목을 전체 선택 해제합니다.</p>
+              <p><span className="text-slate-200 font-medium">숙제 리스트 내보내기</span> : 현재 설정한 숙제 리스트를 로컬에 파일로 저장할 수 있습니다.</p>
+              <p><span className="text-slate-200 font-medium">숙제 리스트 가져오기</span> : 로컬에 저장된 파일을 불러와 설정할 수 있습니다.</p>
+            </div>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            {/* 설정 저장 */}
+            <button
+              onClick={() => { setPresetName(""); setShowSaveModal(true); }}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+            >
+              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 3v5h8V3" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 14h10v7H7z" />
+              </svg>
+              설정 저장
+            </button>
 
-        {/* 설정 불러오기 */}
-        <button
-          onClick={() => setShowLoadModal(true)}
-          className="flex-1 flex items-center justify-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-          </svg>
-          설정 불러오기
-        </button>
+            {/* 설정 리스트 */}
+            <button
+              onClick={() => setShowLoadModal(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+            >
+              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              설정 리스트
+            </button>
 
-        {/* 숙제 초기화 */}
-        <button
-          onClick={() => setShowResetConfirm(true)}
-          className="flex-1 flex items-center justify-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          숙제 초기화
-        </button>
+            {/* 숙제 초기화 */}
+            <button
+              onClick={() => setShowResetConfirm(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+            >
+              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              숙제 초기화
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* 숙제 리스트 내보내기 */}
+            <button
+              onClick={handleExport}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+            >
+              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              숙제 리스트 내보내기
+            </button>
+
+            {/* 숙제 리스트 가져오기 */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+            >
+              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              숙제 리스트 가져오기
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleImportFile}
+              className="hidden"
+            />
+          </div>
+        </div>
       </div>
 
       {/* 초기화 확인 모달 */}
@@ -255,6 +386,37 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
                 className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors"
               >
                 삭제
+              </button>
+            </div>
+          </div>
+        </ModalOverlay>
+      )}
+
+      {/* 설정 가져오기 확인 모달 */}
+      {showImportConfirm && (
+        <ModalOverlay onClose={() => setShowImportConfirm(null)}>
+          <div className="bg-slate-800 rounded-2xl p-6 w-80 mx-auto">
+            <p className="text-white text-sm text-center mb-2 font-semibold">
+              &apos;{showImportConfirm.name}&apos; 설정을 가져오시겠습니까?
+            </p>
+            <p className="text-slate-400 text-xs text-center mb-6">
+              현재 숙제 설정 리스트가 변경됩니다.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowImportConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  onImportPreset(showImportConfirm);
+                  setShowImportConfirm(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+              >
+                적용
               </button>
             </div>
           </div>

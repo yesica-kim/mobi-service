@@ -20,14 +20,13 @@ type PageType = "menu" | "terms" | "privacy";
 function formatFilename() {
   const now = new Date();
   const date = now.toISOString().slice(0, 10);
-  const hh = String(now.getHours()).padStart(2, "0");
-  const mm = String(now.getMinutes()).padStart(2, "0");
-  return `mobimobi_backup_${date}-${hh}-${mm}.json`;
+  return `mobi-account-data-${date}.json`;
 }
 
 export function ProfileModal({ open, onClose, userName, userEmail, userPhoto, isGuest, onSignOut, onDeleteAccount, onSignInWithGoogle, onImportData }: Props) {
   const [page, setPage] = useState<PageType>("menu");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLogoutWarning, setShowLogoutWarning] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -36,6 +35,7 @@ export function ProfileModal({ open, onClose, userName, userEmail, userPhoto, is
   const handleClose = () => {
     setPage("menu");
     setShowDeleteConfirm(false);
+    setShowLogoutWarning(false);
     setDeleteError(null);
     onClose();
   };
@@ -146,36 +146,32 @@ export function ProfileModal({ open, onClose, userName, userEmail, userPhoto, is
 
               {/* 메뉴 */}
               <div className="space-y-1 mb-4">
-                {/* 데이터 내보내기 - 게스트만 */}
-                {isGuest && (
-                  <>
-                    <button
-                      onClick={handleExport}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm text-slate-300 hover:bg-slate-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      데이터 내보내기
-                    </button>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm text-slate-300 hover:bg-slate-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                      </svg>
-                      데이터 가져오기
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".json"
-                      onChange={handleImport}
-                      className="hidden"
-                    />
-                  </>
-                )}
+                {/* 계정 데이터 내보내기/가져오기 */}
+                <button
+                  onClick={handleExport}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm text-slate-300 hover:bg-slate-700 transition-colors"
+                >
+                  <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  계정 데이터 내보내기
+                </button>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm text-slate-300 hover:bg-slate-700 transition-colors"
+                >
+                  <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  계정 데이터 가져오기
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={handleImport}
+                  className="hidden"
+                />
 
                 <div className="border-t border-slate-700 my-2" />
 
@@ -216,7 +212,7 @@ export function ProfileModal({ open, onClose, userName, userEmail, userPhoto, is
                 {isGuest ? (
                   <>
                     <button
-                      onClick={() => { onSignOut(); handleClose(); }}
+                      onClick={() => setShowLogoutWarning(true)}
                       className="w-full py-2.5 rounded-xl bg-slate-700 text-slate-400 text-sm font-medium hover:bg-slate-600 transition-colors"
                     >
                       로그인 화면으로
@@ -318,6 +314,50 @@ export function ProfileModal({ open, onClose, userName, userEmail, userPhoto, is
             </div>
           )}
         </div>
+
+        {/* 로그인 화면 이동 경고 모달 */}
+        {showLogoutWarning && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={() => setShowLogoutWarning(false)}>
+            <div className="absolute inset-0 bg-black/60" />
+            <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
+              <div className="bg-slate-800 rounded-2xl p-6 w-80">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-white text-sm text-center mb-2 font-semibold">데이터 백업 안내</p>
+                <p className="text-slate-400 text-xs text-center mb-4 leading-relaxed">
+                  로그인 화면으로 이동하면 현재 저장된 데이터가<br />
+                  초기화됩니다. 캐시 삭제 시 복구할 수 없습니다.
+                </p>
+                <div className="bg-slate-700/50 rounded-xl p-3 mb-4">
+                  <p className="text-amber-400 text-xs font-medium mb-1">데이터를 보존하려면:</p>
+                  <p className="text-slate-400 text-[11px] leading-relaxed">
+                    설정 &gt; &apos;계정 데이터 내보내기&apos;를 통해<br />
+                    먼저 로컬에 저장해 주세요.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowLogoutWarning(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={() => { onSignOut(); handleClose(); }}
+                    className="flex-1 py-2.5 rounded-xl bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 transition-colors"
+                  >
+                    이동하기
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 탈퇴 확인 모달 */}
         {showDeleteConfirm && (
