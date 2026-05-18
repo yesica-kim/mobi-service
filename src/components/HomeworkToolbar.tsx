@@ -17,6 +17,7 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<HomeworkPreset | null>(null);
+  const [showLoadConfirm, setShowLoadConfirm] = useState<HomeworkPreset | null>(null);
   const [presetName, setPresetName] = useState("");
 
   const handleSave = () => {
@@ -40,22 +41,22 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
 
   return (
     <>
-      <div className="px-4 pt-3 pb-1 flex items-center justify-end gap-2">
+      <div className="px-4 pt-3 pb-1 flex items-center gap-2">
         {/* 숙제 설정 저장 */}
         <button
           onClick={() => { setPresetName(""); setShowSaveModal(true); }}
-          className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg transition-colors"
+          className="flex-1 flex items-center justify-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
           </svg>
-          숙제 설정 저장
+          설정 저장
         </button>
 
         {/* 설정 불러오기 */}
         <button
           onClick={() => setShowLoadModal(true)}
-          className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg transition-colors"
+          className="flex-1 flex items-center justify-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -66,7 +67,7 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
         {/* 숙제 초기화 */}
         <button
           onClick={() => setShowResetConfirm(true)}
-          className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg transition-colors"
+          className="flex-1 flex items-center justify-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -164,7 +165,7 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
                     className="flex items-center gap-2 bg-slate-700 rounded-xl p-3 hover:bg-slate-600 transition-colors group"
                   >
                     <button
-                      onClick={() => { onLoadPreset(preset.id); setShowLoadModal(false); }}
+                      onClick={() => { setShowLoadConfirm(preset); }}
                       className="flex-1 text-left"
                     >
                       <p className="text-white text-sm font-medium">{preset.name}</p>
@@ -199,6 +200,38 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
             >
               닫기
             </button>
+          </div>
+        </ModalOverlay>
+      )}
+
+      {/* 프리셋 불러오기 확인 모달 */}
+      {showLoadConfirm && (
+        <ModalOverlay onClose={() => setShowLoadConfirm(null)}>
+          <div className="bg-slate-800 rounded-2xl p-6 w-80 mx-auto">
+            <p className="text-white text-sm text-center mb-2 font-semibold">
+              &apos;{showLoadConfirm.name}&apos;을 불러오시겠습니까?
+            </p>
+            <p className="text-slate-400 text-xs text-center mb-6">
+              현재 숙제 설정 리스트가 변경됩니다.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLoadConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  onLoadPreset(showLoadConfirm.id);
+                  setShowLoadConfirm(null);
+                  setShowLoadModal(false);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+              >
+                적용
+              </button>
+            </div>
           </div>
         </ModalOverlay>
       )}

@@ -28,7 +28,7 @@ export interface Character {
 
 // ── 숙제 ──
 export type PeriodType = "daily" | "weekly";
-export type TabType = "all" | "daily" | "weekly" | "purchase" | "trade";
+export type TabType = "all" | "daily" | "weekly" | "purchase" | "trade" | "scroll" | "event";
 export type ScopeType = "character" | "server";
 
 export interface HomeworkItem {
@@ -40,6 +40,7 @@ export interface HomeworkItem {
   completedCount: number;
   isFavorite: boolean;
   scope?: ScopeType;
+  tags?: string[];
 }
 
 export function isFullyCompleted(item: HomeworkItem): boolean {
@@ -61,20 +62,37 @@ export interface ShopItem {
   completed: boolean;
   isFavorite: boolean;
   scope?: ScopeType;
+  tags?: string[];
+}
+
+// ── 임무게시판 스크롤 ──
+export const SCROLL_TYPES = ["제작", "채집", "요리", "토벌"] as const;
+export type ScrollType = (typeof SCROLL_TYPES)[number];
+
+export interface ScrollItem {
+  id: string;
+  title: string;
+  scrollType: ScrollType;
+  totalCount: number;
+  completedCount: number;
+  isFavorite: boolean;
+  scope?: ScopeType;
+  materials: string[];
+  tags?: string[];
 }
 
 // ── 기본 숙제 템플릿 ──
 // scope: "on" = 서버 범위 (같은 서버 캐릭터 전체 체크), "off" = 캐릭터 범위 (기본값)
 export const DEFAULT_HOMEWORK: { title: string; reward: string; period: PeriodType; scope?: string }[] = [
   // 일일
-  { title: "우편함 확인", reward: "보상 없음", period: "daily", scope: "on" },
+  { title: "우편함 확인", reward: "보상 없음", period: "daily", scope: "off" },
   { title: "빛나는 동굴 클리어", reward: "성수 1개, 하트 토큰 1개, 아르바이트 120", period: "daily", scope: "off" },
   { title: "심매", reward: "하트 토큰 2개, 성수 1개", period: "daily", scope: "off" },
   { title: "은동전 30개 사용", reward: "-", period: "daily", scope: "off" },
   { title: "보석 승급하기", reward: "-", period: "daily", scope: "off" },
-  { title: "일일 미션 보상 확인", reward: "-", period: "daily", scope: "on" },
-  { title: "모험가 패스 확인", reward: "-", period: "daily", scope: "on" },
-  { title: "이벤트 보상 확인", reward: "-", period: "daily", scope: "on" },
+  { title: "일일 미션 보상 확인", reward: "-", period: "daily", scope: "off" },
+  { title: "모험가 패스 확인", reward: "-", period: "daily", scope: "off" },
+  { title: "이벤트 보상 확인", reward: "-", period: "daily", scope: "off" },
   { title: "가공하기", reward: "-", period: "daily", scope: "off" },
   // 주간
   { title: "모험가 길드 정기 의뢰", reward: "엘리트 연금술 재연소 촉매, 미스틱 다이스(3594)", period: "weekly", scope: "off" },
@@ -96,7 +114,7 @@ export const DEFAULT_HOMEWORK: { title: string; reward: string; period: PeriodTy
 export const DEFAULT_PURCHASE_ITEMS: { itemName: string; region: RegionName; npcName: string; scope?: string }[] = [
   { itemName: "보석 보물 상자 구매 10개(서버)", region: "캐시샵", npcName: "골드", scope: "on" },
   { itemName: "매일 무료 상품 구매 1개(서버)", region: "캐시샵", npcName: "추천픽", scope: "on" },
-  { itemName: "성수 5개(1,500/개)", region: "던바튼", npcName: "크리스텔(봉헌소)", scope: "off" },
+  { itemName: "성수 5개(서버)", region: "던바튼", npcName: "크리스텔(봉헌소)", scope: "on" },
   { itemName: "우유10 -> 케이틴 특제 통밀빵3", region: "티르코네일", npcName: "케이틴(식료품점)", scope: "off" },
   { itemName: "케이틴 특제 통밀빵10 -> 성수10(서버)", region: "티르코네일", npcName: "엔델리온(봉헌소)", scope: "off" },
 ];
@@ -136,6 +154,8 @@ export interface AppData {
   /** charId -> ShopItem[] */
   purchaseItems: Record<string, ShopItem[]>;
   tradeItems: Record<string, ShopItem[]>;
+  /** charId -> ScrollItem[] */
+  scrollItems?: Record<string, ScrollItem[]>;
   lastDailyReset: string;
   lastWeeklyReset: string;
   presets?: HomeworkPreset[];

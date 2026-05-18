@@ -13,6 +13,7 @@ const TABS: { key: TabType; label: string }[] = [
   { key: "weekly", label: "주간 숙제" },
   { key: "purchase", label: "구매" },
   { key: "trade", label: "물물교환" },
+  { key: "scroll", label: "임무게시판" },
 ];
 
 export function PeriodToggle({ active, onChange }: Props) {

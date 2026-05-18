@@ -24,7 +24,7 @@ export function WeeklyCountdown() {
       parts.push(`${String(hours).padStart(2, "0")}시간`);
       parts.push(`${String(minutes).padStart(2, "0")}분`);
       parts.push(`${String(seconds).padStart(2, "0")}초`);
-      setRemaining(parts.join(" "));
+      setRemaining(parts.join(" "));
     }
     update();
     const timer = setInterval(update, 1000);
@@ -32,10 +32,10 @@ export function WeeklyCountdown() {
   }, []);
 
   return (
-    <div className="px-4 pt-3 pb-1">
-      <div className="flex items-center justify-center gap-2 text-xs">
-        <span className="text-slate-500">주간 리셋까지</span>
-        <span className="font-mono font-semibold text-purple-400">{remaining}</span>
+    <div className="px-4 pt-4 pb-2">
+      <div className="flex items-center justify-center gap-3">
+        <span className="text-slate-400 text-base font-medium">주간 리셋까지</span>
+        <span className="font-mono font-bold text-purple-400 text-xl" style={{ wordSpacing: "-0.25em" }}>{remaining}</span>
       </div>
     </div>
   );

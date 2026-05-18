@@ -77,9 +77,10 @@ export function loadData(): AppData {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return createDefaultData();
     const parsed = JSON.parse(raw) as AppData;
-    // 마이그레이션: purchaseItems/tradeItems 없으면 추가
+    // 마이그레이션: purchaseItems/tradeItems/scrollItems 없으면 추가
     if (!parsed.purchaseItems) parsed.purchaseItems = {};
     if (!parsed.tradeItems) parsed.tradeItems = {};
+    if (!parsed.scrollItems) parsed.scrollItems = {};
     // 마이그레이션: server -> region 필드 변환
     migrateShopItems(parsed.purchaseItems);
     migrateShopItems(parsed.tradeItems);

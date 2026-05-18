@@ -9,6 +9,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
+      <head>
+        <meta name="referrer" content="no-referrer" />
+      </head>
       <body className="min-h-screen bg-slate-950 antialiased">{children}</body>
     </html>
   );
