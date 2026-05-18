@@ -129,9 +129,9 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
               <span className="text-xs text-slate-500 mb-1 block">🎁 보상</span>
               <div className="flex flex-wrap gap-1.5 mb-1.5">
                 {editRewardTags.map((tag, idx) => (
-                  <span key={idx} className="inline-flex items-center gap-1 border border-amber-600/40 text-amber-400 text-[11px] px-2 py-1 rounded-lg">
+                  <span key={idx} className="inline-flex items-center gap-1 border border-slate-500/40 text-slate-300 text-[11px] px-2 py-1 rounded-lg">
                     {tag}
-                    <button onClick={() => removeRewardTag(idx)} className="text-amber-600 hover:text-red-400">
+                    <button onClick={() => removeRewardTag(idx)} className="text-slate-500 hover:text-red-400">
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                       </svg>
@@ -248,7 +248,7 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
               <div className="flex flex-wrap gap-1 mt-1.5">
                 <span className="text-xs text-slate-500">🎁</span>
                 {rewardTags.map((tag, idx) => (
-                  <span key={idx} className={`text-[10px] px-1.5 py-0.5 rounded-md border border-amber-600/30 ${fullyDone ? "text-slate-600 line-through" : "text-amber-400"}`}>
+                  <span key={idx} className={`text-[10px] px-1.5 py-0.5 rounded-md border border-slate-600/50 ${fullyDone ? "text-slate-600 line-through" : "text-slate-400"}`}>
                     {tag}
                   </span>
                 ))}
