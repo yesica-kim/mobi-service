@@ -17,11 +17,22 @@ const REGION_COLORS: Record<string, { bg: string; text: string }> = {
   "캐시샵": { bg: "bg-fuchsia-600/20", text: "text-fuchsia-400" },
 };
 
+/** npcName 문자열을 태그 배열로 파싱 */
+function npcToTags(npcName: string): string[] {
+  if (!npcName || npcName === "-") return [];
+  return npcName.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+/** 태그 배열을 npcName 문자열로 합치기 */
+function tagsToNpc(tags: string[]): string {
+  return tags.length > 0 ? tags.join(", ") : "-";
+}
+
 interface Props {
   item: ShopItem;
   onToggle: (id: string) => void;
   onToggleFavorite: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Pick<ShopItem, "itemName" | "region" | "npcName" | "scope" | "tags">>) => void;
+  onUpdate?: (id: string, updates: Partial<Pick<ShopItem, "itemName" | "region" | "npcName" | "scope">>) => void;
   onDelete?: (id: string) => void;
 }
 
@@ -30,10 +41,9 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(item.itemName);
   const [editRegion, setEditRegion] = useState<RegionName>(item.region);
-  const [editNpc, setEditNpc] = useState(item.npcName);
+  const [editNpcTags, setEditNpcTags] = useState<string[]>(npcToTags(item.npcName));
+  const [npcInput, setNpcInput] = useState("");
   const [editScope, setEditScope] = useState<ScopeType>(scope);
-  const [editTags, setEditTags] = useState<string[]>(item.tags || []);
-  const [tagInput, setTagInput] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -60,12 +70,12 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
 
   const handleSave = () => {
     if (onUpdate) {
-      const updates: Partial<Pick<ShopItem, "itemName" | "region" | "npcName" | "scope" | "tags">> = {};
+      const updates: Partial<Pick<ShopItem, "itemName" | "region" | "npcName" | "scope">> = {};
       if (editName !== item.itemName) updates.itemName = editName;
       if (editRegion !== item.region) updates.region = editRegion;
-      if (editNpc !== item.npcName) updates.npcName = editNpc;
+      const newNpc = tagsToNpc(editNpcTags);
+      if (newNpc !== item.npcName) updates.npcName = newNpc;
       if (editScope !== scope) updates.scope = editScope;
-      if (JSON.stringify(editTags) !== JSON.stringify(item.tags || [])) updates.tags = editTags;
       if (Object.keys(updates).length > 0) onUpdate(item.id, updates);
     }
     setEditing(false);
@@ -74,24 +84,25 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
   const handleCancel = () => {
     setEditName(item.itemName);
     setEditRegion(item.region);
-    setEditNpc(item.npcName);
+    setEditNpcTags(npcToTags(item.npcName));
+    setNpcInput("");
     setEditScope(scope);
-    setEditTags(item.tags || []);
-    setTagInput("");
     setEditing(false);
   };
 
-  const addTag = () => {
-    const val = tagInput.trim();
-    if (val && !editTags.includes(val)) {
-      setEditTags([...editTags, val]);
+  const addNpcTag = () => {
+    const val = npcInput.trim();
+    if (val && !editNpcTags.includes(val)) {
+      setEditNpcTags([...editNpcTags, val]);
     }
-    setTagInput("");
+    setNpcInput("");
   };
 
-  const removeTag = (idx: number) => {
-    setEditTags(editTags.filter((_, i) => i !== idx));
+  const removeNpcTag = (idx: number) => {
+    setEditNpcTags(editNpcTags.filter((_, i) => i !== idx));
   };
+
+  const npcTags = npcToTags(item.npcName);
 
   return (
     <div
@@ -111,12 +122,9 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
             title="드래그하여 순서 변경"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <circle cx="9" cy="6" r="1.5" />
-              <circle cx="15" cy="6" r="1.5" />
-              <circle cx="9" cy="12" r="1.5" />
-              <circle cx="15" cy="12" r="1.5" />
-              <circle cx="9" cy="18" r="1.5" />
-              <circle cx="15" cy="18" r="1.5" />
+              <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+              <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+              <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
             </svg>
           </button>
         )}
@@ -144,6 +152,7 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
                 placeholder="아이템 이름"
               />
               <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">지역</span>
                 <select
                   value={editRegion}
                   onChange={(e) => setEditRegion(e.target.value as RegionName)}
@@ -153,22 +162,15 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
                     <option key={r} value={r}>{r}</option>
                   ))}
                 </select>
-                <input
-                  type="text"
-                  value={editNpc}
-                  onChange={(e) => setEditNpc(e.target.value)}
-                  className="flex-1 bg-slate-700 text-slate-300 text-xs rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="NPC 이름"
-                />
               </div>
-              {/* 태그 입력 */}
+              {/* NPC 태그 입력 */}
               <div>
-                <span className="text-xs text-slate-500 mb-1 block">태그</span>
+                <span className="text-xs text-slate-500 mb-1 block">NPC</span>
                 <div className="flex flex-wrap gap-1.5 mb-1.5">
-                  {editTags.map((tag, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-1 bg-cyan-600/20 text-cyan-400 text-[11px] px-2 py-1 rounded-lg">
+                  {editNpcTags.map((tag, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1 bg-slate-600/40 text-slate-300 text-[11px] px-2 py-1 rounded-lg">
                       {tag}
-                      <button onClick={() => removeTag(idx)} className="text-cyan-600 hover:text-red-400">
+                      <button onClick={() => removeNpcTag(idx)} className="text-slate-500 hover:text-red-400">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -178,10 +180,10 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
                 </div>
                 <input
                   type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-                  placeholder="태그 입력 후 Enter"
+                  value={npcInput}
+                  onChange={(e) => setNpcInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addNpcTag(); } }}
+                  placeholder="NPC 입력 후 Enter"
                   className="w-full bg-slate-700 text-slate-300 text-xs rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
                 />
               </div>
@@ -212,53 +214,30 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
                 </div>
               </div>
               <div className="flex items-center justify-end gap-2 pt-1">
-                <button
-                  onClick={handleCancel}
-                  className="text-xs px-3 py-1 rounded-lg bg-slate-700 text-slate-400 hover:bg-slate-600 transition-colors"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="text-xs px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors"
-                >
-                  저장
-                </button>
+                <button onClick={handleCancel} className="text-xs px-3 py-1 rounded-lg bg-slate-700 text-slate-400 hover:bg-slate-600 transition-colors">취소</button>
+                <button onClick={handleSave} className="text-xs px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors">저장</button>
               </div>
             </div>
           ) : (
             <>
               <div className="flex items-center gap-2">
                 {scope === "server" && (
-                  <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-600/20 text-teal-400">
-                    서버
-                  </span>
+                  <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-600/20 text-teal-400">서버</span>
                 )}
-                <p
-                  className={`text-[15px] font-medium leading-snug ${
-                    item.completed ? "line-through text-slate-500" : "text-white"
-                  }`}
-                >
+                <p className={`text-[15px] font-medium leading-snug ${item.completed ? "line-through text-slate-500" : "text-white"}`}>
                   {item.itemName}
                 </p>
               </div>
-              <div className="flex items-center gap-2 mt-1.5">
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                 <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${REGION_COLORS[item.region]?.bg ?? "bg-blue-600/20"} ${REGION_COLORS[item.region]?.text ?? "text-blue-400"}`}>
                   {item.region}
                 </span>
-                <span className={`text-xs ${item.completed ? "text-slate-600 line-through" : "text-slate-400"}`}>
-                  {item.npcName}
-                </span>
+                {npcTags.map((tag, idx) => (
+                  <span key={idx} className={`text-[10px] px-1.5 py-0.5 rounded-md bg-slate-700/60 ${item.completed ? "text-slate-600 line-through" : "text-slate-400"}`}>
+                    {tag}
+                  </span>
+                ))}
               </div>
-              {item.tags && item.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {item.tags.map((tag, idx) => (
-                    <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded-md bg-cyan-600/15 text-cyan-400">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
             </>
           )}
         </div>
@@ -267,22 +246,14 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
         {!editing && (
           <div className="flex items-center gap-2 flex-shrink-0">
             {onUpdate && (
-              <button
-                onClick={() => setEditing(true)}
-                className="text-slate-600 hover:text-slate-400 transition-colors"
-                title="수정"
-              >
+              <button onClick={() => setEditing(true)} className="text-slate-600 hover:text-slate-400 transition-colors" title="수정">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
               </button>
             )}
             {onDelete && (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="text-slate-600 hover:text-red-400 transition-colors"
-                title="삭제"
-              >
+              <button onClick={() => setShowDeleteConfirm(true)} className="text-slate-600 hover:text-red-400 transition-colors" title="삭제">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
@@ -316,18 +287,8 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
                 &apos;{item.itemName}&apos;을 삭제하시겠습니까?
               </p>
               <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={() => { onDelete?.(item.id); setShowDeleteConfirm(false); }}
-                  className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors"
-                >
-                  삭제
-                </button>
+                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors">취소</button>
+                <button onClick={() => { onDelete?.(item.id); setShowDeleteConfirm(false); }} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors">삭제</button>
               </div>
             </div>
           </div>

@@ -40,7 +40,6 @@ export interface HomeworkItem {
   completedCount: number;
   isFavorite: boolean;
   scope?: ScopeType;
-  tags?: string[];
 }
 
 export function isFullyCompleted(item: HomeworkItem): boolean {
@@ -62,7 +61,6 @@ export interface ShopItem {
   completed: boolean;
   isFavorite: boolean;
   scope?: ScopeType;
-  tags?: string[];
 }
 
 // ── 임무게시판 스크롤 ──
