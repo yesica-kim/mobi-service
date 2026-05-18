@@ -168,7 +168,7 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
                 <span className="text-xs text-slate-500 mb-1 block">NPC</span>
                 <div className="flex flex-wrap gap-1.5 mb-1.5">
                   {editNpcTags.map((tag, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-1 bg-slate-600/40 text-slate-300 text-[11px] px-2 py-1 rounded-lg">
+                    <span key={idx} className="inline-flex items-center gap-1 border border-slate-500/40 text-slate-300 text-[11px] px-2 py-1 rounded-lg">
                       {tag}
                       <button onClick={() => removeNpcTag(idx)} className="text-slate-500 hover:text-red-400">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -233,7 +233,7 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
                   {item.region}
                 </span>
                 {npcTags.map((tag, idx) => (
-                  <span key={idx} className={`text-[10px] px-1.5 py-0.5 rounded-md bg-slate-700/60 ${item.completed ? "text-slate-600 line-through" : "text-slate-400"}`}>
+                  <span key={idx} className={`text-[10px] px-1.5 py-0.5 rounded-md border border-slate-600/50 ${item.completed ? "text-slate-600 line-through" : "text-slate-400"}`}>
                     {tag}
                   </span>
                 ))}
