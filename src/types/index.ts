@@ -92,7 +92,7 @@ export const DEFAULT_HOMEWORK: { title: string; reward: string; period: PeriodTy
   // 일일
   { title: "우편함 확인", reward: "보상 없음", period: "daily", scope: "off" },
   { title: "빛나는 동굴 클리어", reward: "성수 1개, 하트 토큰 1개, 아르바이트 120", period: "daily", scope: "off" },
-  { title: "심층 던전", reward: "하트 토큰 2개, 성수 1개", period: "daily", scope: "off" },
+  { title: "심층 던전 매우어려움", reward: "하트 토큰 2개, 성수 1개", period: "daily", scope: "off" },
   { title: "은동전 30개 사용", reward: "-", period: "daily", scope: "off" },
   { title: "보석 승급하기", reward: "-", period: "daily", scope: "off" },
   { title: "일일 미션 보상 확인", reward: "-", period: "daily", scope: "off" },
