@@ -13,7 +13,7 @@ export function useAppState(uid?: string | null) {
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [regionFilter, setRegionFilter] = useState<RegionName | "all">("all");
+  const [regionFilter, setRegionFilter] = useState<RegionName[]>([]);
   const [periodFilter, setPeriodFilter] = useState<PeriodType | "all">("all");
   const [scopeFilter, setScopeFilter] = useState<ScopeType | "all">("all");
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -481,7 +481,7 @@ export function useAppState(uid?: string | null) {
     if (favoriteOnly) items = items.filter((item) => item.isFavorite);
     if (periodFilter !== "all") items = items.filter((item) => (item.period ?? "weekly") === periodFilter);
     if (scopeFilter !== "all") items = items.filter((item) => (item.scope || "character") === scopeFilter);
-    if (regionFilter !== "all") items = items.filter((item) => item.region === regionFilter);
+    if (regionFilter.length > 0) items = items.filter((item) => regionFilter.includes(item.region));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       items = items.filter((item) => item.title.toLowerCase().includes(q) || item.reward.toLowerCase().includes(q));
@@ -875,7 +875,7 @@ export function useAppState(uid?: string | null) {
     if (favoriteOnly) items = items.filter((item) => item.isFavorite);
     if (periodFilter !== "all") items = items.filter((item) => (item.period ?? "daily") === periodFilter);
     if (scopeFilter !== "all") items = items.filter((item) => (item.scope || "character") === scopeFilter);
-    if (regionFilter !== "all") items = items.filter((item) => item.region === regionFilter);
+    if (regionFilter.length > 0) items = items.filter((item) => regionFilter.includes(item.region));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       items = items.filter((item) => item.itemName.toLowerCase().includes(q) || item.npcName.toLowerCase().includes(q));

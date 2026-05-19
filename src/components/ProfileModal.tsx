@@ -203,7 +203,7 @@ export function ProfileModal({ open, onClose, userName, userEmail, userPhoto, is
                   문의하기
                 </a>
                 <div className="px-4 py-2">
-                  <p className="text-[11px] text-slate-600">앱 버전 1.0.0</p>
+                  <p className="text-[11px] text-slate-600">앱 버전 {process.env.APP_VERSION}</p>
                 </div>
               </div>
 

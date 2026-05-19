@@ -19,15 +19,15 @@ import { SortableList } from "@/components/SortableList";
 import { useAppState } from "@/hooks/useAppState";
 import { useAuth } from "@/hooks/useAuth";
 import { Download, Upload, Settings } from "lucide-react";
-import type { Character } from "@/types";
+import type { Character, RegionName } from "@/types";
 
-type FilterState = { favoriteOnly: boolean; searchQuery: string; regionFilter: string; periodFilter: string; scopeFilter: string };
+type FilterState = { favoriteOnly: boolean; searchQuery: string; regionFilter: RegionName[]; periodFilter: string; scopeFilter: string };
 
 function filteredPurchase(state: FilterState & { allPurchaseItems: any[] }) {
   let items = state.favoriteOnly ? state.allPurchaseItems.filter((i: any) => i.isFavorite) : state.allPurchaseItems;
   if (state.periodFilter !== "all") items = items.filter((i: any) => (i.period ?? "daily") === state.periodFilter);
   if (state.scopeFilter !== "all") items = items.filter((i: any) => (i.scope || "character") === state.scopeFilter);
-  if (state.regionFilter !== "all") items = items.filter((i: any) => i.region === state.regionFilter);
+  if (state.regionFilter.length > 0) items = items.filter((i: any) => state.regionFilter.includes(i.region));
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
     items = items.filter((i: any) => i.itemName.toLowerCase().includes(q) || i.npcName.toLowerCase().includes(q));
@@ -38,7 +38,7 @@ function filteredTrade(state: FilterState & { allTradeItems: any[] }) {
   let items = state.favoriteOnly ? state.allTradeItems.filter((i: any) => i.isFavorite) : state.allTradeItems;
   if (state.periodFilter !== "all") items = items.filter((i: any) => (i.period ?? "daily") === state.periodFilter);
   if (state.scopeFilter !== "all") items = items.filter((i: any) => (i.scope || "character") === state.scopeFilter);
-  if (state.regionFilter !== "all") items = items.filter((i: any) => i.region === state.regionFilter);
+  if (state.regionFilter.length > 0) items = items.filter((i: any) => state.regionFilter.includes(i.region));
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
     items = items.filter((i: any) => i.itemName.toLowerCase().includes(q) || i.npcName.toLowerCase().includes(q));
@@ -49,7 +49,7 @@ function filteredScroll(state: FilterState & { allScrollItems: any[] }) {
   let items = state.favoriteOnly ? state.allScrollItems.filter((i: any) => i.isFavorite) : state.allScrollItems;
   if (state.periodFilter !== "all") items = items.filter((i: any) => (i.period ?? "weekly") === state.periodFilter);
   if (state.scopeFilter !== "all") items = items.filter((i: any) => (i.scope || "character") === state.scopeFilter);
-  if (state.regionFilter !== "all") items = items.filter((i: any) => i.region === state.regionFilter);
+  if (state.regionFilter.length > 0) items = items.filter((i: any) => state.regionFilter.includes(i.region));
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
     items = items.filter((i: any) => i.title.toLowerCase().includes(q) || i.reward.toLowerCase().includes(q));

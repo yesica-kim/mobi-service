@@ -19,8 +19,8 @@ const REGION_COLORS: Record<string, { bg: string; text: string; activeBg: string
 interface Props {
   searchQuery: string;
   onSearchChange: (q: string) => void;
-  regionFilter: RegionName | "all";
-  onRegionChange: (r: RegionName | "all") => void;
+  regionFilter: RegionName[];
+  onRegionChange: (r: RegionName[]) => void;
   periodFilter: PeriodType | "all";
   onPeriodChange: (p: PeriodType | "all") => void;
   scopeFilter: ScopeType | "all";
@@ -34,11 +34,20 @@ export function SearchFilterBar({
   scopeFilter, onScopeChange,
 }: Props) {
   const [showFilters, setShowFilters] = useState(false);
-  const hasActiveFilter = regionFilter !== "all" || periodFilter !== "all" || scopeFilter !== "all";
-  const activeFilterCount = [regionFilter !== "all", periodFilter !== "all", scopeFilter !== "all"].filter(Boolean).length;
+  const hasRegionFilter = regionFilter.length > 0;
+  const hasActiveFilter = hasRegionFilter || periodFilter !== "all" || scopeFilter !== "all";
+  const activeFilterCount = [hasRegionFilter, periodFilter !== "all", scopeFilter !== "all"].filter(Boolean).length;
+
+  const toggleRegion = (r: RegionName) => {
+    if (regionFilter.includes(r)) {
+      onRegionChange(regionFilter.filter((x) => x !== r));
+    } else {
+      onRegionChange([...regionFilter, r]);
+    }
+  };
 
   const resetAll = () => {
-    onRegionChange("all");
+    onRegionChange([]);
     onPeriodChange("all");
     onScopeChange("all");
   };
@@ -175,27 +184,27 @@ export function SearchFilterBar({
             </div>
           </div>
 
-          {/* 지역 필터 */}
+          {/* 지역 필터 (다중 선택) */}
           <div>
-            <span className="text-[11px] text-slate-500 mb-1.5 block">지역</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] text-slate-500">지역 (다중 선택)</span>
+              {hasRegionFilter && (
+                <button
+                  onClick={() => onRegionChange([])}
+                  className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  해제
+                </button>
+              )}
+            </div>
             <div className="flex flex-wrap gap-1.5">
-              <button
-                onClick={() => onRegionChange("all")}
-                className={`text-[11px] px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
-                  regionFilter === "all"
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-700 text-slate-400 hover:bg-slate-600"
-                }`}
-              >
-                전체
-              </button>
               {REGIONS.map((r) => {
                 const colors = REGION_COLORS[r];
-                const isActive = regionFilter === r;
+                const isActive = regionFilter.includes(r);
                 return (
                   <button
                     key={r}
-                    onClick={() => onRegionChange(isActive ? "all" : r)}
+                    onClick={() => toggleRegion(r)}
                     className={`text-[11px] px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
                       isActive
                         ? `${colors.activeBg} text-white`
@@ -242,14 +251,14 @@ export function SearchFilterBar({
               </button>
             </span>
           )}
-          {regionFilter !== "all" && (
-            <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg ${REGION_COLORS[regionFilter]?.bg ?? "bg-blue-600/20"} ${REGION_COLORS[regionFilter]?.text ?? "text-blue-400"}`}>
-              {regionFilter}
-              <button onClick={() => onRegionChange("all")} className="hover:opacity-70">
+          {regionFilter.map((r) => (
+            <span key={r} className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg ${REGION_COLORS[r]?.bg ?? "bg-blue-600/20"} ${REGION_COLORS[r]?.text ?? "text-blue-400"}`}>
+              {r}
+              <button onClick={() => toggleRegion(r)} className="hover:opacity-70">
                 <X className="w-3 h-3" />
               </button>
             </span>
-          )}
+          ))}
         </div>
       )}
     </div>
