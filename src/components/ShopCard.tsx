@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { ShopItem, RegionName, ScopeType } from "@/types";
+import type { ShopItem, RegionName, ScopeType, PeriodType } from "@/types";
 import { REGIONS } from "@/types";
 
 const REGION_COLORS: Record<string, { bg: string; text: string }> = {
@@ -32,7 +32,7 @@ interface Props {
   item: ShopItem;
   onToggle: (id: string) => void;
   onToggleFavorite: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Pick<ShopItem, "itemName" | "region" | "npcName" | "scope">>) => void;
+  onUpdate?: (id: string, updates: Partial<Pick<ShopItem, "itemName" | "region" | "npcName" | "scope" | "period">>) => void;
   onDelete?: (id: string) => void;
 }
 
@@ -44,6 +44,7 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
   const [editNpcTags, setEditNpcTags] = useState<string[]>(npcToTags(item.npcName));
   const [npcInput, setNpcInput] = useState("");
   const [editScope, setEditScope] = useState<ScopeType>(scope);
+  const [editPeriod, setEditPeriod] = useState<PeriodType>(item.period ?? "daily");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -70,12 +71,13 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
 
   const handleSave = () => {
     if (onUpdate) {
-      const updates: Partial<Pick<ShopItem, "itemName" | "region" | "npcName" | "scope">> = {};
+      const updates: Partial<Pick<ShopItem, "itemName" | "region" | "npcName" | "scope" | "period">> = {};
       if (editName !== item.itemName) updates.itemName = editName;
       if (editRegion !== item.region) updates.region = editRegion;
       const newNpc = tagsToNpc(editNpcTags);
       if (newNpc !== item.npcName) updates.npcName = newNpc;
       if (editScope !== scope) updates.scope = editScope;
+      if (editPeriod !== (item.period ?? "daily")) updates.period = editPeriod;
       if (Object.keys(updates).length > 0) onUpdate(item.id, updates);
     }
     setEditing(false);
@@ -87,6 +89,7 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
     setEditNpcTags(npcToTags(item.npcName));
     setNpcInput("");
     setEditScope(scope);
+    setEditPeriod(item.period ?? "daily");
     setEditing(false);
   };
 
@@ -187,6 +190,32 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
                   className="w-full bg-slate-700 text-slate-300 text-xs rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
                 />
               </div>
+              {/* 주기 설정 */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">주기</span>
+                <div className="flex rounded-lg overflow-hidden border border-slate-600">
+                  <button
+                    onClick={() => setEditPeriod("daily")}
+                    className={`text-[11px] px-3 py-1 transition-colors ${
+                      editPeriod === "daily"
+                        ? "bg-orange-600 text-white"
+                        : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+                    }`}
+                  >
+                    일간
+                  </button>
+                  <button
+                    onClick={() => setEditPeriod("weekly")}
+                    className={`text-[11px] px-3 py-1 transition-colors ${
+                      editPeriod === "weekly"
+                        ? "bg-green-600 text-white"
+                        : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+                    }`}
+                  >
+                    주간
+                  </button>
+                </div>
+              </div>
               {/* 범위 설정 */}
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500">범위</span>
@@ -221,6 +250,11 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
           ) : (
             <>
               <div className="flex items-center gap-2">
+                {(item.period ?? "daily") === "weekly" ? (
+                  <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-green-600/20 text-green-400">주간</span>
+                ) : (
+                  <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-orange-600/20 text-orange-400">일간</span>
+                )}
                 {scope === "server" && (
                   <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-teal-600/20 text-teal-400">서버</span>
                 )}

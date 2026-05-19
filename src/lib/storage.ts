@@ -35,6 +35,7 @@ export function createPurchaseForChar(charId: string): ShopItem[] {
     itemName: item.itemName,
     region: item.region,
     npcName: item.npcName,
+    period: item.period,
     completed: false,
     isFavorite: false,
     scope: toScope(item.scope),
@@ -47,6 +48,7 @@ export function createTradeForChar(charId: string): ShopItem[] {
     itemName: item.itemName,
     region: item.region,
     npcName: item.npcName,
+    period: item.period,
     completed: false,
     isFavorite: false,
     scope: toScope(item.scope),
@@ -165,6 +167,17 @@ export function applyResets(data: AppData): AppData {
         hw.period === "daily" ? { ...hw, completedCount: 0 } : hw
       );
     }
+    // 일간 구매/물물교환 초기화
+    for (const charId of Object.keys(data.purchaseItems ?? {})) {
+      data.purchaseItems[charId] = data.purchaseItems[charId].map((item) =>
+        (item.period ?? "daily") === "daily" ? { ...item, completed: false } : item
+      );
+    }
+    for (const charId of Object.keys(data.tradeItems ?? {})) {
+      data.tradeItems[charId] = data.tradeItems[charId].map((item) =>
+        (item.period ?? "daily") === "daily" ? { ...item, completed: false } : item
+      );
+    }
     data.lastDailyReset = dailyReset.toISOString();
     changed = true;
   }
@@ -175,12 +188,16 @@ export function applyResets(data: AppData): AppData {
         hw.period === "weekly" ? { ...hw, completedCount: 0 } : hw
       );
     }
-    // 주간 리셋 시 구매/물물교환도 초기화
+    // 주간 구매/물물교환 초기화
     for (const charId of Object.keys(data.purchaseItems ?? {})) {
-      data.purchaseItems[charId] = data.purchaseItems[charId].map((item) => ({ ...item, completed: false }));
+      data.purchaseItems[charId] = data.purchaseItems[charId].map((item) =>
+        item.period === "weekly" ? { ...item, completed: false } : item
+      );
     }
     for (const charId of Object.keys(data.tradeItems ?? {})) {
-      data.tradeItems[charId] = data.tradeItems[charId].map((item) => ({ ...item, completed: false }));
+      data.tradeItems[charId] = data.tradeItems[charId].map((item) =>
+        item.period === "weekly" ? { ...item, completed: false } : item
+      );
     }
     data.lastWeeklyReset = weeklyReset.toISOString();
     changed = true;

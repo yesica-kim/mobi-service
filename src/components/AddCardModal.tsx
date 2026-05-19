@@ -10,7 +10,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onAddHomework: (hw: { title: string; reward: string; period: PeriodType; totalCount: number; scope: ScopeType }) => void;
-  onAddShopItem: (type: "purchase" | "trade", item: { itemName: string; region: RegionName; npcName: string; scope: ScopeType }) => void;
+  onAddShopItem: (type: "purchase" | "trade", item: { itemName: string; region: RegionName; npcName: string; period: PeriodType; scope: ScopeType }) => void;
   onAddScrollItem?: (item: { title: string; scrollType: ScrollType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => void;
 }
 
@@ -31,6 +31,7 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
   const [region, setRegion] = useState<RegionName>("던바튼");
   const [npcName, setNpcName] = useState("");
   const [scope, setScope] = useState<ScopeType>("character");
+  const [shopPeriod, setShopPeriod] = useState<PeriodType>("daily");
   // scroll fields
   const [scrollType, setScrollType] = useState<ScrollType>("제작");
   const [scrollTotalCount, setScrollTotalCount] = useState(3);
@@ -61,6 +62,7 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
         itemName: itemName.trim(),
         region,
         npcName: npcName.trim() || "-",
+        period: shopPeriod,
         scope,
       });
     } else if (isScroll) {
@@ -86,6 +88,7 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
     setRegion("던바튼");
     setNpcName("");
     setScope("character");
+    setShopPeriod("daily");
     setScrollType("제작");
     setScrollTotalCount(3);
     setScrollRegion("던바튼");
@@ -210,6 +213,31 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
                   placeholder="NPC 이름을 입력하세요 (선택)"
                   className="w-full bg-slate-700 text-white text-sm rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
                 />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">주기</span>
+                <div className="flex rounded-lg overflow-hidden border border-slate-600">
+                  <button
+                    onClick={() => setShopPeriod("daily")}
+                    className={`text-[11px] px-3 py-1 transition-colors ${
+                      shopPeriod === "daily"
+                        ? "bg-orange-600 text-white"
+                        : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+                    }`}
+                  >
+                    일간
+                  </button>
+                  <button
+                    onClick={() => setShopPeriod("weekly")}
+                    className={`text-[11px] px-3 py-1 transition-colors ${
+                      shopPeriod === "weekly"
+                        ? "bg-green-600 text-white"
+                        : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+                    }`}
+                  >
+                    주간
+                  </button>
+                </div>
               </div>
             </div>
           )}

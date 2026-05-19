@@ -299,7 +299,7 @@ export function useAppState(uid?: string | null) {
 
   // ── 구매/물물교환 수정 (전체 캐릭터 동기화) ──
   const updateShopItem = useCallback(
-    (itemId: string, type: "purchase" | "trade", updates: Partial<Pick<import("@/types").ShopItem, "itemName" | "region" | "npcName" | "scope">>) => {
+    (itemId: string, type: "purchase" | "trade", updates: Partial<Pick<import("@/types").ShopItem, "itemName" | "region" | "npcName" | "period" | "scope">>) => {
       if (!selectedCharId) return;
       const key = type === "purchase" ? "purchaseItems" : "tradeItems";
       persist((prev) => {
@@ -391,7 +391,7 @@ export function useAppState(uid?: string | null) {
 
   // ── 구매/물물교환 추가 (전체 캐릭터 동기화) ──
   const addShopItem = useCallback(
-    (type: "purchase" | "trade", item: { itemName: string; region: RegionName; npcName: string; scope: ScopeType }) => {
+    (type: "purchase" | "trade", item: { itemName: string; region: RegionName; npcName: string; period: PeriodType; scope: ScopeType }) => {
       if (!selectedCharId) return;
       const key = type === "purchase" ? "purchaseItems" : "tradeItems";
       const prefix = type === "purchase" ? "pur" : "trd";
@@ -405,6 +405,7 @@ export function useAppState(uid?: string | null) {
             itemName: item.itemName,
             region: item.region,
             npcName: item.npcName,
+            period: item.period,
             completed: false,
             isFavorite: false,
             scope: item.scope,
@@ -645,6 +646,7 @@ export function useAppState(uid?: string | null) {
       itemName: item.itemName,
       region: item.region,
       npcName: item.npcName,
+      period: item.period,
       isFavorite: false,
       scope: toScope(item.scope),
     })),
@@ -652,6 +654,7 @@ export function useAppState(uid?: string | null) {
       itemName: item.itemName,
       region: item.region,
       npcName: item.npcName,
+      period: item.period,
       isFavorite: false,
       scope: toScope(item.scope),
     })),

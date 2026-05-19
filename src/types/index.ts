@@ -58,6 +58,7 @@ export interface ShopItem {
   itemName: string;
   region: RegionName;
   npcName: string;
+  period: PeriodType;
   completed: boolean;
   isFavorite: boolean;
   scope?: ScopeType;
@@ -110,19 +111,19 @@ export const DEFAULT_HOMEWORK: { title: string; reward: string; period: PeriodTy
 
 // ── 기본 구매 / 물물교환 템플릿 ──
 // scope: "on" = 서버 범위, "off" = 캐릭터 범위 (기본값)
-export const DEFAULT_PURCHASE_ITEMS: { itemName: string; region: RegionName; npcName: string; scope?: string }[] = [
-  { itemName: "보석 보물 상자 구매 10개(서버)", region: "캐시샵", npcName: "골드", scope: "on" },
-  { itemName: "매일 무료 상품 구매 1개(서버)", region: "캐시샵", npcName: "추천픽", scope: "on" },
-  { itemName: "성수 5개(서버)", region: "던바튼", npcName: "크리스텔(봉헌소)", scope: "on" },
+export const DEFAULT_PURCHASE_ITEMS: { itemName: string; region: RegionName; npcName: string; period: PeriodType; scope?: string }[] = [
+  { itemName: "보석 보물 상자 구매 10개(서버)", region: "캐시샵", npcName: "골드", period: "daily", scope: "on" },
+  { itemName: "매일 무료 상품 구매 1개(서버)", region: "캐시샵", npcName: "추천픽", period: "daily", scope: "on" },
+  { itemName: "성수 5개(서버)", region: "던바튼", npcName: "크리스텔(봉헌소)", period: "daily", scope: "on" },
 ];
 
-export const DEFAULT_TRADE_ITEMS: { itemName: string; region: RegionName; npcName: string; scope?: string }[] = [
-  { itemName: "우유10 -> 케이틴 특제 통밀빵3", region: "티르코네일", npcName: "케이틴(식료품점)", scope: "off" },
-  { itemName: "케이틴 특제 통밀빵10 -> 성수10(서버)", region: "티르코네일", npcName: "엔델리온(봉헌소)", scope: "off" },
-  { itemName: "호박 수프4 -> 최상급 가죽+2", region: "이멘마하", npcName: "델렌(잡화점)", scope: "off" },
-  { itemName: "호박 수프4 -> 최상급 목재+2", region: "이멘마하", npcName: "델렌(잡화점)", scope: "off" },
-  { itemName: "카레라이스4 -> 운철괴2", region: "이멘마하", npcName: "오슬라(무기점)", scope: "off" },
-  { itemName: "농어 매운탕1 -> 은합금괴10", region: "반호르", npcName: "아이데른(대장간)", scope: "off" },
+export const DEFAULT_TRADE_ITEMS: { itemName: string; region: RegionName; npcName: string; period: PeriodType; scope?: string }[] = [
+  { itemName: "우유10 -> 케이틴 특제 통밀빵3", region: "티르코네일", npcName: "케이틴(식료품점)", period: "daily", scope: "off" },
+  { itemName: "케이틴 특제 통밀빵10 -> 성수10(서버)", region: "티르코네일", npcName: "엔델리온(봉헌소)", period: "daily", scope: "off" },
+  { itemName: "호박 수프4 -> 최상급 가죽+2", region: "이멘마하", npcName: "델렌(잡화점)", period: "daily", scope: "off" },
+  { itemName: "호박 수프4 -> 최상급 목재+2", region: "이멘마하", npcName: "델렌(잡화점)", period: "daily", scope: "off" },
+  { itemName: "카레라이스4 -> 운철괴2", region: "이멘마하", npcName: "오슬라(무기점)", period: "daily", scope: "off" },
+  { itemName: "농어 매운탕1 -> 은합금괴10", region: "반호르", npcName: "아이데른(대장간)", period: "daily", scope: "off" },
 ];
 
 // ── 기본 임무게시판 스크롤 템플릿 ──
