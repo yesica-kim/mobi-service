@@ -193,9 +193,9 @@ export interface HomeworkPreset {
   id: string;
   name: string;
   createdAt: string;
-  homework: Omit<HomeworkItem, "id" | "completedCount">[];
-  purchaseItems: Omit<ShopItem, "id" | "completed">[];
-  tradeItems: Omit<ShopItem, "id" | "completed">[];
+  homework: Omit<HomeworkItem, "id" | "completedCount" | "isFavorite">[];
+  purchaseItems: Omit<ShopItem, "id" | "completed" | "isFavorite">[];
+  tradeItems: Omit<ShopItem, "id" | "completed" | "isFavorite">[];
 }
 
 // ── 저장 데이터 형태 ──

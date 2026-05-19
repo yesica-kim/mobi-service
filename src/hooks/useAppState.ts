@@ -197,14 +197,11 @@ export function useAppState(uid?: string | null) {
         const currentList = prev.homework[selectedCharId] ?? [];
         const idx = currentList.findIndex((hw) => hw.id === hwId);
         if (idx === -1) return prev;
-        const newFav = !currentList[idx].isFavorite;
 
         const newHomework = { ...prev.homework };
-        for (const charId of Object.keys(newHomework)) {
-          newHomework[charId] = (newHomework[charId] ?? []).map((hw, i) =>
-            i === idx ? { ...hw, isFavorite: newFav } : hw
-          );
-        }
+        newHomework[selectedCharId] = currentList.map((hw, i) =>
+          i === idx ? { ...hw, isFavorite: !hw.isFavorite } : hw
+        );
         return { ...prev, homework: newHomework };
       });
     },
@@ -283,14 +280,11 @@ export function useAppState(uid?: string | null) {
         const currentList = prev[key][selectedCharId] ?? [];
         const idx = currentList.findIndex((item) => item.id === itemId);
         if (idx === -1) return prev;
-        const newFav = !currentList[idx].isFavorite;
 
         const newItems = { ...prev[key] };
-        for (const charId of Object.keys(newItems)) {
-          newItems[charId] = (newItems[charId] ?? []).map((item, i) =>
-            i === idx ? { ...item, isFavorite: newFav } : item
-          );
-        }
+        newItems[selectedCharId] = currentList.map((item, i) =>
+          i === idx ? { ...item, isFavorite: !item.isFavorite } : item
+        );
         return { ...prev, [key]: newItems };
       });
     },
@@ -541,13 +535,10 @@ export function useAppState(uid?: string | null) {
         const currentList = scrollItems[selectedCharId] ?? [];
         const idx = currentList.findIndex((s) => s.id === itemId);
         if (idx === -1) return prev;
-        const newFav = !currentList[idx].isFavorite;
 
-        for (const charId of Object.keys(scrollItems)) {
-          scrollItems[charId] = (scrollItems[charId] ?? []).map((s, i) =>
-            i === idx ? { ...s, isFavorite: newFav } : s
-          );
-        }
+        scrollItems[selectedCharId] = currentList.map((s, i) =>
+          i === idx ? { ...s, isFavorite: !s.isFavorite } : s
+        );
         return { ...prev, scrollItems };
       });
     },
@@ -639,7 +630,6 @@ export function useAppState(uid?: string | null) {
       reward: hw.reward,
       period: hw.period,
       totalCount: parseTotalCount(hw.title),
-      isFavorite: false,
       scope: toScope(hw.scope),
     })),
     purchaseItems: DEFAULT_PURCHASE_ITEMS.map((item) => ({
@@ -647,7 +637,6 @@ export function useAppState(uid?: string | null) {
       region: item.region,
       npcName: item.npcName,
       period: item.period,
-      isFavorite: false,
       scope: toScope(item.scope),
     })),
     tradeItems: DEFAULT_TRADE_ITEMS.map((item) => ({
@@ -655,7 +644,6 @@ export function useAppState(uid?: string | null) {
       region: item.region,
       npcName: item.npcName,
       period: item.period,
-      isFavorite: false,
       scope: toScope(item.scope),
     })),
   }), []);
@@ -671,9 +659,9 @@ export function useAppState(uid?: string | null) {
         id: `preset_${Date.now()}`,
         name,
         createdAt: new Date().toISOString(),
-        homework: hw.map(({ id, completedCount, ...rest }) => rest),
-        purchaseItems: pur.map(({ id, completed, ...rest }) => rest),
-        tradeItems: trd.map(({ id, completed, ...rest }) => rest),
+        homework: hw.map(({ id, completedCount, isFavorite, ...rest }) => rest),
+        purchaseItems: pur.map(({ id, completed, isFavorite, ...rest }) => rest),
+        tradeItems: trd.map(({ id, completed, isFavorite, ...rest }) => rest),
       };
       persist((prev) => ({
         ...prev,
@@ -703,6 +691,7 @@ export function useAppState(uid?: string | null) {
             ...hw,
             id: `${selectedCharId}_hw_${i}`,
             completedCount: 0,
+            isFavorite: false,
             totalCount: hw.totalCount || parseTotalCount(hw.title),
           })),
         },
@@ -712,6 +701,7 @@ export function useAppState(uid?: string | null) {
             ...item,
             id: `${selectedCharId}_pur_${i}`,
             completed: false,
+            isFavorite: false,
           })),
         },
         tradeItems: {
@@ -720,6 +710,7 @@ export function useAppState(uid?: string | null) {
             ...item,
             id: `${selectedCharId}_trd_${i}`,
             completed: false,
+            isFavorite: false,
           })),
         },
       }));
@@ -750,9 +741,9 @@ export function useAppState(uid?: string | null) {
       id: `preset_export_${Date.now()}`,
       name: char ? `${char.name}의 설정` : "내보낸 설정",
       createdAt: new Date().toISOString(),
-      homework: hw.map(({ id, completedCount, ...rest }) => rest),
-      purchaseItems: pur.map(({ id, completed, ...rest }) => rest),
-      tradeItems: trd.map(({ id, completed, ...rest }) => rest),
+      homework: hw.map(({ id, completedCount, isFavorite, ...rest }) => rest),
+      purchaseItems: pur.map(({ id, completed, isFavorite, ...rest }) => rest),
+      tradeItems: trd.map(({ id, completed, isFavorite, ...rest }) => rest),
     };
   }, [selectedCharId, data]);
 
@@ -768,6 +759,7 @@ export function useAppState(uid?: string | null) {
             ...hw,
             id: `${selectedCharId}_hw_${i}`,
             completedCount: 0,
+            isFavorite: false,
             totalCount: hw.totalCount || parseTotalCount(hw.title),
           })),
         },
@@ -777,6 +769,7 @@ export function useAppState(uid?: string | null) {
             ...item,
             id: `${selectedCharId}_pur_${i}`,
             completed: false,
+            isFavorite: false,
           })),
         },
         tradeItems: {
@@ -785,6 +778,7 @@ export function useAppState(uid?: string | null) {
             ...item,
             id: `${selectedCharId}_trd_${i}`,
             completed: false,
+            isFavorite: false,
           })),
         },
       }));
