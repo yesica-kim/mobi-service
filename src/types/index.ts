@@ -39,6 +39,7 @@ export interface HomeworkItem {
   totalCount: number;
   completedCount: number;
   isFavorite: boolean;
+  isDefault?: boolean;
   scope?: ScopeType;
 }
 
@@ -61,6 +62,7 @@ export interface ShopItem {
   period: PeriodType;
   completed: boolean;
   isFavorite: boolean;
+  isDefault?: boolean;
   scope?: ScopeType;
 }
 
@@ -76,6 +78,7 @@ export interface ScrollItem {
   totalCount: number;
   completedCount: number;
   isFavorite: boolean;
+  isDefault?: boolean;
   scope?: ScopeType;
   region: RegionName;
   materials: string[];

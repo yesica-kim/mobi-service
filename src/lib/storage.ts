@@ -16,6 +16,37 @@ function migrateShopItems(items: Record<string, any[]>) {
   }
 }
 
+/** isDefault 마이그레이션: 기존 데이터에 isDefault 플래그가 없으면 ID 패턴으로 판별 */
+function migrateIsDefault(data: AppData) {
+  // ID가 인덱스 기반(_hw_0, _pur_2 등)이면 기본 카드, 타임스탬프 기반이면 유저 추가 카드
+  const isDefaultId = (id: string, prefix: string) => {
+    const match = id.match(new RegExp(`_${prefix}_(\\d+)$`));
+    if (!match) return false;
+    return Number(match[1]) < 100; // 기본 카드 인덱스는 100 미만
+  };
+
+  for (const charId of Object.keys(data.homework ?? {})) {
+    data.homework[charId] = data.homework[charId].map((item) =>
+      item.isDefault === undefined ? { ...item, isDefault: isDefaultId(item.id, "hw") } : item
+    );
+  }
+  for (const charId of Object.keys(data.purchaseItems ?? {})) {
+    data.purchaseItems[charId] = data.purchaseItems[charId].map((item) =>
+      item.isDefault === undefined ? { ...item, isDefault: isDefaultId(item.id, "pur") } : item
+    );
+  }
+  for (const charId of Object.keys(data.tradeItems ?? {})) {
+    data.tradeItems[charId] = data.tradeItems[charId].map((item) =>
+      item.isDefault === undefined ? { ...item, isDefault: isDefaultId(item.id, "trd") } : item
+    );
+  }
+  for (const charId of Object.keys(data.scrollItems ?? {})) {
+    data.scrollItems![charId] = data.scrollItems![charId].map((item) =>
+      item.isDefault === undefined ? { ...item, isDefault: isDefaultId(item.id, "scroll") } : item
+    );
+  }
+}
+
 export function createHomeworkForChar(charId: string): HomeworkItem[] {
   return DEFAULT_HOMEWORK.map((hw, i) => ({
     id: `${charId}_hw_${i}`,
@@ -25,6 +56,7 @@ export function createHomeworkForChar(charId: string): HomeworkItem[] {
     totalCount: parseTotalCount(hw.title),
     completedCount: 0,
     isFavorite: false,
+    isDefault: true,
     scope: toScope(hw.scope),
   }));
 }
@@ -38,6 +70,7 @@ export function createPurchaseForChar(charId: string): ShopItem[] {
     period: item.period,
     completed: false,
     isFavorite: false,
+    isDefault: true,
     scope: toScope(item.scope),
   }));
 }
@@ -51,6 +84,7 @@ export function createTradeForChar(charId: string): ShopItem[] {
     period: item.period,
     completed: false,
     isFavorite: false,
+    isDefault: true,
     scope: toScope(item.scope),
   }));
 }
@@ -64,6 +98,7 @@ export function createScrollForChar(charId: string): ScrollItem[] {
     totalCount: 3,
     completedCount: 0,
     isFavorite: false,
+    isDefault: true,
     region: item.region,
     materials: item.materials === "-" ? ["-"] : item.materials.split(",").map((s) => s.trim()),
     reward: item.reward,
@@ -102,6 +137,8 @@ export function loadData(): AppData {
     // 마이그레이션: server -> region 필드 변환
     migrateShopItems(parsed.purchaseItems);
     migrateShopItems(parsed.tradeItems);
+    // 마이그레이션: isDefault 플래그 추가
+    migrateIsDefault(parsed);
     return parsed;
   } catch {
     return createDefaultData();
@@ -170,6 +207,9 @@ export function getNextWeeklyResetMs(): number {
 }
 
 export function applyResets(data: AppData): AppData {
+  // Firestore 로드 시에도 마이그레이션 적용
+  migrateIsDefault(data);
+
   const dailyReset = getTodayResetUTC();
   const weeklyReset = getWeeklyResetUTC();
   let changed = false;
