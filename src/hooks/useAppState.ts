@@ -12,6 +12,8 @@ export function useAppState(uid?: string | null) {
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [favoriteOnly, setFavoriteOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [regionFilter, setRegionFilter] = useState<RegionName | "all">("all");
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 초기 로드: Firestore 우선, 없으면 localStorage
@@ -475,8 +477,13 @@ export function useAppState(uid?: string | null) {
   const currentScrollItems = useMemo((): ScrollItem[] => {
     let items = allScrollItems;
     if (favoriteOnly) items = items.filter((item) => item.isFavorite);
+    if (regionFilter !== "all") items = items.filter((item) => item.region === regionFilter);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      items = items.filter((item) => item.title.toLowerCase().includes(q) || item.reward.toLowerCase().includes(q));
+    }
     return items;
-  }, [allScrollItems, favoriteOnly]);
+  }, [allScrollItems, favoriteOnly, regionFilter, searchQuery]);
 
   const addScrollItem = useCallback(
     (item: { title: string; scrollType: ScrollType; period: PeriodType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => {
@@ -833,8 +840,12 @@ export function useAppState(uid?: string | null) {
     if (favoriteOnly) {
       list = list.filter((hw) => hw.isFavorite);
     }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((hw) => hw.title.toLowerCase().includes(q) || hw.reward.toLowerCase().includes(q));
+    }
     return list;
-  }, [allHomework, activeTab, favoriteOnly]);
+  }, [allHomework, activeTab, favoriteOnly, searchQuery]);
 
   const allPurchaseItems = useMemo(() => {
     if (!data || !selectedCharId) return [];
@@ -852,8 +863,13 @@ export function useAppState(uid?: string | null) {
     else if (activeTab === "trade") items = allTradeItems;
     else return [];
     if (favoriteOnly) items = items.filter((item) => item.isFavorite);
+    if (regionFilter !== "all") items = items.filter((item) => item.region === regionFilter);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      items = items.filter((item) => item.itemName.toLowerCase().includes(q) || item.npcName.toLowerCase().includes(q));
+    }
     return items;
-  }, [allPurchaseItems, allTradeItems, activeTab, favoriteOnly]);
+  }, [allPurchaseItems, allTradeItems, activeTab, favoriteOnly, regionFilter, searchQuery]);
 
   const progress = useMemo(() => {
     const hwSource = favoriteOnly ? allHomework.filter((hw) => hw.isFavorite) : allHomework;
@@ -927,6 +943,10 @@ export function useAppState(uid?: string | null) {
     updateHomework,
     favoriteOnly,
     setFavoriteOnly,
+    searchQuery,
+    setSearchQuery,
+    regionFilter,
+    setRegionFilter,
     progress,
     allPurchaseItems,
     allTradeItems,

@@ -13,6 +13,7 @@ import { WeeklyCountdown } from "@/components/WeeklyCountdown";
 import { ShopCard } from "@/components/ShopCard";
 import { ScrollCard } from "@/components/ScrollCard";
 import { AddCardModal } from "@/components/AddCardModal";
+import { SearchFilterBar } from "@/components/SearchFilterBar";
 import { ProfileModal } from "@/components/ProfileModal";
 import { SortableList } from "@/components/SortableList";
 import { useAppState } from "@/hooks/useAppState";
@@ -20,14 +21,32 @@ import { useAuth } from "@/hooks/useAuth";
 import { Download, Upload, Settings } from "lucide-react";
 import type { Character } from "@/types";
 
-function filteredPurchase(state: { allPurchaseItems: any[]; favoriteOnly: boolean }) {
-  return state.favoriteOnly ? state.allPurchaseItems.filter((i: any) => i.isFavorite) : state.allPurchaseItems;
+function filteredPurchase(state: { allPurchaseItems: any[]; favoriteOnly: boolean; searchQuery: string; regionFilter: string }) {
+  let items = state.favoriteOnly ? state.allPurchaseItems.filter((i: any) => i.isFavorite) : state.allPurchaseItems;
+  if (state.regionFilter !== "all") items = items.filter((i: any) => i.region === state.regionFilter);
+  if (state.searchQuery) {
+    const q = state.searchQuery.toLowerCase();
+    items = items.filter((i: any) => i.itemName.toLowerCase().includes(q) || i.npcName.toLowerCase().includes(q));
+  }
+  return items;
 }
-function filteredTrade(state: { allTradeItems: any[]; favoriteOnly: boolean }) {
-  return state.favoriteOnly ? state.allTradeItems.filter((i: any) => i.isFavorite) : state.allTradeItems;
+function filteredTrade(state: { allTradeItems: any[]; favoriteOnly: boolean; searchQuery: string; regionFilter: string }) {
+  let items = state.favoriteOnly ? state.allTradeItems.filter((i: any) => i.isFavorite) : state.allTradeItems;
+  if (state.regionFilter !== "all") items = items.filter((i: any) => i.region === state.regionFilter);
+  if (state.searchQuery) {
+    const q = state.searchQuery.toLowerCase();
+    items = items.filter((i: any) => i.itemName.toLowerCase().includes(q) || i.npcName.toLowerCase().includes(q));
+  }
+  return items;
 }
-function filteredScroll(state: { allScrollItems: any[]; favoriteOnly: boolean }) {
-  return state.favoriteOnly ? state.allScrollItems.filter((i: any) => i.isFavorite) : state.allScrollItems;
+function filteredScroll(state: { allScrollItems: any[]; favoriteOnly: boolean; searchQuery: string; regionFilter: string }) {
+  let items = state.favoriteOnly ? state.allScrollItems.filter((i: any) => i.isFavorite) : state.allScrollItems;
+  if (state.regionFilter !== "all") items = items.filter((i: any) => i.region === state.regionFilter);
+  if (state.searchQuery) {
+    const q = state.searchQuery.toLowerCase();
+    items = items.filter((i: any) => i.title.toLowerCase().includes(q) || i.reward.toLowerCase().includes(q));
+  }
+  return items;
 }
 
 export default function Home() {
@@ -241,6 +260,13 @@ export default function Home() {
             />
 
             <PeriodToggle active={state.activeTab} onChange={state.setActiveTab} />
+
+            <SearchFilterBar
+              searchQuery={state.searchQuery}
+              onSearchChange={state.setSearchQuery}
+              regionFilter={state.regionFilter}
+              onRegionChange={state.setRegionFilter}
+            />
 
             {/* 숙제 추가 버튼 */}
             <div className="px-4 pt-3">
