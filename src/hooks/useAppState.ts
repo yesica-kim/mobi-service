@@ -14,6 +14,8 @@ export function useAppState(uid?: string | null) {
   const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [regionFilter, setRegionFilter] = useState<RegionName | "all">("all");
+  const [periodFilter, setPeriodFilter] = useState<PeriodType | "all">("all");
+  const [scopeFilter, setScopeFilter] = useState<ScopeType | "all">("all");
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 초기 로드: Firestore 우선, 없으면 localStorage
@@ -477,13 +479,15 @@ export function useAppState(uid?: string | null) {
   const currentScrollItems = useMemo((): ScrollItem[] => {
     let items = allScrollItems;
     if (favoriteOnly) items = items.filter((item) => item.isFavorite);
+    if (periodFilter !== "all") items = items.filter((item) => (item.period ?? "weekly") === periodFilter);
+    if (scopeFilter !== "all") items = items.filter((item) => (item.scope || "character") === scopeFilter);
     if (regionFilter !== "all") items = items.filter((item) => item.region === regionFilter);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       items = items.filter((item) => item.title.toLowerCase().includes(q) || item.reward.toLowerCase().includes(q));
     }
     return items;
-  }, [allScrollItems, favoriteOnly, regionFilter, searchQuery]);
+  }, [allScrollItems, favoriteOnly, periodFilter, scopeFilter, regionFilter, searchQuery]);
 
   const addScrollItem = useCallback(
     (item: { title: string; scrollType: ScrollType; period: PeriodType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => {
@@ -840,12 +844,18 @@ export function useAppState(uid?: string | null) {
     if (favoriteOnly) {
       list = list.filter((hw) => hw.isFavorite);
     }
+    if (periodFilter !== "all") {
+      list = list.filter((hw) => hw.period === periodFilter);
+    }
+    if (scopeFilter !== "all") {
+      list = list.filter((hw) => (hw.scope || "character") === scopeFilter);
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       list = list.filter((hw) => hw.title.toLowerCase().includes(q) || hw.reward.toLowerCase().includes(q));
     }
     return list;
-  }, [allHomework, activeTab, favoriteOnly, searchQuery]);
+  }, [allHomework, activeTab, favoriteOnly, periodFilter, scopeFilter, searchQuery]);
 
   const allPurchaseItems = useMemo(() => {
     if (!data || !selectedCharId) return [];
@@ -863,13 +873,15 @@ export function useAppState(uid?: string | null) {
     else if (activeTab === "trade") items = allTradeItems;
     else return [];
     if (favoriteOnly) items = items.filter((item) => item.isFavorite);
+    if (periodFilter !== "all") items = items.filter((item) => (item.period ?? "daily") === periodFilter);
+    if (scopeFilter !== "all") items = items.filter((item) => (item.scope || "character") === scopeFilter);
     if (regionFilter !== "all") items = items.filter((item) => item.region === regionFilter);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       items = items.filter((item) => item.itemName.toLowerCase().includes(q) || item.npcName.toLowerCase().includes(q));
     }
     return items;
-  }, [allPurchaseItems, allTradeItems, activeTab, favoriteOnly, regionFilter, searchQuery]);
+  }, [allPurchaseItems, allTradeItems, activeTab, favoriteOnly, periodFilter, scopeFilter, regionFilter, searchQuery]);
 
   const progress = useMemo(() => {
     const hwSource = favoriteOnly ? allHomework.filter((hw) => hw.isFavorite) : allHomework;
@@ -947,6 +959,10 @@ export function useAppState(uid?: string | null) {
     setSearchQuery,
     regionFilter,
     setRegionFilter,
+    periodFilter,
+    setPeriodFilter,
+    scopeFilter,
+    setScopeFilter,
     progress,
     allPurchaseItems,
     allTradeItems,

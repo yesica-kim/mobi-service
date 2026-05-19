@@ -21,8 +21,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { Download, Upload, Settings } from "lucide-react";
 import type { Character } from "@/types";
 
-function filteredPurchase(state: { allPurchaseItems: any[]; favoriteOnly: boolean; searchQuery: string; regionFilter: string }) {
+type FilterState = { favoriteOnly: boolean; searchQuery: string; regionFilter: string; periodFilter: string; scopeFilter: string };
+
+function filteredPurchase(state: FilterState & { allPurchaseItems: any[] }) {
   let items = state.favoriteOnly ? state.allPurchaseItems.filter((i: any) => i.isFavorite) : state.allPurchaseItems;
+  if (state.periodFilter !== "all") items = items.filter((i: any) => (i.period ?? "daily") === state.periodFilter);
+  if (state.scopeFilter !== "all") items = items.filter((i: any) => (i.scope || "character") === state.scopeFilter);
   if (state.regionFilter !== "all") items = items.filter((i: any) => i.region === state.regionFilter);
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
@@ -30,8 +34,10 @@ function filteredPurchase(state: { allPurchaseItems: any[]; favoriteOnly: boolea
   }
   return items;
 }
-function filteredTrade(state: { allTradeItems: any[]; favoriteOnly: boolean; searchQuery: string; regionFilter: string }) {
+function filteredTrade(state: FilterState & { allTradeItems: any[] }) {
   let items = state.favoriteOnly ? state.allTradeItems.filter((i: any) => i.isFavorite) : state.allTradeItems;
+  if (state.periodFilter !== "all") items = items.filter((i: any) => (i.period ?? "daily") === state.periodFilter);
+  if (state.scopeFilter !== "all") items = items.filter((i: any) => (i.scope || "character") === state.scopeFilter);
   if (state.regionFilter !== "all") items = items.filter((i: any) => i.region === state.regionFilter);
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
@@ -39,8 +45,10 @@ function filteredTrade(state: { allTradeItems: any[]; favoriteOnly: boolean; sea
   }
   return items;
 }
-function filteredScroll(state: { allScrollItems: any[]; favoriteOnly: boolean; searchQuery: string; regionFilter: string }) {
+function filteredScroll(state: FilterState & { allScrollItems: any[] }) {
   let items = state.favoriteOnly ? state.allScrollItems.filter((i: any) => i.isFavorite) : state.allScrollItems;
+  if (state.periodFilter !== "all") items = items.filter((i: any) => (i.period ?? "weekly") === state.periodFilter);
+  if (state.scopeFilter !== "all") items = items.filter((i: any) => (i.scope || "character") === state.scopeFilter);
   if (state.regionFilter !== "all") items = items.filter((i: any) => i.region === state.regionFilter);
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
@@ -266,6 +274,10 @@ export default function Home() {
               onSearchChange={state.setSearchQuery}
               regionFilter={state.regionFilter}
               onRegionChange={state.setRegionFilter}
+              periodFilter={state.periodFilter}
+              onPeriodChange={state.setPeriodFilter}
+              scopeFilter={state.scopeFilter}
+              onScopeChange={state.setScopeFilter}
             />
 
             {/* 숙제 추가 버튼 */}
