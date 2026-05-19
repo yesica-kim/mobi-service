@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { applyResets, createHomeworkForChar, createPurchaseForChar, createTradeForChar, createScrollForChar, loadData, saveData } from "@/lib/storage";
+import { applyResets, createHomeworkForChar, createPurchaseForChar, createTradeForChar, createScrollForChar, getNextDailyResetMs, getNextWeeklyResetMs, loadData, saveData } from "@/lib/storage";
 import { loadUserData, saveUserData } from "@/lib/firestore";
 import type { AppData, Character, HomeworkItem, HomeworkPreset, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType } from "@/types";
 import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, MAX_CHARS_PER_SERVER, SERVERS, parseTotalCount, toScope } from "@/types";
@@ -66,6 +66,47 @@ export function useAppState(uid?: string | null) {
     init();
     return () => { cancelled = true; };
   }, [uid]);
+
+  // 일간/주간 리셋 타이머: 앱이 열려 있는 동안 자동 리셋
+  useEffect(() => {
+    if (!data) return;
+
+    const scheduleDailyReset = () => {
+      const ms = getNextDailyResetMs();
+      return setTimeout(() => {
+        setData((prev) => {
+          if (!prev) return prev;
+          const next = applyResets({ ...prev });
+          saveData(next);
+          if (uid) saveUserData(uid, next);
+          return next;
+        });
+        dailyTimer = scheduleDailyReset();
+      }, ms + 1000); // 1초 여유
+    };
+
+    const scheduleWeeklyReset = () => {
+      const ms = getNextWeeklyResetMs();
+      return setTimeout(() => {
+        setData((prev) => {
+          if (!prev) return prev;
+          const next = applyResets({ ...prev });
+          saveData(next);
+          if (uid) saveUserData(uid, next);
+          return next;
+        });
+        weeklyTimer = scheduleWeeklyReset();
+      }, ms + 1000);
+    };
+
+    let dailyTimer = scheduleDailyReset();
+    let weeklyTimer = scheduleWeeklyReset();
+
+    return () => {
+      clearTimeout(dailyTimer);
+      clearTimeout(weeklyTimer);
+    };
+  }, [data !== null, uid]); // data가 로드된 후 한 번만 설정
 
   // 데이터 변경 시 저장 (debounce)
   const persist = useCallback((updater: (prev: AppData) => AppData) => {

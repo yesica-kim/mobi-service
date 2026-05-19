@@ -142,6 +142,18 @@ function getWeeklyResetUTC(): Date {
   return new Date(resetKST.getTime() - 9 * 60 * 60 * 1000);
 }
 
+/** 다음 일간 리셋까지 남은 밀리초 */
+export function getNextDailyResetMs(): number {
+  const kst = getKSTDate();
+  const nextResetKST = new Date(kst);
+  nextResetKST.setUTCHours(6, 0, 0, 0);
+  if (kst.getUTCHours() >= 6) {
+    nextResetKST.setUTCDate(nextResetKST.getUTCDate() + 1);
+  }
+  const nextResetUTC = new Date(nextResetKST.getTime() - 9 * 60 * 60 * 1000);
+  return nextResetUTC.getTime() - new Date().getTime();
+}
+
 /** 다음 주간 리셋까지 남은 밀리초 */
 export function getNextWeeklyResetMs(): number {
   const kst = getKSTDate();
