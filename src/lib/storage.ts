@@ -60,6 +60,7 @@ export function createScrollForChar(charId: string): ScrollItem[] {
     id: `${charId}_scroll_${i}`,
     title: item.title,
     scrollType: item.scrollType,
+    period: item.period,
     totalCount: 3,
     completedCount: 0,
     isFavorite: false,
@@ -178,6 +179,12 @@ export function applyResets(data: AppData): AppData {
         (item.period ?? "daily") === "daily" ? { ...item, completed: false } : item
       );
     }
+    // 일간 임무게시판 초기화
+    for (const charId of Object.keys(data.scrollItems ?? {})) {
+      data.scrollItems![charId] = data.scrollItems![charId].map((item) =>
+        (item.period ?? "weekly") === "daily" ? { ...item, completedCount: 0 } : item
+      );
+    }
     data.lastDailyReset = dailyReset.toISOString();
     changed = true;
   }
@@ -197,6 +204,12 @@ export function applyResets(data: AppData): AppData {
     for (const charId of Object.keys(data.tradeItems ?? {})) {
       data.tradeItems[charId] = data.tradeItems[charId].map((item) =>
         item.period === "weekly" ? { ...item, completed: false } : item
+      );
+    }
+    // 주간 임무게시판 초기화
+    for (const charId of Object.keys(data.scrollItems ?? {})) {
+      data.scrollItems![charId] = data.scrollItems![charId].map((item) =>
+        (item.period ?? "weekly") === "weekly" ? { ...item, completedCount: 0 } : item
       );
     }
     data.lastWeeklyReset = weeklyReset.toISOString();

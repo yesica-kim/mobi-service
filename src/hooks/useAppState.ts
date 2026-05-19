@@ -479,7 +479,7 @@ export function useAppState(uid?: string | null) {
   }, [allScrollItems, favoriteOnly]);
 
   const addScrollItem = useCallback(
-    (item: { title: string; scrollType: ScrollType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => {
+    (item: { title: string; scrollType: ScrollType; period: PeriodType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => {
       if (!selectedCharId) return;
       persist((prev) => {
         const scrollItems = { ...(prev.scrollItems ?? {}) };
@@ -490,6 +490,7 @@ export function useAppState(uid?: string | null) {
             id: `${charId}_scroll_${ts}`,
             title: item.title,
             scrollType: item.scrollType,
+            period: item.period,
             totalCount: item.totalCount,
             completedCount: 0,
             isFavorite: false,
@@ -546,7 +547,7 @@ export function useAppState(uid?: string | null) {
   );
 
   const updateScrollItem = useCallback(
-    (itemId: string, updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "totalCount" | "materials" | "reward" | "region" | "tags">>) => {
+    (itemId: string, updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "period" | "totalCount" | "materials" | "reward" | "region" | "tags">>) => {
       if (!selectedCharId) return;
       persist((prev) => {
         const scrollItems = { ...(prev.scrollItems ?? {}) };

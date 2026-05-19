@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { ScrollItem, ScrollType, RegionName } from "@/types";
+import type { ScrollItem, ScrollType, RegionName, PeriodType } from "@/types";
 import { SCROLL_TYPES, REGIONS } from "@/types";
 
 const SCROLL_TYPE_COLORS: Record<ScrollType, { bg: string; text: string }> = {
@@ -28,7 +28,7 @@ interface Props {
   item: ScrollItem;
   onToggle: (id: string, checkIndex: number) => void;
   onToggleFavorite: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "totalCount" | "materials" | "reward" | "region" | "tags">>) => void;
+  onUpdate?: (id: string, updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "period" | "totalCount" | "materials" | "reward" | "region" | "tags">>) => void;
   onDelete?: (id: string) => void;
 }
 
@@ -39,6 +39,7 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
   const [editScrollType, setEditScrollType] = useState<ScrollType>(item.scrollType);
+  const [editPeriod, setEditPeriod] = useState<PeriodType>(item.period ?? "weekly");
   const [editTotalCount, setEditTotalCount] = useState(totalCount);
   const [editRegion, setEditRegion] = useState<RegionName>(item.region || "콜헨");
   const [editMaterials, setEditMaterials] = useState<string[]>(item.materials || []);
@@ -70,9 +71,10 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
 
   const handleSave = () => {
     if (onUpdate) {
-      const updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "totalCount" | "materials" | "reward" | "region">> = {};
+      const updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "period" | "totalCount" | "materials" | "reward" | "region">> = {};
       if (editTitle !== item.title) updates.title = editTitle;
       if (editScrollType !== item.scrollType) updates.scrollType = editScrollType;
+      if (editPeriod !== (item.period ?? "weekly")) updates.period = editPeriod;
       if (editTotalCount !== totalCount) updates.totalCount = editTotalCount;
       if (editRegion !== item.region) updates.region = editRegion;
       if (editReward !== (item.reward || "-")) updates.reward = editReward;
@@ -85,6 +87,7 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
   const handleCancel = () => {
     setEditTitle(item.title);
     setEditScrollType(item.scrollType);
+    setEditPeriod(item.period ?? "weekly");
     setEditTotalCount(totalCount);
     setEditRegion(item.region || "콜헨");
     setEditMaterials(item.materials || []);
@@ -155,6 +158,32 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
                     {st}
                   </button>
                 ))}
+              </div>
+            </div>
+            {/* 주기 설정 */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">주기</span>
+              <div className="flex rounded-lg overflow-hidden border border-slate-600">
+                <button
+                  onClick={() => setEditPeriod("daily")}
+                  className={`text-[11px] px-3 py-1 transition-colors ${
+                    editPeriod === "daily"
+                      ? "bg-orange-600 text-white"
+                      : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+                  }`}
+                >
+                  일간
+                </button>
+                <button
+                  onClick={() => setEditPeriod("weekly")}
+                  className={`text-[11px] px-3 py-1 transition-colors ${
+                    editPeriod === "weekly"
+                      ? "bg-green-600 text-white"
+                      : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+                  }`}
+                >
+                  주간
+                </button>
               </div>
             </div>
             {/* 지역 드롭다운 */}
@@ -258,6 +287,11 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
           {/* 내용 */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
+              {(item.period ?? "weekly") === "weekly" ? (
+                <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-green-600/20 text-green-400">주간</span>
+              ) : (
+                <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-orange-600/20 text-orange-400">일간</span>
+              )}
               {item.scope === "server" && (
                 <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-teal-600/20 text-teal-400">서버</span>
               )}
