@@ -116,6 +116,7 @@ export const DEFAULT_PURCHASE_ITEMS: { itemName: string; region: RegionName; npc
   { itemName: "보석 보물 상자 구매 10개(서버)", region: "캐시샵", npcName: "골드", period: "daily", scope: "on" },
   { itemName: "매일 무료 상품 구매 1개(서버)", region: "캐시샵", npcName: "추천픽", period: "daily", scope: "on" },
   { itemName: "성수 5개(서버)", region: "던바튼", npcName: "크리스텔(봉헌소)", period: "weekly", scope: "on" },
+  { itemName: "에반 마물 퇴치 증표, 글라스기브넨", region: "던바튼", npcName: "에반(모험가 길드)", period: "weekly", scope: "on" },
 ];
 
 export const DEFAULT_TRADE_ITEMS: { itemName: string; region: RegionName; npcName: string; period: PeriodType; scope?: string }[] = [
