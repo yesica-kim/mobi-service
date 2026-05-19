@@ -11,7 +11,7 @@ interface Props {
   onClose: () => void;
   onAddHomework: (hw: { title: string; reward: string; period: PeriodType; totalCount: number; scope: ScopeType }) => void;
   onAddShopItem: (type: "purchase" | "trade", item: { itemName: string; region: RegionName; npcName: string; scope: ScopeType }) => void;
-  onAddScrollItem?: (item: { title: string; scrollType: ScrollType; totalCount: number; materials: string[] }) => void;
+  onAddScrollItem?: (item: { title: string; scrollType: ScrollType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => void;
 }
 
 const TYPE_OPTIONS: { value: CardType; label: string; color: string }[] = [
@@ -34,6 +34,8 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
   // scroll fields
   const [scrollType, setScrollType] = useState<ScrollType>("제작");
   const [scrollTotalCount, setScrollTotalCount] = useState(3);
+  const [scrollRegion, setScrollRegion] = useState<RegionName>("던바튼");
+  const [scrollReward, setScrollReward] = useState("");
   const [materials, setMaterials] = useState<string[]>([]);
   const [materialInput, setMaterialInput] = useState("");
 
@@ -68,6 +70,8 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
         scrollType,
         totalCount: scrollTotalCount,
         materials,
+        region: scrollRegion,
+        reward: scrollReward.trim() || "-",
       });
     }
     resetFields();
@@ -84,6 +88,8 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
     setScope("character");
     setScrollType("제작");
     setScrollTotalCount(3);
+    setScrollRegion("던바튼");
+    setScrollReward("");
     setMaterials([]);
     setMaterialInput("");
   };
@@ -240,6 +246,19 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
                   ))}
                 </div>
               </div>
+              {/* 지역 */}
+              <div>
+                <span className="text-xs text-slate-500 mb-1 block">지역</span>
+                <select
+                  value={scrollRegion}
+                  onChange={(e) => setScrollRegion(e.target.value as RegionName)}
+                  className="w-full bg-slate-700 text-white text-sm rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {REGIONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-500">체크박스 수</span>
                 <div className="flex items-center gap-1.5">
@@ -248,27 +267,41 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
                   <button onClick={() => setScrollTotalCount(Math.min(10, scrollTotalCount + 1))} className="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center text-lg font-bold">+</button>
                 </div>
               </div>
-              <div>
-                <span className="text-xs text-slate-500 mb-1 block">재료</span>
-                <div className="flex flex-wrap gap-1.5 mb-1.5">
-                  {materials.map((mat, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-1 bg-slate-700 text-slate-300 text-[11px] px-2 py-1 rounded-lg">
-                      {mat}
-                      <button onClick={() => removeMaterial(idx)} className="text-slate-500 hover:text-red-400">
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </span>
-                  ))}
+              {/* 재료 (토벌은 숨김) */}
+              {scrollType !== "토벌" && (
+                <div>
+                  <span className="text-xs text-slate-500 mb-1 block">재료</span>
+                  <div className="flex flex-wrap gap-1.5 mb-1.5">
+                    {materials.map((mat, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-1 bg-slate-700 text-slate-300 text-[11px] px-2 py-1 rounded-lg">
+                        {mat}
+                        <button onClick={() => removeMaterial(idx)} className="text-slate-500 hover:text-red-400">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    value={materialInput}
+                    onChange={(e) => setMaterialInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMaterial(); } }}
+                    placeholder="재료 입력 후 Enter"
+                    className="w-full bg-slate-700 text-slate-300 text-xs rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
+                  />
                 </div>
+              )}
+              {/* 보상 */}
+              <div>
+                <span className="text-xs text-slate-500 mb-1 block">보상</span>
                 <input
                   type="text"
-                  value={materialInput}
-                  onChange={(e) => setMaterialInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMaterial(); } }}
-                  placeholder="재료 입력 후 Enter"
-                  className="w-full bg-slate-700 text-slate-300 text-xs rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
+                  value={scrollReward}
+                  onChange={(e) => setScrollReward(e.target.value)}
+                  placeholder="보상을 입력하세요 (선택)"
+                  className="w-full bg-slate-700 text-white text-sm rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
                 />
               </div>
             </div>

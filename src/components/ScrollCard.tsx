@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { ScrollItem, ScrollType } from "@/types";
-import { SCROLL_TYPES } from "@/types";
+import type { ScrollItem, ScrollType, RegionName } from "@/types";
+import { SCROLL_TYPES, REGIONS } from "@/types";
 
 const SCROLL_TYPE_COLORS: Record<ScrollType, { bg: string; text: string }> = {
   "제작": { bg: "bg-indigo-600/20", text: "text-indigo-400" },
@@ -13,11 +13,22 @@ const SCROLL_TYPE_COLORS: Record<ScrollType, { bg: string; text: string }> = {
   "토벌": { bg: "bg-red-600/20", text: "text-red-400" },
 };
 
+const REGION_COLORS: Record<string, { bg: string; text: string }> = {
+  "콜헨": { bg: "bg-red-600/20", text: "text-red-400" },
+  "티르코네일": { bg: "bg-sky-600/20", text: "text-sky-400" },
+  "두갈드아일": { bg: "bg-amber-600/20", text: "text-amber-400" },
+  "던바튼": { bg: "bg-violet-600/20", text: "text-violet-400" },
+  "가이레흐 언덕": { bg: "bg-pink-600/20", text: "text-pink-400" },
+  "반호르": { bg: "bg-orange-600/20", text: "text-orange-400" },
+  "이멘마하": { bg: "bg-cyan-600/20", text: "text-cyan-400" },
+  "캐시샵": { bg: "bg-fuchsia-600/20", text: "text-fuchsia-400" },
+};
+
 interface Props {
   item: ScrollItem;
   onToggle: (id: string, checkIndex: number) => void;
   onToggleFavorite: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "totalCount" | "materials" | "tags">>) => void;
+  onUpdate?: (id: string, updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "totalCount" | "materials" | "reward" | "region" | "tags">>) => void;
   onDelete?: (id: string) => void;
 }
 
@@ -29,10 +40,10 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
   const [editTitle, setEditTitle] = useState(item.title);
   const [editScrollType, setEditScrollType] = useState<ScrollType>(item.scrollType);
   const [editTotalCount, setEditTotalCount] = useState(totalCount);
+  const [editRegion, setEditRegion] = useState<RegionName>(item.region || "콜헨");
   const [editMaterials, setEditMaterials] = useState<string[]>(item.materials || []);
-  const [editTags, setEditTags] = useState<string[]>(item.tags || []);
+  const [editReward, setEditReward] = useState(item.reward || "-");
   const [materialInput, setMaterialInput] = useState("");
-  const [tagInput, setTagInput] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -59,12 +70,13 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
 
   const handleSave = () => {
     if (onUpdate) {
-      const updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "totalCount" | "materials" | "tags">> = {};
+      const updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "totalCount" | "materials" | "reward" | "region">> = {};
       if (editTitle !== item.title) updates.title = editTitle;
       if (editScrollType !== item.scrollType) updates.scrollType = editScrollType;
       if (editTotalCount !== totalCount) updates.totalCount = editTotalCount;
+      if (editRegion !== item.region) updates.region = editRegion;
+      if (editReward !== (item.reward || "-")) updates.reward = editReward;
       if (JSON.stringify(editMaterials) !== JSON.stringify(item.materials)) updates.materials = editMaterials;
-      if (JSON.stringify(editTags) !== JSON.stringify(item.tags || [])) updates.tags = editTags;
       if (Object.keys(updates).length > 0) onUpdate(item.id, updates);
     }
     setEditing(false);
@@ -74,10 +86,10 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
     setEditTitle(item.title);
     setEditScrollType(item.scrollType);
     setEditTotalCount(totalCount);
+    setEditRegion(item.region || "콜헨");
     setEditMaterials(item.materials || []);
-    setEditTags(item.tags || []);
+    setEditReward(item.reward || "-");
     setMaterialInput("");
-    setTagInput("");
     setEditing(false);
   };
 
@@ -93,19 +105,10 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
     setEditMaterials(editMaterials.filter((_, i) => i !== idx));
   };
 
-  const addTag = () => {
-    const val = tagInput.trim();
-    if (val && !editTags.includes(val)) {
-      setEditTags([...editTags, val]);
-    }
-    setTagInput("");
-  };
-
-  const removeTag = (idx: number) => {
-    setEditTags(editTags.filter((_, i) => i !== idx));
-  };
-
   const typeColor = SCROLL_TYPE_COLORS[item.scrollType];
+  const regionColor = REGION_COLORS[item.region] ?? { bg: "bg-blue-600/20", text: "text-blue-400" };
+  const hasMaterials = item.scrollType !== "토벌" && item.materials && item.materials.length > 0 && item.materials[0] !== "-";
+  const hasReward = item.reward && item.reward !== "-";
 
   return (
     <div
@@ -154,68 +157,68 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
                 ))}
               </div>
             </div>
+            {/* 지역 드롭다운 */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">지역</span>
+              <select
+                value={editRegion}
+                onChange={(e) => setEditRegion(e.target.value as RegionName)}
+                className="bg-slate-700 text-blue-400 text-[11px] font-semibold rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {REGIONS.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
             {/* 체크박스 수 */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500">체크박스</span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setEditTotalCount(Math.max(1, editTotalCount - 1))}
-                    className="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-lg font-bold"
-                  >-</button>
-                  <span className="text-white text-sm font-semibold w-6 text-center">{editTotalCount}</span>
-                  <button
-                    onClick={() => setEditTotalCount(Math.min(10, editTotalCount + 1))}
-                    className="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-lg font-bold"
-                  >+</button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">체크박스</span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setEditTotalCount(Math.max(1, editTotalCount - 1))}
+                  className="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-lg font-bold"
+                >-</button>
+                <span className="text-white text-sm font-semibold w-6 text-center">{editTotalCount}</span>
+                <button
+                  onClick={() => setEditTotalCount(Math.min(10, editTotalCount + 1))}
+                  className="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-lg font-bold"
+                >+</button>
+              </div>
+            </div>
+            {/* 재료 태그 입력 (토벌은 숨김) */}
+            {editScrollType !== "토벌" && (
+              <div>
+                <span className="text-xs text-slate-500 mb-1 block">재료</span>
+                <div className="flex flex-wrap gap-1.5 mb-1.5">
+                  {editMaterials.filter((m) => m !== "-").map((mat, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1 bg-slate-700 text-slate-300 text-[11px] px-2 py-1 rounded-lg">
+                      {mat}
+                      <button onClick={() => removeMaterial(idx)} className="text-slate-500 hover:text-red-400">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
                 </div>
+                <input
+                  type="text"
+                  value={materialInput}
+                  onChange={(e) => setMaterialInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMaterial(); } }}
+                  placeholder="재료 입력 후 Enter"
+                  className="w-full bg-slate-700 text-slate-300 text-xs rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
+                />
               </div>
-            </div>
-            {/* 재료 태그 입력 */}
+            )}
+            {/* 보상 입력 */}
             <div>
-              <span className="text-xs text-slate-500 mb-1 block">재료</span>
-              <div className="flex flex-wrap gap-1.5 mb-1.5">
-                {editMaterials.map((mat, idx) => (
-                  <span key={idx} className="inline-flex items-center gap-1 bg-slate-700 text-slate-300 text-[11px] px-2 py-1 rounded-lg">
-                    {mat}
-                    <button onClick={() => removeMaterial(idx)} className="text-slate-500 hover:text-red-400">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </span>
-                ))}
-              </div>
+              <span className="text-xs text-slate-500 mb-1 block">보상</span>
               <input
                 type="text"
-                value={materialInput}
-                onChange={(e) => setMaterialInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMaterial(); } }}
-                placeholder="재료 입력 후 Enter"
-                className="w-full bg-slate-700 text-slate-300 text-xs rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
-              />
-            </div>
-            {/* 태그 입력 */}
-            <div>
-              <span className="text-xs text-slate-500 mb-1 block">태그</span>
-              <div className="flex flex-wrap gap-1.5 mb-1.5">
-                {editTags.map((tag, idx) => (
-                  <span key={idx} className="inline-flex items-center gap-1 bg-cyan-600/20 text-cyan-400 text-[11px] px-2 py-1 rounded-lg">
-                    {tag}
-                    <button onClick={() => removeTag(idx)} className="text-cyan-600 hover:text-red-400">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <input
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-                placeholder="태그 입력 후 Enter"
+                value={editReward}
+                onChange={(e) => setEditReward(e.target.value)}
+                placeholder="보상 입력"
                 className="w-full bg-slate-700 text-slate-300 text-xs rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
               />
             </div>
@@ -265,26 +268,22 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
                 {item.title}
               </p>
             </div>
-            {/* 재료 태그 */}
-            {item.materials && item.materials.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1.5">
-                {item.materials.map((mat, idx) => (
-                  <span key={idx} className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-700 text-slate-400">
-                    {mat}
-                  </span>
-                ))}
-              </div>
-            )}
-            {/* 태그 */}
-            {item.tags && item.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {item.tags.map((tag, idx) => (
-                  <span key={idx} className="text-[11px] px-1.5 py-0.5 rounded-md bg-cyan-600/15 text-cyan-400">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
+            {/* 지역 + 재료 + 보상 */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              {item.region && (
+                <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${regionColor.bg} ${regionColor.text}`}>
+                  {item.region}
+                </span>
+              )}
+              {hasMaterials && item.materials.map((mat, idx) => (
+                <span key={idx} className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-700 text-slate-400">
+                  {mat}
+                </span>
+              ))}
+              {hasReward && (
+                <span className="text-[11px] text-slate-500">{item.reward}</span>
+              )}
+            </div>
           </div>
 
           {/* 체크박스 + 수정/삭제 */}

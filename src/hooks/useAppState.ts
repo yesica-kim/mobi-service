@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { applyResets, createHomeworkForChar, createPurchaseForChar, createTradeForChar, loadData, saveData } from "@/lib/storage";
+import { applyResets, createHomeworkForChar, createPurchaseForChar, createTradeForChar, createScrollForChar, loadData, saveData } from "@/lib/storage";
 import { loadUserData, saveUserData } from "@/lib/firestore";
 import type { AppData, Character, HomeworkItem, HomeworkPreset, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType } from "@/types";
 import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, MAX_CHARS_PER_SERVER, SERVERS, parseTotalCount, toScope } from "@/types";
@@ -34,6 +34,21 @@ export function useAppState(uid?: string | null) {
         }
       } else {
         loaded = applyResets(loadData());
+      }
+
+      // 기존 캐릭터에 scrollItems가 없으면 기본 스크롤 추가
+      if (loaded.characters.length > 0) {
+        const scrollItems = loaded.scrollItems ?? {};
+        let updated = false;
+        for (const char of loaded.characters) {
+          if (!scrollItems[char.id] || scrollItems[char.id].length === 0) {
+            scrollItems[char.id] = createScrollForChar(char.id);
+            updated = true;
+          }
+        }
+        if (updated) {
+          loaded = { ...loaded, scrollItems };
+        }
       }
 
       if (cancelled) return;
@@ -77,6 +92,7 @@ export function useAppState(uid?: string | null) {
         homework: { ...prev.homework, [id]: createHomeworkForChar(id) },
         purchaseItems: { ...prev.purchaseItems, [id]: createPurchaseForChar(id) },
         tradeItems: { ...prev.tradeItems, [id]: createTradeForChar(id) },
+        scrollItems: { ...(prev.scrollItems ?? {}), [id]: createScrollForChar(id) },
       }));
       setSelectedServer(char.server);
       setSelectedCharId(id);
@@ -421,7 +437,7 @@ export function useAppState(uid?: string | null) {
   }, [allScrollItems, favoriteOnly]);
 
   const addScrollItem = useCallback(
-    (item: { title: string; scrollType: ScrollType; totalCount: number; materials: string[] }) => {
+    (item: { title: string; scrollType: ScrollType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => {
       if (!selectedCharId) return;
       persist((prev) => {
         const scrollItems = prev.scrollItems ?? {};
@@ -434,7 +450,9 @@ export function useAppState(uid?: string | null) {
           completedCount: 0,
           isFavorite: false,
           scope: "character",
+          region: item.region,
           materials: item.materials,
+          reward: item.reward,
         };
         return { ...prev, scrollItems: { ...scrollItems, [selectedCharId]: [...list, newItem] } };
       });
@@ -483,7 +501,7 @@ export function useAppState(uid?: string | null) {
   );
 
   const updateScrollItem = useCallback(
-    (itemId: string, updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "totalCount" | "materials" | "tags">>) => {
+    (itemId: string, updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "totalCount" | "materials" | "reward" | "region" | "tags">>) => {
       if (!selectedCharId) return;
       persist((prev) => {
         const scrollItems = prev.scrollItems ?? {};
@@ -545,6 +563,7 @@ export function useAppState(uid?: string | null) {
       homework: { ...prev.homework, [selectedCharId]: createHomeworkForChar(selectedCharId) },
       purchaseItems: { ...prev.purchaseItems, [selectedCharId]: createPurchaseForChar(selectedCharId) },
       tradeItems: { ...prev.tradeItems, [selectedCharId]: createTradeForChar(selectedCharId) },
+      scrollItems: { ...(prev.scrollItems ?? {}), [selectedCharId]: createScrollForChar(selectedCharId) },
     }));
   }, [persist, selectedCharId]);
 

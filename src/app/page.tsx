@@ -172,7 +172,7 @@ export default function Home() {
                   title="계정 데이터 가져오기"
                 >
                   <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0l-4 4m4-4l4 4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 14V2m0 0l-4 4m4-4l4 4" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
                   </svg>
                 </button>

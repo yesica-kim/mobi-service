@@ -1,5 +1,5 @@
-import type { AppData, Character, HomeworkItem, ShopItem } from "@/types";
-import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, parseTotalCount, toScope } from "@/types";
+import type { AppData, Character, HomeworkItem, ScrollItem, ShopItem } from "@/types";
+import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, DEFAULT_SCROLL_ITEMS, parseTotalCount, toScope } from "@/types";
 
 const STORAGE_KEY = "mabimobi_data";
 
@@ -53,6 +53,20 @@ export function createTradeForChar(charId: string): ShopItem[] {
   }));
 }
 
+export function createScrollForChar(charId: string): ScrollItem[] {
+  return DEFAULT_SCROLL_ITEMS.map((item, i) => ({
+    id: `${charId}_scroll_${i}`,
+    title: item.title,
+    scrollType: item.scrollType,
+    totalCount: 3,
+    completedCount: 0,
+    isFavorite: false,
+    region: item.region,
+    materials: item.materials === "-" ? ["-"] : item.materials.split(",").map((s) => s.trim()),
+    reward: item.reward,
+  }));
+}
+
 function createDefaultData(): AppData {
   const defaultChar: Character = {
     id: "char_default",
@@ -66,6 +80,7 @@ function createDefaultData(): AppData {
     homework: { [defaultChar.id]: createHomeworkForChar(defaultChar.id) },
     purchaseItems: { [defaultChar.id]: createPurchaseForChar(defaultChar.id) },
     tradeItems: { [defaultChar.id]: createTradeForChar(defaultChar.id) },
+    scrollItems: { [defaultChar.id]: createScrollForChar(defaultChar.id) },
     lastDailyReset: new Date().toISOString(),
     lastWeeklyReset: new Date().toISOString(),
   };
