@@ -193,38 +193,46 @@ export function useAppState(uid?: string | null) {
   const toggleFavorite = useCallback(
     (hwId: string) => {
       if (!selectedCharId) return;
-      persist((prev) => ({
-        ...prev,
-        homework: {
-          ...prev.homework,
-          [selectedCharId]: (prev.homework[selectedCharId] ?? []).map((hw) =>
-            hw.id === hwId ? { ...hw, isFavorite: !hw.isFavorite } : hw
-          ),
-        },
-      }));
+      persist((prev) => {
+        const currentList = prev.homework[selectedCharId] ?? [];
+        const idx = currentList.findIndex((hw) => hw.id === hwId);
+        if (idx === -1) return prev;
+        const newFav = !currentList[idx].isFavorite;
+
+        const newHomework = { ...prev.homework };
+        for (const charId of Object.keys(newHomework)) {
+          newHomework[charId] = (newHomework[charId] ?? []).map((hw, i) =>
+            i === idx ? { ...hw, isFavorite: newFav } : hw
+          );
+        }
+        return { ...prev, homework: newHomework };
+      });
     },
     [persist, selectedCharId]
   );
 
-  // ── 숙제 수정 ──
+  // ── 숙제 수정 (전체 캐릭터 동기화) ──
   const updateHomework = useCallback(
     (hwId: string, updates: Partial<Pick<import("@/types").HomeworkItem, "title" | "reward" | "totalCount" | "scope">>) => {
       if (!selectedCharId) return;
-      persist((prev) => ({
-        ...prev,
-        homework: {
-          ...prev.homework,
-          [selectedCharId]: (prev.homework[selectedCharId] ?? []).map((hw) => {
-            if (hw.id !== hwId) return hw;
+      persist((prev) => {
+        const currentList = prev.homework[selectedCharId] ?? [];
+        const idx = currentList.findIndex((hw) => hw.id === hwId);
+        if (idx === -1) return prev;
+
+        const newHomework = { ...prev.homework };
+        for (const charId of Object.keys(newHomework)) {
+          newHomework[charId] = (newHomework[charId] ?? []).map((hw, i) => {
+            if (i !== idx) return hw;
             const updated = { ...hw, ...updates };
-            // totalCount가 줄었으면 completedCount도 맞춤
             if (updates.totalCount !== undefined && updated.completedCount > updates.totalCount) {
               updated.completedCount = updates.totalCount;
             }
             return updated;
-          }),
-        },
-      }));
+          });
+        }
+        return { ...prev, homework: newHomework };
+      });
     },
     [persist, selectedCharId]
   );
@@ -271,141 +279,180 @@ export function useAppState(uid?: string | null) {
     (itemId: string, type: "purchase" | "trade") => {
       if (!selectedCharId) return;
       const key = type === "purchase" ? "purchaseItems" : "tradeItems";
-      persist((prev) => ({
-        ...prev,
-        [key]: {
-          ...prev[key],
-          [selectedCharId]: (prev[key][selectedCharId] ?? []).map((item) =>
-            item.id === itemId ? { ...item, isFavorite: !item.isFavorite } : item
-          ),
-        },
-      }));
-    },
-    [persist, selectedCharId]
-  );
-
-  // ── 구매/물물교환 수정 ──
-  const updateShopItem = useCallback(
-    (itemId: string, type: "purchase" | "trade", updates: Partial<Pick<import("@/types").ShopItem, "itemName" | "region" | "npcName" | "scope">>) => {
-      if (!selectedCharId) return;
-      const key = type === "purchase" ? "purchaseItems" : "tradeItems";
-      persist((prev) => ({
-        ...prev,
-        [key]: {
-          ...prev[key],
-          [selectedCharId]: (prev[key][selectedCharId] ?? []).map((item) =>
-            item.id === itemId ? { ...item, ...updates } : item
-          ),
-        },
-      }));
-    },
-    [persist, selectedCharId]
-  );
-
-  // ── 숙제 삭제 ──
-  const deleteHomework = useCallback(
-    (hwId: string) => {
-      if (!selectedCharId) return;
-      persist((prev) => ({
-        ...prev,
-        homework: {
-          ...prev.homework,
-          [selectedCharId]: (prev.homework[selectedCharId] ?? []).filter((hw) => hw.id !== hwId),
-        },
-      }));
-    },
-    [persist, selectedCharId]
-  );
-
-  // ── 숙제 추가 ──
-  const addHomework = useCallback(
-    (hw: { title: string; reward: string; period: PeriodType; totalCount: number; scope: ScopeType }) => {
-      if (!selectedCharId) return;
       persist((prev) => {
-        const list = prev.homework[selectedCharId] ?? [];
-        const newItem: HomeworkItem = {
-          id: `${selectedCharId}_hw_${Date.now()}`,
-          title: hw.title,
-          reward: hw.reward,
-          period: hw.period,
-          totalCount: hw.totalCount,
-          completedCount: 0,
-          isFavorite: false,
-          scope: hw.scope,
-        };
-        // 같은 period의 마지막에 추가
-        const lastIndex = list.reduce((acc, item, i) => (item.period === hw.period ? i : acc), -1);
-        const newList = [...list];
-        newList.splice(lastIndex + 1, 0, newItem);
-        return { ...prev, homework: { ...prev.homework, [selectedCharId]: newList } };
+        const currentList = prev[key][selectedCharId] ?? [];
+        const idx = currentList.findIndex((item) => item.id === itemId);
+        if (idx === -1) return prev;
+        const newFav = !currentList[idx].isFavorite;
+
+        const newItems = { ...prev[key] };
+        for (const charId of Object.keys(newItems)) {
+          newItems[charId] = (newItems[charId] ?? []).map((item, i) =>
+            i === idx ? { ...item, isFavorite: newFav } : item
+          );
+        }
+        return { ...prev, [key]: newItems };
       });
     },
     [persist, selectedCharId]
   );
 
-  // ── 구매/물물교환 삭제 ──
-  const deleteShopItem = useCallback(
-    (itemId: string, type: "purchase" | "trade") => {
+  // ── 구매/물물교환 수정 (전체 캐릭터 동기화) ──
+  const updateShopItem = useCallback(
+    (itemId: string, type: "purchase" | "trade", updates: Partial<Pick<import("@/types").ShopItem, "itemName" | "region" | "npcName" | "scope">>) => {
       if (!selectedCharId) return;
       const key = type === "purchase" ? "purchaseItems" : "tradeItems";
-      persist((prev) => ({
-        ...prev,
-        [key]: {
-          ...prev[key],
-          [selectedCharId]: (prev[key][selectedCharId] ?? []).filter((item) => item.id !== itemId),
-        },
-      }));
+      persist((prev) => {
+        const currentList = prev[key][selectedCharId] ?? [];
+        const idx = currentList.findIndex((item) => item.id === itemId);
+        if (idx === -1) return prev;
+
+        const newItems = { ...prev[key] };
+        for (const charId of Object.keys(newItems)) {
+          newItems[charId] = (newItems[charId] ?? []).map((item, i) =>
+            i === idx ? { ...item, ...updates } : item
+          );
+        }
+        return { ...prev, [key]: newItems };
+      });
     },
     [persist, selectedCharId]
   );
 
-  // ── 구매/물물교환 추가 ──
+  // ── 숙제 삭제 (전체 캐릭터 동기화) ──
+  const deleteHomework = useCallback(
+    (hwId: string) => {
+      if (!selectedCharId) return;
+      persist((prev) => {
+        const currentList = prev.homework[selectedCharId] ?? [];
+        const idx = currentList.findIndex((hw) => hw.id === hwId);
+        if (idx === -1) return prev;
+
+        const newHomework = { ...prev.homework };
+        for (const charId of Object.keys(newHomework)) {
+          const list = newHomework[charId] ?? [];
+          newHomework[charId] = list.filter((_, i) => i !== idx);
+        }
+        return { ...prev, homework: newHomework };
+      });
+    },
+    [persist, selectedCharId]
+  );
+
+  // ── 숙제 추가 (전체 캐릭터 동기화) ──
+  const addHomework = useCallback(
+    (hw: { title: string; reward: string; period: PeriodType; totalCount: number; scope: ScopeType }) => {
+      if (!selectedCharId) return;
+      persist((prev) => {
+        const newHomework = { ...prev.homework };
+        const ts = Date.now();
+        for (const charId of Object.keys(newHomework)) {
+          const list = [...(newHomework[charId] ?? [])];
+          const newItem: HomeworkItem = {
+            id: `${charId}_hw_${ts}`,
+            title: hw.title,
+            reward: hw.reward,
+            period: hw.period,
+            totalCount: hw.totalCount,
+            completedCount: 0,
+            isFavorite: false,
+            scope: hw.scope,
+          };
+          const lastIndex = list.reduce((acc, item, i) => (item.period === hw.period ? i : acc), -1);
+          list.splice(lastIndex + 1, 0, newItem);
+          newHomework[charId] = list;
+        }
+        return { ...prev, homework: newHomework };
+      });
+    },
+    [persist, selectedCharId]
+  );
+
+  // ── 구매/물물교환 삭제 (전체 캐릭터 동기화) ──
+  const deleteShopItem = useCallback(
+    (itemId: string, type: "purchase" | "trade") => {
+      if (!selectedCharId) return;
+      const key = type === "purchase" ? "purchaseItems" : "tradeItems";
+      persist((prev) => {
+        const currentList = prev[key][selectedCharId] ?? [];
+        const idx = currentList.findIndex((item) => item.id === itemId);
+        if (idx === -1) return prev;
+
+        const newItems = { ...prev[key] };
+        for (const charId of Object.keys(newItems)) {
+          const list = newItems[charId] ?? [];
+          newItems[charId] = list.filter((_, i) => i !== idx);
+        }
+        return { ...prev, [key]: newItems };
+      });
+    },
+    [persist, selectedCharId]
+  );
+
+  // ── 구매/물물교환 추가 (전체 캐릭터 동기화) ──
   const addShopItem = useCallback(
     (type: "purchase" | "trade", item: { itemName: string; region: RegionName; npcName: string; scope: ScopeType }) => {
       if (!selectedCharId) return;
       const key = type === "purchase" ? "purchaseItems" : "tradeItems";
       const prefix = type === "purchase" ? "pur" : "trd";
       persist((prev) => {
-        const list = prev[key][selectedCharId] ?? [];
-        const newItem: ShopItem = {
-          id: `${selectedCharId}_${prefix}_${Date.now()}`,
-          itemName: item.itemName,
-          region: item.region,
-          npcName: item.npcName,
-          completed: false,
-          isFavorite: false,
-          scope: item.scope,
-        };
-        return { ...prev, [key]: { ...prev[key], [selectedCharId]: [...list, newItem] } };
+        const newItems = { ...prev[key] };
+        const ts = Date.now();
+        for (const charId of Object.keys(newItems)) {
+          const list = newItems[charId] ?? [];
+          const newItem: ShopItem = {
+            id: `${charId}_${prefix}_${ts}`,
+            itemName: item.itemName,
+            region: item.region,
+            npcName: item.npcName,
+            completed: false,
+            isFavorite: false,
+            scope: item.scope,
+          };
+          newItems[charId] = [...list, newItem];
+        }
+        return { ...prev, [key]: newItems };
       });
     },
     [persist, selectedCharId]
   );
 
-  // ── 숙제 순서 변경 ──
+  // ── 숙제 순서 변경 (전체 캐릭터 동기화) ──
   const reorderHomework = useCallback(
     (oldIndex: number, newIndex: number) => {
       if (!selectedCharId) return;
       persist((prev) => {
-        const list = [...(prev.homework[selectedCharId] ?? [])];
-        const [moved] = list.splice(oldIndex, 1);
-        list.splice(newIndex, 0, moved);
-        return { ...prev, homework: { ...prev.homework, [selectedCharId]: list } };
+        const newHomework = { ...prev.homework };
+        for (const charId of Object.keys(newHomework)) {
+          const list = [...(newHomework[charId] ?? [])];
+          if (oldIndex < list.length && newIndex < list.length) {
+            const [moved] = list.splice(oldIndex, 1);
+            list.splice(newIndex, 0, moved);
+            newHomework[charId] = list;
+          }
+        }
+        return { ...prev, homework: newHomework };
       });
     },
     [persist, selectedCharId]
   );
 
-  // ── 구매/물물교환 순서 변경 ──
+  // ── 구매/물물교환 순서 변경 (전체 캐릭터 동기화) ──
   const reorderShopItem = useCallback(
     (type: "purchase" | "trade", oldIndex: number, newIndex: number) => {
       if (!selectedCharId) return;
       const key = type === "purchase" ? "purchaseItems" : "tradeItems";
       persist((prev) => {
-        const list = [...(prev[key][selectedCharId] ?? [])];
-        const [moved] = list.splice(oldIndex, 1);
-        list.splice(newIndex, 0, moved);
-        return { ...prev, [key]: { ...prev[key], [selectedCharId]: list } };
+        const newItems = { ...prev[key] };
+        for (const charId of Object.keys(newItems)) {
+          const list = [...(newItems[charId] ?? [])];
+          if (oldIndex < list.length && newIndex < list.length) {
+            const [moved] = list.splice(oldIndex, 1);
+            list.splice(newIndex, 0, moved);
+            newItems[charId] = list;
+          }
+        }
+        return { ...prev, [key]: newItems };
       });
     },
     [persist, selectedCharId]
@@ -440,21 +487,25 @@ export function useAppState(uid?: string | null) {
     (item: { title: string; scrollType: ScrollType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => {
       if (!selectedCharId) return;
       persist((prev) => {
-        const scrollItems = prev.scrollItems ?? {};
-        const list = scrollItems[selectedCharId] ?? [];
-        const newItem: ScrollItem = {
-          id: `${selectedCharId}_scroll_${Date.now()}`,
-          title: item.title,
-          scrollType: item.scrollType,
-          totalCount: item.totalCount,
-          completedCount: 0,
-          isFavorite: false,
-          scope: "character",
-          region: item.region,
-          materials: item.materials,
-          reward: item.reward,
-        };
-        return { ...prev, scrollItems: { ...scrollItems, [selectedCharId]: [...list, newItem] } };
+        const scrollItems = { ...(prev.scrollItems ?? {}) };
+        const ts = Date.now();
+        for (const charId of Object.keys(scrollItems)) {
+          const list = scrollItems[charId] ?? [];
+          const newItem: ScrollItem = {
+            id: `${charId}_scroll_${ts}`,
+            title: item.title,
+            scrollType: item.scrollType,
+            totalCount: item.totalCount,
+            completedCount: 0,
+            isFavorite: false,
+            scope: "character",
+            region: item.region,
+            materials: item.materials,
+            reward: item.reward,
+          };
+          scrollItems[charId] = [...list, newItem];
+        }
+        return { ...prev, scrollItems };
       });
     },
     [persist, selectedCharId]
@@ -485,16 +536,18 @@ export function useAppState(uid?: string | null) {
     (itemId: string) => {
       if (!selectedCharId) return;
       persist((prev) => {
-        const scrollItems = prev.scrollItems ?? {};
-        return {
-          ...prev,
-          scrollItems: {
-            ...scrollItems,
-            [selectedCharId]: (scrollItems[selectedCharId] ?? []).map((s) =>
-              s.id === itemId ? { ...s, isFavorite: !s.isFavorite } : s
-            ),
-          },
-        };
+        const scrollItems = { ...(prev.scrollItems ?? {}) };
+        const currentList = scrollItems[selectedCharId] ?? [];
+        const idx = currentList.findIndex((s) => s.id === itemId);
+        if (idx === -1) return prev;
+        const newFav = !currentList[idx].isFavorite;
+
+        for (const charId of Object.keys(scrollItems)) {
+          scrollItems[charId] = (scrollItems[charId] ?? []).map((s, i) =>
+            i === idx ? { ...s, isFavorite: newFav } : s
+          );
+        }
+        return { ...prev, scrollItems };
       });
     },
     [persist, selectedCharId]
@@ -504,21 +557,22 @@ export function useAppState(uid?: string | null) {
     (itemId: string, updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "totalCount" | "materials" | "reward" | "region" | "tags">>) => {
       if (!selectedCharId) return;
       persist((prev) => {
-        const scrollItems = prev.scrollItems ?? {};
-        return {
-          ...prev,
-          scrollItems: {
-            ...scrollItems,
-            [selectedCharId]: (scrollItems[selectedCharId] ?? []).map((s) => {
-              if (s.id !== itemId) return s;
-              const updated = { ...s, ...updates };
-              if (updates.totalCount !== undefined && updated.completedCount > updates.totalCount) {
-                updated.completedCount = updates.totalCount;
-              }
-              return updated;
-            }),
-          },
-        };
+        const scrollItems = { ...(prev.scrollItems ?? {}) };
+        const currentList = scrollItems[selectedCharId] ?? [];
+        const idx = currentList.findIndex((s) => s.id === itemId);
+        if (idx === -1) return prev;
+
+        for (const charId of Object.keys(scrollItems)) {
+          scrollItems[charId] = (scrollItems[charId] ?? []).map((s, i) => {
+            if (i !== idx) return s;
+            const updated = { ...s, ...updates };
+            if (updates.totalCount !== undefined && updated.completedCount > updates.totalCount) {
+              updated.completedCount = updates.totalCount;
+            }
+            return updated;
+          });
+        }
+        return { ...prev, scrollItems };
       });
     },
     [persist, selectedCharId]
@@ -528,14 +582,16 @@ export function useAppState(uid?: string | null) {
     (itemId: string) => {
       if (!selectedCharId) return;
       persist((prev) => {
-        const scrollItems = prev.scrollItems ?? {};
-        return {
-          ...prev,
-          scrollItems: {
-            ...scrollItems,
-            [selectedCharId]: (scrollItems[selectedCharId] ?? []).filter((s) => s.id !== itemId),
-          },
-        };
+        const scrollItems = { ...(prev.scrollItems ?? {}) };
+        const currentList = scrollItems[selectedCharId] ?? [];
+        const idx = currentList.findIndex((s) => s.id === itemId);
+        if (idx === -1) return prev;
+
+        for (const charId of Object.keys(scrollItems)) {
+          const list = scrollItems[charId] ?? [];
+          scrollItems[charId] = list.filter((_, i) => i !== idx);
+        }
+        return { ...prev, scrollItems };
       });
     },
     [persist, selectedCharId]
@@ -545,11 +601,16 @@ export function useAppState(uid?: string | null) {
     (oldIndex: number, newIndex: number) => {
       if (!selectedCharId) return;
       persist((prev) => {
-        const scrollItems = prev.scrollItems ?? {};
-        const list = [...(scrollItems[selectedCharId] ?? [])];
-        const [moved] = list.splice(oldIndex, 1);
-        list.splice(newIndex, 0, moved);
-        return { ...prev, scrollItems: { ...scrollItems, [selectedCharId]: list } };
+        const scrollItems = { ...(prev.scrollItems ?? {}) };
+        for (const charId of Object.keys(scrollItems)) {
+          const list = [...(scrollItems[charId] ?? [])];
+          if (oldIndex < list.length && newIndex < list.length) {
+            const [moved] = list.splice(oldIndex, 1);
+            list.splice(newIndex, 0, moved);
+            scrollItems[charId] = list;
+          }
+        }
+        return { ...prev, scrollItems };
       });
     },
     [persist, selectedCharId]
