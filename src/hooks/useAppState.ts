@@ -377,12 +377,22 @@ export function useAppState(uid?: string | null) {
         const idx = currentList.findIndex((hw) => hw.id === hwId);
         if (idx === -1) return prev;
 
+        // 삭제 전 모든 캐릭터의 상태 저장
+        const savedStates = { ...(prev.savedItemStates ?? {}) };
+        for (const charId of Object.keys(prev.homework)) {
+          const item = (prev.homework[charId] ?? [])[idx];
+          if (!item) continue;
+          const cs = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
+          cs.homework = { ...cs.homework, [item.title]: { completedCount: item.completedCount, isFavorite: item.isFavorite } };
+          savedStates[charId] = cs;
+        }
+
         const newHomework = { ...prev.homework };
         for (const charId of Object.keys(newHomework)) {
           const list = newHomework[charId] ?? [];
           newHomework[charId] = list.filter((_, i) => i !== idx);
         }
-        return { ...prev, homework: newHomework };
+        return { ...prev, homework: newHomework, savedItemStates: savedStates };
       });
     },
     [persist, selectedCharId]
@@ -422,17 +432,28 @@ export function useAppState(uid?: string | null) {
     (itemId: string, type: "purchase" | "trade") => {
       if (!selectedCharId) return;
       const key = type === "purchase" ? "purchaseItems" : "tradeItems";
+      const stateKey = type === "purchase" ? "purchase" : "trade";
       persist((prev) => {
         const currentList = prev[key][selectedCharId] ?? [];
         const idx = currentList.findIndex((item) => item.id === itemId);
         if (idx === -1) return prev;
+
+        // 삭제 전 모든 캐릭터의 상태 저장
+        const savedStates = { ...(prev.savedItemStates ?? {}) };
+        for (const charId of Object.keys(prev[key])) {
+          const item = (prev[key][charId] ?? [])[idx];
+          if (!item) continue;
+          const cs = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
+          cs[stateKey] = { ...cs[stateKey], [item.itemName]: { completed: item.completed, isFavorite: item.isFavorite } };
+          savedStates[charId] = cs;
+        }
 
         const newItems = { ...prev[key] };
         for (const charId of Object.keys(newItems)) {
           const list = newItems[charId] ?? [];
           newItems[charId] = list.filter((_, i) => i !== idx);
         }
-        return { ...prev, [key]: newItems };
+        return { ...prev, [key]: newItems, savedItemStates: savedStates };
       });
     },
     [persist, selectedCharId]
@@ -675,13 +696,19 @@ export function useAppState(uid?: string | null) {
   // ── 숙제 초기화 (기본 세팅으로) ──
   const resetHomework = useCallback(() => {
     if (!selectedCharId) return;
-    persist((prev) => ({
-      ...prev,
-      homework: { ...prev.homework, [selectedCharId]: createHomeworkForChar(selectedCharId) },
-      purchaseItems: { ...prev.purchaseItems, [selectedCharId]: createPurchaseForChar(selectedCharId) },
-      tradeItems: { ...prev.tradeItems, [selectedCharId]: createTradeForChar(selectedCharId) },
-      scrollItems: { ...(prev.scrollItems ?? {}), [selectedCharId]: createScrollForChar(selectedCharId) },
-    }));
+    persist((prev) => {
+      // savedItemStates에서 해당 캐릭터 상태 초기화
+      const savedStates = { ...(prev.savedItemStates ?? {}) };
+      delete savedStates[selectedCharId];
+      return {
+        ...prev,
+        homework: { ...prev.homework, [selectedCharId]: createHomeworkForChar(selectedCharId) },
+        purchaseItems: { ...prev.purchaseItems, [selectedCharId]: createPurchaseForChar(selectedCharId) },
+        tradeItems: { ...prev.tradeItems, [selectedCharId]: createTradeForChar(selectedCharId) },
+        scrollItems: { ...(prev.scrollItems ?? {}), [selectedCharId]: createScrollForChar(selectedCharId) },
+        savedItemStates: savedStates,
+      };
+    });
   }, [persist, selectedCharId]);
 
   // 기본 프리셋
