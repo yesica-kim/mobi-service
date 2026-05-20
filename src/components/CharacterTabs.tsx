@@ -70,8 +70,8 @@ function SortableCharTab({
         </svg>
       </div>
       <button
-        onClick={() => { if (active) { onEdit(); } else { onSelect(); } }}
-        className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all min-w-[80px] ${
+        onClick={onSelect}
+        className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all min-w-[80px] relative ${
           active
             ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
             : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300"
@@ -79,6 +79,17 @@ function SortableCharTab({
       >
         <div className="text-[11px] opacity-70">{char.subClass}</div>
         <div className="font-bold">{char.name}</div>
+        {active && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center hover:bg-slate-600 transition-colors"
+            title="캐릭터 수정"
+          >
+            <svg className="w-2.5 h-2.5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+        )}
       </button>
     </div>
   );

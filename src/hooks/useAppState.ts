@@ -58,9 +58,18 @@ export function useAppState(uid?: string | null) {
       if (cancelled) return;
       setData(loaded);
       if (loaded.characters.length > 0) {
-        const first = loaded.characters[0];
-        setSelectedServer(first.server);
-        setSelectedCharId(first.id);
+        // SERVERS 순서 기준으로 첫 서버의 첫 캐릭터 선택
+        const charServers = new Set(loaded.characters.map((c) => c.server));
+        const firstServer = SERVERS.find((s) => charServers.has(s));
+        if (firstServer) {
+          const firstChar = loaded.characters.find((c) => c.server === firstServer);
+          setSelectedServer(firstServer);
+          setSelectedCharId(firstChar?.id ?? loaded.characters[0].id);
+        } else {
+          const first = loaded.characters[0];
+          setSelectedServer(first.server);
+          setSelectedCharId(first.id);
+        }
       }
     }
     init();
