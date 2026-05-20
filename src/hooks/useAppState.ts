@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyResets, createHomeworkForChar, createPurchaseForChar, createTradeForChar, createScrollForChar, getNextDailyResetMs, getNextWeeklyResetMs, loadData, saveData } from "@/lib/storage";
 import { loadUserData, saveUserData } from "@/lib/firestore";
-import type { AppData, Character, HomeworkItem, HomeworkPreset, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType } from "@/types";
+import type { AppData, Character, HomeworkItem, HomeworkPreset, MembershipInfo, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType } from "@/types";
 import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, MAX_CHARS_PER_SERVER, SERVERS, parseTotalCount, toScope } from "@/types";
 
 export function useAppState(uid?: string | null) {
@@ -973,6 +973,30 @@ export function useAppState(uid?: string | null) {
     [serverCharCount]
   );
 
+  // ── 멤버십 ──
+  const updateMembership = useCallback(
+    (server: ServerName, info: MembershipInfo | null) => {
+      persist((prev) => {
+        const membership = { ...(prev.membership ?? {}) } as Record<ServerName, MembershipInfo>;
+        if (info) {
+          membership[server] = info;
+        } else {
+          delete membership[server];
+        }
+        return { ...prev, membership };
+      });
+    },
+    [persist]
+  );
+
+  // ── 메모 ──
+  const saveMemo = useCallback(
+    (memo: string) => {
+      persist((prev) => ({ ...prev, memo }));
+    },
+    [persist]
+  );
+
   return {
     isLoaded: data !== null,
     activeServers,
@@ -1034,5 +1058,11 @@ export function useAppState(uid?: string | null) {
     reorderScrollItem,
     exportCurrentPreset,
     importPreset,
+    // 멤버십
+    membership: data?.membership,
+    updateMembership,
+    // 메모
+    memo: data?.memo ?? "",
+    saveMemo,
   };
 }

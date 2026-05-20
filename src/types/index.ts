@@ -119,16 +119,15 @@ export const DEFAULT_PURCHASE_ITEMS: { itemName: string; region: RegionName; npc
   { itemName: "보석 보물 상자 구매 10개(서버)", region: "캐시샵", npcName: "골드", period: "daily", scope: "on" },
   { itemName: "매일 무료 상품 구매 1개(서버)", region: "캐시샵", npcName: "추천픽", period: "daily", scope: "on" },
   { itemName: "성수 5개(서버)", region: "던바튼", npcName: "크리스텔(봉헌소)", period: "weekly", scope: "on" },
-  { itemName: "에반 마물 퇴치 증표, 글라스기브넨", region: "던바튼", npcName: "에반(모험가 길드)", period: "weekly", scope: "on" },
 ];
 
 export const DEFAULT_TRADE_ITEMS: { itemName: string; region: RegionName; npcName: string; period: PeriodType; scope?: string }[] = [
-  { itemName: "우유10 -> 케이틴 특제 통밀빵3", region: "티르코네일", npcName: "케이틴(식료품점)", period: "weekly", scope: "off" },
-  { itemName: "케이틴 특제 통밀빵10 -> 성수10(서버)", region: "티르코네일", npcName: "엔델리온(봉헌소)", period: "weekly", scope: "off" },
-  { itemName: "호박 수프4 -> 최상급 가죽+2", region: "이멘마하", npcName: "델렌(잡화점)", period: "weekly", scope: "off" },
-  { itemName: "호박 수프4 -> 최상급 목재+2", region: "이멘마하", npcName: "델렌(잡화점)", period: "weekly", scope: "off" },
-  { itemName: "카레라이스4 -> 운철괴2", region: "이멘마하", npcName: "오슬라(무기점)", period: "weekly", scope: "off" },
-  { itemName: "농어 매운탕1 -> 은합금괴10", region: "반호르", npcName: "아이데른(대장간)", period: "weekly", scope: "off" },
+  { itemName: "우유(10) -> 케이틴 특제 통밀빵(3)", region: "티르코네일", npcName: "케이틴(식료품점)", period: "weekly", scope: "off" },
+  { itemName: "케이틴 특제 통밀빵(10) -> 성수(10)", region: "티르코네일", npcName: "엔델리온(봉헌소)", period: "weekly", scope: "off" },
+  { itemName: "호박 수프(4) -> 최상급 가죽+(2)", region: "이멘마하", npcName: "델렌(잡화점)", period: "weekly", scope: "off" },
+  { itemName: "호박 수프(4) -> 최상급 목재+(2)", region: "이멘마하", npcName: "델렌(잡화점)", period: "weekly", scope: "off" },
+  { itemName: "카레라이스(4) -> 운철괴(2)", region: "이멘마하", npcName: "오슬라(무기점)", period: "weekly", scope: "off" },
+  { itemName: "농어 매운탕(1) -> 은합금괴(10)", region: "반호르", npcName: "아이데른(대장간)", period: "weekly", scope: "off" },
 ];
 
 // ── 기본 임무게시판 스크롤 템플릿 ──
@@ -203,6 +202,65 @@ export interface HomeworkPreset {
   tradeItems: Omit<ShopItem, "id" | "completed" | "isFavorite">[];
 }
 
+// ── 멤버십 ──
+export interface MembershipInfo {
+  /** 만료 날짜 (ISO string, 날짜만: "2025-06-15") */
+  expiresAt: string;
+}
+
+// ── 업데이트 노트 ──
+export interface UpdateNote {
+  version: string;
+  date: string;
+  changes: string[];
+}
+
+export const UPDATE_NOTES: UpdateNote[] = [
+  {
+    version: "1.2.0",
+    date: "2026-05-20",
+    changes: [
+      "메모장 기능 추가 (서버 공통)",
+      "멤버십 알리미 기능 추가 (서버별 D-day)",
+      "업데이트 노트 기능 추가",
+    ],
+  },
+  {
+    version: "1.1.2",
+    date: "2026-05-20",
+    changes: [
+      "기본 제공 카드 수정/삭제 차단 (isDefault 플래그)",
+    ],
+  },
+  {
+    version: "1.1.1",
+    date: "2026-05-20",
+    changes: [
+      "앱을 열어둔 상태에서 오전 6시 일간 리셋이 안 되던 버그 수정",
+    ],
+  },
+  {
+    version: "1.1.0",
+    date: "2026-05-20",
+    changes: [
+      "카드 검색 기능 추가",
+      "필터 기능 추가 (주기/범위/지역 다중 선택)",
+      "앱 버전 자동 반영",
+    ],
+  },
+  {
+    version: "1.0.0",
+    date: "2026-05-19",
+    changes: [
+      "최초 출시",
+      "서버별 캐릭터 관리",
+      "일일/주간 숙제, 구매, 물물교환, 임무게시판",
+      "숙제 프리셋 저장/불러오기",
+      "Google 로그인 및 데이터 동기화",
+    ],
+  },
+];
+
 // ── 저장 데이터 형태 ──
 export interface AppData {
   characters: Character[];
@@ -215,4 +273,8 @@ export interface AppData {
   lastDailyReset: string;
   lastWeeklyReset: string;
   presets?: HomeworkPreset[];
+  /** 서버별 멤버십 정보 */
+  membership?: Record<ServerName, MembershipInfo>;
+  /** 메모장 (서버 공통) */
+  memo?: string;
 }

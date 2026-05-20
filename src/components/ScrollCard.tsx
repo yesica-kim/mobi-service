@@ -209,7 +209,7 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
                 >-</button>
                 <span className="text-white text-sm font-semibold w-6 text-center">{editTotalCount}</span>
                 <button
-                  onClick={() => setEditTotalCount(Math.min(10, editTotalCount + 1))}
+                  onClick={() => setEditTotalCount(Math.min(20, editTotalCount + 1))}
                   className="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-lg font-bold"
                 >+</button>
               </div>

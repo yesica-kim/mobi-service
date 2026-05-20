@@ -175,7 +175,7 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
                 <div className="flex items-center gap-1.5">
                   <button onClick={() => setTotalCount(Math.max(1, totalCount - 1))} className="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center text-lg font-bold">-</button>
                   <span className="text-white text-sm font-semibold w-6 text-center">{totalCount}</span>
-                  <button onClick={() => setTotalCount(Math.min(10, totalCount + 1))} className="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center text-lg font-bold">+</button>
+                  <button onClick={() => setTotalCount(Math.min(20, totalCount + 1))} className="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center text-lg font-bold">+</button>
                 </div>
               </div>
             </div>
@@ -321,7 +321,7 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
                 <div className="flex items-center gap-1.5">
                   <button onClick={() => setScrollTotalCount(Math.max(1, scrollTotalCount - 1))} className="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center text-lg font-bold">-</button>
                   <span className="text-white text-sm font-semibold w-6 text-center">{scrollTotalCount}</span>
-                  <button onClick={() => setScrollTotalCount(Math.min(10, scrollTotalCount + 1))} className="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center text-lg font-bold">+</button>
+                  <button onClick={() => setScrollTotalCount(Math.min(20, scrollTotalCount + 1))} className="w-7 h-7 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center text-lg font-bold">+</button>
                 </div>
               </div>
               {/* 재료 (토벌은 숨김) */}

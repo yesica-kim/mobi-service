@@ -14,6 +14,9 @@ import { ShopCard } from "@/components/ShopCard";
 import { ScrollCard } from "@/components/ScrollCard";
 import { AddCardModal } from "@/components/AddCardModal";
 import { SearchFilterBar } from "@/components/SearchFilterBar";
+import { MembershipBanner } from "@/components/MembershipBanner";
+import { MemoSection } from "@/components/MemoSection";
+import { UpdateNotesModal } from "@/components/UpdateNotesModal";
 import { ProfileModal } from "@/components/ProfileModal";
 import { SortableList } from "@/components/SortableList";
 import { useAppState } from "@/hooks/useAppState";
@@ -63,6 +66,7 @@ export default function Home() {
   const [editingChar, setEditingChar] = useState<Character | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showUpdateNotes, setShowUpdateNotes] = useState(false);
   const state = useAppState(user?.uid);
 
   // 인증 로딩
@@ -142,6 +146,12 @@ export default function Home() {
             onClick={() => window.location.reload()}
           >mobimobi</h1>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowUpdateNotes(true)}
+              className="px-2 py-1 rounded-lg text-[15px] font-bold text-white hover:text-slate-300 hover:bg-slate-800 transition-colors"
+            >
+              업데이트 노트
+            </button>
             {isGuest ? (
               <>
                 {/* 계정 데이터 내보내기 */}
@@ -245,6 +255,13 @@ export default function Home() {
           onEdit={(c) => setEditingChar(c)}
           onReorder={state.reorderCharacters}
         />
+
+        <MembershipBanner
+          server={state.selectedServer}
+          membership={state.membership}
+          onUpdate={state.updateMembership}
+        />
+        <MemoSection memo={state.memo} onSave={state.saveMemo} />
 
         {state.selectedChar ? (
           <>
@@ -550,6 +567,7 @@ export default function Home() {
           window.location.reload();
         }}
       />
+      <UpdateNotesModal open={showUpdateNotes} onClose={() => setShowUpdateNotes(false)} />
     </div>
   );
 }
