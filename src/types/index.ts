@@ -107,7 +107,7 @@ export const DEFAULT_HOMEWORK: { title: string; reward: string; period: PeriodTy
   { title: "에이렐 어려움", reward: "인챈트 스크롤, 아티팩트, 초월의 정수 조각 30개, 10만 골드", period: "weekly", scope: "off" },
   { title: "화이트 서큐버스 매우어려움", reward: "초월의 정수 조각 50개, 10만 골드, 미스틱 던전 열쇠 2개, 빛의 흔적 100개, 인챈트 스크롤", period: "weekly", scope: "off" },
   { title: "글라스기브넨 매우어려움", reward: "원정의 증거 30개, 30만 골드, 인챈트 스크롤", period: "weekly", scope: "off" },
-  { title: "주간 어비스 3회", reward: "심연의 마석 15개", period: "weekly", scope: "off" },
+  { title: "주간 어비스", reward: "심연의 마석 15개", period: "weekly", scope: "off" },
   { title: "주간 레이드", reward: "원정의 증거2개", period: "weekly", scope: "off" },
   { title: "불길한 소환의 결계 7회", reward: "미스틱 다이스 열쇠 상자", period: "weekly", scope: "off" },
   { title: "검은 구멍 14회", reward: "-", period: "weekly", scope: "off" },

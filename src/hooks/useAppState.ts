@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyResets, createHomeworkForChar, createPurchaseForChar, createTradeForChar, createScrollForChar, getNextDailyResetMs, getNextWeeklyResetMs, loadData, saveData } from "@/lib/storage";
 import { loadUserData, saveUserData } from "@/lib/firestore";
-import type { AppData, Character, HomeworkItem, HomeworkPreset, MembershipInfo, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType } from "@/types";
+import type { AppData, Character, HomeworkItem, HomeworkPreset, MembershipInfo, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType} from "@/types";
 import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, MAX_CHARS_PER_SERVER, SERVERS, parseTotalCount, toScope } from "@/types";
 
 export function useAppState(uid?: string | null) {
@@ -16,6 +16,7 @@ export function useAppState(uid?: string | null) {
   const [regionFilter, setRegionFilter] = useState<RegionName[]>([]);
   const [periodFilter, setPeriodFilter] = useState<PeriodType | "all">("all");
   const [scopeFilter, setScopeFilter] = useState<ScopeType | "all">("all");
+  const [scrollTypeFilter, setScrollTypeFilter] = useState<ScrollType | "all">("all");
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 초기 로드: Firestore 우선, 없으면 localStorage
@@ -531,13 +532,14 @@ export function useAppState(uid?: string | null) {
     if (favoriteOnly) items = items.filter((item) => item.isFavorite);
     if (periodFilter !== "all") items = items.filter((item) => (item.period ?? "weekly") === periodFilter);
     if (scopeFilter !== "all") items = items.filter((item) => (item.scope || "character") === scopeFilter);
+    if (scrollTypeFilter !== "all") items = items.filter((item) => item.scrollType === scrollTypeFilter);
     if (regionFilter.length > 0) items = items.filter((item) => regionFilter.includes(item.region));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       items = items.filter((item) => item.title.toLowerCase().includes(q) || item.reward.toLowerCase().includes(q));
     }
     return items;
-  }, [allScrollItems, favoriteOnly, periodFilter, scopeFilter, regionFilter, searchQuery]);
+  }, [allScrollItems, favoriteOnly, periodFilter, scopeFilter, scrollTypeFilter, regionFilter, searchQuery]);
 
   const addScrollItem = useCallback(
     (item: { title: string; scrollType: ScrollType; period: PeriodType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => {
@@ -1037,6 +1039,8 @@ export function useAppState(uid?: string | null) {
     setPeriodFilter,
     scopeFilter,
     setScopeFilter,
+    scrollTypeFilter,
+    setScrollTypeFilter,
     progress,
     allPurchaseItems,
     allTradeItems,

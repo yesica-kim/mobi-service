@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Search, X, SlidersHorizontal } from "lucide-react";
-import type { RegionName, PeriodType, ScopeType } from "@/types";
-import { REGIONS } from "@/types";
+import type { RegionName, PeriodType, ScopeType, ScrollType } from "@/types";
+import { REGIONS, SCROLL_TYPES } from "@/types";
 
 const REGION_COLORS: Record<string, { bg: string; text: string; activeBg: string }> = {
   "콜헨": { bg: "bg-red-600/10", text: "text-red-400", activeBg: "bg-red-600" },
@@ -25,6 +25,8 @@ interface Props {
   onPeriodChange: (p: PeriodType | "all") => void;
   scopeFilter: ScopeType | "all";
   onScopeChange: (s: ScopeType | "all") => void;
+  scrollTypeFilter?: ScrollType | "all";
+  onScrollTypeChange?: (t: ScrollType | "all") => void;
 }
 
 export function SearchFilterBar({
@@ -32,11 +34,13 @@ export function SearchFilterBar({
   regionFilter, onRegionChange,
   periodFilter, onPeriodChange,
   scopeFilter, onScopeChange,
+  scrollTypeFilter, onScrollTypeChange,
 }: Props) {
   const [showFilters, setShowFilters] = useState(false);
   const hasRegionFilter = regionFilter.length > 0;
-  const hasActiveFilter = hasRegionFilter || periodFilter !== "all" || scopeFilter !== "all";
-  const activeFilterCount = [hasRegionFilter, periodFilter !== "all", scopeFilter !== "all"].filter(Boolean).length;
+  const hasScrollTypeFilter = scrollTypeFilter !== undefined && scrollTypeFilter !== "all";
+  const hasActiveFilter = hasRegionFilter || periodFilter !== "all" || scopeFilter !== "all" || hasScrollTypeFilter;
+  const activeFilterCount = [hasRegionFilter, periodFilter !== "all", scopeFilter !== "all", hasScrollTypeFilter].filter(Boolean).length;
 
   const toggleRegion = (r: RegionName) => {
     if (regionFilter.includes(r)) {
@@ -50,6 +54,7 @@ export function SearchFilterBar({
     onRegionChange([]);
     onPeriodChange("all");
     onScopeChange("all");
+    onScrollTypeChange?.("all");
   };
 
   return (
@@ -184,6 +189,46 @@ export function SearchFilterBar({
             </div>
           </div>
 
+          {/* 스크롤 타입 필터 */}
+          {onScrollTypeChange && (
+            <div>
+              <span className="text-[11px] text-slate-500 mb-1.5 block">스크롤 타입</span>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => onScrollTypeChange("all")}
+                  className={`text-[11px] px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+                    scrollTypeFilter === "all"
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+                  }`}
+                >
+                  전체
+                </button>
+                {SCROLL_TYPES.map((t) => {
+                  const colors: Record<string, { bg: string; text: string; active: string }> = {
+                    "제작": { bg: "bg-amber-600/10", text: "text-amber-400", active: "bg-amber-600" },
+                    "채집": { bg: "bg-emerald-600/10", text: "text-emerald-400", active: "bg-emerald-600" },
+                    "요리": { bg: "bg-rose-600/10", text: "text-rose-400", active: "bg-rose-600" },
+                    "토벌": { bg: "bg-red-600/10", text: "text-red-400", active: "bg-red-600" },
+                  };
+                  const c = colors[t];
+                  const isActive = scrollTypeFilter === t;
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => onScrollTypeChange(isActive ? "all" : t)}
+                      className={`text-[11px] px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+                        isActive ? `${c.active} text-white` : `${c.bg} ${c.text} hover:opacity-80`
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* 지역 필터 (다중 선택) */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -247,6 +292,14 @@ export function SearchFilterBar({
             }`}>
               {scopeFilter === "character" ? "캐릭터" : "서버"}
               <button onClick={() => onScopeChange("all")} className="hover:opacity-70">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {hasScrollTypeFilter && (
+            <span className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-amber-600/20 text-amber-400">
+              {scrollTypeFilter}
+              <button onClick={() => onScrollTypeChange?.("all")} className="hover:opacity-70">
                 <X className="w-3 h-3" />
               </button>
             </span>

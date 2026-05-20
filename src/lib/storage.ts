@@ -17,6 +17,22 @@ function migrateShopItems(items: Record<string, any[]>) {
 }
 
 /** isDefault 마이그레이션: 기존 데이터에 isDefault 플래그가 없으면 ID 패턴으로 판별 */
+// 기존 데이터 타이틀/카운트 마이그레이션
+function migrateRenames(data: AppData) {
+  const renames: Record<string, { newTitle: string; totalCount?: number }> = {
+    "주간 어비스 3회": { newTitle: "주간 어비스", totalCount: 1 },
+  };
+  for (const charId of Object.keys(data.homework ?? {})) {
+    data.homework[charId] = data.homework[charId].map((item) => {
+      const rename = renames[item.title];
+      if (rename) {
+        return { ...item, title: rename.newTitle, ...(rename.totalCount !== undefined ? { totalCount: rename.totalCount, completedCount: Math.min(item.completedCount, rename.totalCount) } : {}) };
+      }
+      return item;
+    });
+  }
+}
+
 function migrateIsDefault(data: AppData) {
   // ID가 인덱스 기반(_hw_0, _pur_2 등)이면 기본 카드, 타임스탬프 기반이면 유저 추가 카드
   const isDefaultId = (id: string, prefix: string) => {
@@ -137,7 +153,8 @@ export function loadData(): AppData {
     // 마이그레이션: server -> region 필드 변환
     migrateShopItems(parsed.purchaseItems);
     migrateShopItems(parsed.tradeItems);
-    // 마이그레이션: isDefault 플래그 추가
+    // 마이그레이션
+    migrateRenames(parsed);
     migrateIsDefault(parsed);
     return parsed;
   } catch {
@@ -208,6 +225,7 @@ export function getNextWeeklyResetMs(): number {
 
 export function applyResets(data: AppData): AppData {
   // Firestore 로드 시에도 마이그레이션 적용
+  migrateRenames(data);
   migrateIsDefault(data);
 
   const dailyReset = getTodayResetUTC();

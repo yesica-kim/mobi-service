@@ -48,10 +48,11 @@ function filteredTrade(state: FilterState & { allTradeItems: any[] }) {
   }
   return items;
 }
-function filteredScroll(state: FilterState & { allScrollItems: any[] }) {
+function filteredScroll(state: FilterState & { allScrollItems: any[]; scrollTypeFilter: string }) {
   let items = state.favoriteOnly ? state.allScrollItems.filter((i: any) => i.isFavorite) : state.allScrollItems;
   if (state.periodFilter !== "all") items = items.filter((i: any) => (i.period ?? "weekly") === state.periodFilter);
   if (state.scopeFilter !== "all") items = items.filter((i: any) => (i.scope || "character") === state.scopeFilter);
+  if (state.scrollTypeFilter !== "all") items = items.filter((i: any) => i.scrollType === state.scrollTypeFilter);
   if (state.regionFilter.length > 0) items = items.filter((i: any) => state.regionFilter.includes(i.region));
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
@@ -295,6 +296,8 @@ export default function Home() {
               onPeriodChange={state.setPeriodFilter}
               scopeFilter={state.scopeFilter}
               onScopeChange={state.setScopeFilter}
+              scrollTypeFilter={state.scrollTypeFilter}
+              onScrollTypeChange={state.setScrollTypeFilter}
             />
 
             {/* 숙제 추가 버튼 */}
