@@ -747,37 +747,68 @@ export function useAppState(uid?: string | null) {
         preset = (data.presets ?? []).find((p) => p.id === presetId);
       }
       if (!preset) return;
-      persist((prev) => ({
-        ...prev,
-        homework: {
-          ...prev.homework,
-          [selectedCharId]: preset!.homework.map((hw, i) => ({
-            ...hw,
-            id: `${selectedCharId}_hw_${i}`,
-            completedCount: 0,
-            isFavorite: false,
-            totalCount: hw.totalCount || parseTotalCount(hw.title),
-          })),
-        },
-        purchaseItems: {
-          ...prev.purchaseItems,
-          [selectedCharId]: preset!.purchaseItems.map((item, i) => ({
-            ...item,
-            id: `${selectedCharId}_pur_${i}`,
-            completed: false,
-            isFavorite: false,
-          })),
-        },
-        tradeItems: {
-          ...prev.tradeItems,
-          [selectedCharId]: preset!.tradeItems.map((item, i) => ({
-            ...item,
-            id: `${selectedCharId}_trd_${i}`,
-            completed: false,
-            isFavorite: false,
-          })),
-        },
-      }));
+      persist((prev) => {
+        // 1. 현재 상태를 savedItemStates에 저장 (기존 저장분과 병합)
+        const prevHw = prev.homework[selectedCharId] ?? [];
+        const prevPur = prev.purchaseItems[selectedCharId] ?? [];
+        const prevTrd = prev.tradeItems[selectedCharId] ?? [];
+
+        const savedStates = { ...(prev.savedItemStates ?? {}) };
+        const charStates = savedStates[selectedCharId] ?? { homework: {}, purchase: {}, trade: {} };
+
+        // 기존 저장분과 현재 상태 병합 (현재가 우선)
+        const mergedHw = { ...charStates.homework };
+        for (const h of prevHw) { mergedHw[h.title] = { completedCount: h.completedCount, isFavorite: h.isFavorite }; }
+        const mergedPur = { ...charStates.purchase };
+        for (const p of prevPur) { mergedPur[p.itemName] = { completed: p.completed, isFavorite: p.isFavorite }; }
+        const mergedTrd = { ...charStates.trade };
+        for (const t of prevTrd) { mergedTrd[t.itemName] = { completed: t.completed, isFavorite: t.isFavorite }; }
+
+        savedStates[selectedCharId] = { homework: mergedHw, purchase: mergedPur, trade: mergedTrd };
+
+        // 2. 프리셋 아이템 생성 + 저장된 상태 복원
+        return {
+          ...prev,
+          savedItemStates: savedStates,
+          homework: {
+            ...prev.homework,
+            [selectedCharId]: preset!.homework.map((hw, i) => {
+              const saved = mergedHw[hw.title];
+              return {
+                ...hw,
+                id: `${selectedCharId}_hw_${i}`,
+                completedCount: saved?.completedCount ?? 0,
+                isFavorite: saved?.isFavorite ?? false,
+                totalCount: hw.totalCount || parseTotalCount(hw.title),
+              };
+            }),
+          },
+          purchaseItems: {
+            ...prev.purchaseItems,
+            [selectedCharId]: preset!.purchaseItems.map((item, i) => {
+              const saved = mergedPur[item.itemName];
+              return {
+                ...item,
+                id: `${selectedCharId}_pur_${i}`,
+                completed: saved?.completed ?? false,
+                isFavorite: saved?.isFavorite ?? false,
+              };
+            }),
+          },
+          tradeItems: {
+            ...prev.tradeItems,
+            [selectedCharId]: preset!.tradeItems.map((item, i) => {
+              const saved = mergedTrd[item.itemName];
+              return {
+                ...item,
+                id: `${selectedCharId}_trd_${i}`,
+                completed: saved?.completed ?? false,
+                isFavorite: saved?.isFavorite ?? false,
+              };
+            }),
+          },
+        };
+      });
     },
     [persist, selectedCharId, data, defaultPreset]
   );

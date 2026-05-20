@@ -64,6 +64,11 @@ export interface ShopItem {
   isFavorite: boolean;
   isDefault?: boolean;
   scope?: ScopeType;
+  // 물물교환 전용 스키마
+  fromItem?: string;
+  fromCount?: number;
+  toItem?: string;
+  toCount?: number;
 }
 
 // ── 임무게시판 스크롤 ──
@@ -192,6 +197,17 @@ export function parseTotalCount(title: string): number {
   return match ? parseInt(match[1], 10) : 1;
 }
 
+/** 물물교환 itemName에서 스키마 파싱: "우유(10) -> 케이틴 특제 통밀빵(3)" */
+export function parseTradeItemName(itemName: string): { fromItem: string; fromCount: number; toItem: string; toCount: number } | null {
+  // "아이템(숫자) -> 아이템(숫자)" 또는 "아이템숫자 -> 아이템숫자"
+  const match = itemName.match(/^(.+?)\((\d+)\)\s*->\s*(.+?)\((\d+)\)$/);
+  if (match) return { fromItem: match[1].trim(), fromCount: parseInt(match[2]), toItem: match[3].trim(), toCount: parseInt(match[4]) };
+  // 괄호 없는 옛날 포맷: "우유10 -> 통밀빵3"
+  const matchOld = itemName.match(/^(.+?)(\d+)\s*->\s*(.+?)(\d+)$/);
+  if (matchOld) return { fromItem: matchOld[1].trim(), fromCount: parseInt(matchOld[2]), toItem: matchOld[3].trim(), toCount: parseInt(matchOld[4]) };
+  return null;
+}
+
 // ── 숙제 프리셋 ──
 export interface HomeworkPreset {
   id: string;
@@ -277,4 +293,10 @@ export interface AppData {
   membership?: Record<ServerName, MembershipInfo>;
   /** 메모장 (서버 공통) */
   memo?: string;
+  /** 캐릭터별 즐겨찾기/체크 상태 영구 저장 (프리셋 전환 시 복원용) */
+  savedItemStates?: Record<string, {
+    homework: Record<string, { completedCount: number; isFavorite: boolean }>;
+    purchase: Record<string, { completed: boolean; isFavorite: boolean }>;
+    trade: Record<string, { completed: boolean; isFavorite: boolean }>;
+  }>;
 }

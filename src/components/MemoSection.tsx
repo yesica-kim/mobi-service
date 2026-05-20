@@ -213,25 +213,52 @@ export function MemoSection({ memo, onSave }: Props) {
         {isOpen && (
           <div className="px-3 pb-3 border-t border-slate-700/50">
             {/* 툴바 */}
-            <div className="flex items-center gap-1 py-2">
-              <button
-                onClick={() => insertPrefix("- [ ] ")}
-                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-600 transition-colors"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                체크박스
-              </button>
-              <button
-                onClick={() => insertPrefix("• ")}
-                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-600 transition-colors"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-                블릿
-              </button>
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => insertPrefix("- [ ] ")}
+                  className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-600 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  체크박스
+                </button>
+                <button
+                  onClick={() => insertPrefix("• ")}
+                  className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-600 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                  블릿
+                </button>
+              </div>
+              {parsedLines.some((p) => p.type === "checkbox" || p.type === "checkbox-checked") && (
+                <button
+                  onClick={() => {
+                    const allChecked = parsedLines
+                      .filter((p) => p.type === "checkbox" || p.type === "checkbox-checked")
+                      .every((p) => p.type === "checkbox-checked");
+                    const targetType: LineType = allChecked ? "checkbox" : "checkbox-checked";
+                    const newLines = lines.map((line, i) => {
+                      const p = parsedLines[i];
+                      if (p.type === "checkbox" || p.type === "checkbox-checked") {
+                        return lineToString(targetType, p.content);
+                      }
+                      return line;
+                    });
+                    setText(newLines.join("\n"));
+                  }}
+                  className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  {parsedLines
+                    .filter((p) => p.type === "checkbox" || p.type === "checkbox-checked")
+                    .every((p) => p.type === "checkbox-checked")
+                    ? "체크 해제"
+                    : "전체 체크"}
+                </button>
+              )}
             </div>
 
             {/* 줄별 에디터 */}

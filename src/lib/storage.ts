@@ -1,5 +1,5 @@
 import type { AppData, Character, HomeworkItem, ScrollItem, ShopItem } from "@/types";
-import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, DEFAULT_SCROLL_ITEMS, parseTotalCount, toScope } from "@/types";
+import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, DEFAULT_SCROLL_ITEMS, parseTotalCount, parseTradeItemName, toScope } from "@/types";
 
 const STORAGE_KEY = "mabimobi_data";
 
@@ -29,6 +29,34 @@ function migrateRenames(data: AppData) {
         return { ...item, title: rename.newTitle, ...(rename.totalCount !== undefined ? { totalCount: rename.totalCount, completedCount: Math.min(item.completedCount, rename.totalCount) } : {}) };
       }
       return item;
+    });
+  }
+
+  // 물물교환 아이템: itemName에서 스키마 파싱 + 옛날 포맷 → 괄호 포맷으로 변환
+  // 기존 저장 데이터의 itemName을 DEFAULT_TRADE_ITEMS 기준으로 업데이트
+  const tradeNameMap: Record<string, string> = {};
+  for (const item of DEFAULT_TRADE_ITEMS) {
+    // 괄호/공백 제거한 키로 매칭
+    const key = item.itemName.replace(/[() ]/g, "").toLowerCase();
+    tradeNameMap[key] = item.itemName;
+  }
+
+  for (const charId of Object.keys(data.tradeItems ?? {})) {
+    data.tradeItems[charId] = data.tradeItems[charId].map((item) => {
+      // 이미 스키마가 있으면 스킵
+      if (item.fromItem && item.toItem) return item;
+
+      // 옛날 포맷 → 현재 DEFAULT 이름으로 매칭
+      const normalKey = item.itemName.replace(/[() ]/g, "").toLowerCase();
+      const matchedName = tradeNameMap[normalKey];
+      const nameToUse = matchedName || item.itemName;
+
+      // 파싱
+      const parsed = parseTradeItemName(nameToUse);
+      if (parsed) {
+        return { ...item, itemName: nameToUse, ...parsed };
+      }
+      return { ...item, itemName: nameToUse };
     });
   }
 }
@@ -92,17 +120,21 @@ export function createPurchaseForChar(charId: string): ShopItem[] {
 }
 
 export function createTradeForChar(charId: string): ShopItem[] {
-  return DEFAULT_TRADE_ITEMS.map((item, i) => ({
-    id: `${charId}_trd_${i}`,
-    itemName: item.itemName,
-    region: item.region,
-    npcName: item.npcName,
-    period: item.period,
-    completed: false,
-    isFavorite: false,
-    isDefault: true,
-    scope: toScope(item.scope),
-  }));
+  return DEFAULT_TRADE_ITEMS.map((item, i) => {
+    const parsed = parseTradeItemName(item.itemName);
+    return {
+      id: `${charId}_trd_${i}`,
+      itemName: item.itemName,
+      region: item.region,
+      npcName: item.npcName,
+      period: item.period,
+      completed: false,
+      isFavorite: false,
+      isDefault: true,
+      scope: toScope(item.scope),
+      ...(parsed ?? {}),
+    };
+  });
 }
 
 export function createScrollForChar(charId: string): ScrollItem[] {

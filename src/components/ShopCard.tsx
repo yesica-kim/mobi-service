@@ -258,9 +258,19 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
                 {scope === "server" && (
                   <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-teal-600/20 text-teal-400">서버</span>
                 )}
-                <p className={`text-[15px] font-medium leading-snug ${item.completed ? "line-through text-slate-500" : "text-white"}`}>
-                  {item.itemName}
-                </p>
+                {item.fromItem && item.toItem ? (
+                  <p className={`text-[15px] font-medium leading-snug ${item.completed ? "line-through text-slate-500" : "text-white"}`}>
+                    <span>{item.fromItem}</span>
+                    <span className="text-slate-500 text-[12px]">({item.fromCount})</span>
+                    <span className="text-slate-500 mx-1">→</span>
+                    <span>{item.toItem}</span>
+                    <span className="text-slate-500 text-[12px]">({item.toCount})</span>
+                  </p>
+                ) : (
+                  <p className={`text-[15px] font-medium leading-snug ${item.completed ? "line-through text-slate-500" : "text-white"}`}>
+                    {item.itemName}
+                  </p>
+                )}
               </div>
               <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                 <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${REGION_COLORS[item.region]?.bg ?? "bg-blue-600/20"} ${REGION_COLORS[item.region]?.text ?? "text-blue-400"}`}>
