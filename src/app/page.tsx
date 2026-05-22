@@ -21,7 +21,8 @@ import { ProfileModal } from "@/components/ProfileModal";
 import { SortableList } from "@/components/SortableList";
 import { useAppState } from "@/hooks/useAppState";
 import { useAuth } from "@/hooks/useAuth";
-import { Download, Upload, Settings } from "lucide-react";
+import { Download, Upload, Settings, UserCog } from "lucide-react";
+import { isAdminUser } from "@/lib/adminFirestore";
 import type { Character, RegionName } from "@/types";
 
 type FilterState = { favoriteOnly: boolean; searchQuery: string; regionFilter: RegionName[]; periodFilter: string; scopeFilter: string };
@@ -153,6 +154,15 @@ export default function Home() {
             >
               업데이트 노트
             </button>
+            {user && isAdminUser(user.email) && (
+              <button
+                onClick={() => (window.location.href = "/ctrl-a7x9k2m")}
+                className="p-1 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
+                title="관리자"
+              >
+                <UserCog size={22} strokeWidth={1.5} />
+              </button>
+            )}
             {isGuest ? (
               <>
                 {/* 계정 데이터 내보내기 */}
@@ -319,7 +329,6 @@ export default function Home() {
                   <>
                     {state.currentHomework.some((hw) => hw.period === "daily") && (
                       <div className="space-y-3">
-                        <h3 className="text-base font-bold text-orange-400 tracking-wide pt-1">일일 숙제</h3>
                         <SortableList
                           items={state.currentHomework.filter((hw) => hw.period === "daily")}
                           onReorder={(oldIdx, newIdx) => {
@@ -333,14 +342,13 @@ export default function Home() {
                           {state.currentHomework
                             .filter((hw) => hw.period === "daily")
                             .map((hw) => (
-                              <HomeworkCard key={hw.id} item={hw} onToggle={state.toggleHomework} onToggleFavorite={state.toggleFavorite} onUpdate={state.updateHomework} onDelete={state.deleteHomework} />
+                              <HomeworkCard key={hw.id} item={hw} onToggle={state.toggleHomework} onToggleFavorite={state.toggleFavorite} onUpdate={state.updateHomework} onDelete={state.deleteHomework} showPeriodLabel />
                             ))}
                         </SortableList>
                       </div>
                     )}
                     {state.currentHomework.some((hw) => hw.period === "weekly") && (
                       <div className="space-y-3">
-                        <h3 className="text-base font-bold text-green-400 tracking-wide pt-3">주간 숙제</h3>
                         <SortableList
                           items={state.currentHomework.filter((hw) => hw.period === "weekly")}
                           onReorder={(oldIdx, newIdx) => {
@@ -354,14 +362,13 @@ export default function Home() {
                           {state.currentHomework
                             .filter((hw) => hw.period === "weekly")
                             .map((hw) => (
-                              <HomeworkCard key={hw.id} item={hw} onToggle={state.toggleHomework} onToggleFavorite={state.toggleFavorite} onUpdate={state.updateHomework} onDelete={state.deleteHomework} />
+                              <HomeworkCard key={hw.id} item={hw} onToggle={state.toggleHomework} onToggleFavorite={state.toggleFavorite} onUpdate={state.updateHomework} onDelete={state.deleteHomework} showPeriodLabel />
                             ))}
                         </SortableList>
                       </div>
                     )}
                     {filteredPurchase(state).length > 0 && (
                       <div className="space-y-3">
-                        <h3 className="text-base font-bold text-purple-400 tracking-wide pt-3">구매</h3>
                         <SortableList
                           items={filteredPurchase(state)}
                           onReorder={(oldIdx, newIdx) => state.reorderShopItem("purchase", oldIdx, newIdx)}
@@ -381,7 +388,6 @@ export default function Home() {
                     )}
                     {filteredTrade(state).length > 0 && (
                       <div className="space-y-3">
-                        <h3 className="text-base font-bold text-pink-400 tracking-wide pt-3">물물교환</h3>
                         <SortableList
                           items={filteredTrade(state)}
                           onReorder={(oldIdx, newIdx) => state.reorderShopItem("trade", oldIdx, newIdx)}
@@ -401,7 +407,6 @@ export default function Home() {
                     )}
                     {filteredScroll(state).length > 0 && (
                       <div className="space-y-3">
-                        <h3 className="text-base font-bold text-yellow-400 tracking-wide pt-3">임무게시판</h3>
                         <SortableList
                           items={filteredScroll(state)}
                           onReorder={(oldIdx, newIdx) => state.reorderScrollItem(oldIdx, newIdx)}
@@ -444,7 +449,7 @@ export default function Home() {
                     }}
                   >
                     {state.currentHomework.map((hw) => (
-                      <HomeworkCard key={hw.id} item={hw} onToggle={state.toggleHomework} onToggleFavorite={state.toggleFavorite} onUpdate={state.updateHomework} onDelete={state.deleteHomework} />
+                      <HomeworkCard key={hw.id} item={hw} onToggle={state.toggleHomework} onToggleFavorite={state.toggleFavorite} onUpdate={state.updateHomework} onDelete={state.deleteHomework} showPeriodLabel />
                     ))}
                   </SortableList>
                 ) : (

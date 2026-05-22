@@ -1,7 +1,17 @@
 import type { AppData, Character, HomeworkItem, ScrollItem, ShopItem } from "@/types";
 import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, DEFAULT_SCROLL_ITEMS, parseTotalCount, parseTradeItemName, toScope } from "@/types";
+import type { DefaultCardsData } from "@/lib/adminFirestore";
 
 const STORAGE_KEY = "mabimobi_data";
+
+function getDefaultCards(defaultCards?: DefaultCardsData): DefaultCardsData {
+  return defaultCards ?? {
+    homework: DEFAULT_HOMEWORK,
+    purchaseItems: DEFAULT_PURCHASE_ITEMS,
+    tradeItems: DEFAULT_TRADE_ITEMS,
+    scrollItems: DEFAULT_SCROLL_ITEMS,
+  };
+}
 
 /** server -> region 마이그레이션 */
 function migrateShopItems(items: Record<string, any[]>) {
@@ -18,7 +28,7 @@ function migrateShopItems(items: Record<string, any[]>) {
 
 /** isDefault 마이그레이션: 기존 데이터에 isDefault 플래그가 없으면 ID 패턴으로 판별 */
 // 기존 데이터 타이틀/카운트 마이그레이션
-function migrateRenames(data: AppData) {
+function migrateRenames(data: AppData, defaultCards?: DefaultCardsData) {
   const renames: Record<string, { newTitle: string; totalCount?: number }> = {
     "주간 어비스 3회": { newTitle: "주간 어비스", totalCount: 1 },
   };
@@ -32,10 +42,21 @@ function migrateRenames(data: AppData) {
     });
   }
 
+  // 구매 아이템 이름 변경
+  const purchaseRenames: Record<string, string> = {
+    "성수 5개(서버)": "성수 5개",
+  };
+  for (const charId of Object.keys(data.purchaseItems ?? {})) {
+    data.purchaseItems[charId] = data.purchaseItems[charId].map((item) => {
+      const newName = purchaseRenames[item.itemName];
+      return newName ? { ...item, itemName: newName } : item;
+    });
+  }
+
   // 물물교환 아이템: itemName에서 스키마 파싱 + 옛날 포맷 → 괄호 포맷으로 변환
   // 기존 저장 데이터의 itemName을 DEFAULT_TRADE_ITEMS 기준으로 업데이트
   const tradeNameMap: Record<string, string> = {};
-  for (const item of DEFAULT_TRADE_ITEMS) {
+  for (const item of getDefaultCards(defaultCards).tradeItems) {
     // 괄호/공백 제거한 키로 매칭
     const key = item.itemName.replace(/[() ]/g, "").toLowerCase();
     tradeNameMap[key] = item.itemName;
@@ -59,6 +80,159 @@ function migrateRenames(data: AppData) {
       return { ...item, itemName: nameToUse };
     });
   }
+}
+
+/** 새 기본 숙제가 추가되었을 때 기존 캐릭터에 자동 삽입 */
+function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
+  const defaults = getDefaultCards(defaultCards);
+  const savedStates = { ...(data.savedItemStates ?? {}) };
+
+  for (const charId of Object.keys(data.homework ?? {})) {
+    const current = data.homework[charId] ?? [];
+    const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
+    const defaultItems = current.filter((item) => item.isDefault);
+    const customItems = current.filter((item) => !item.isDefault);
+
+    for (const item of defaultItems) {
+      const stillExists = defaults.homework.some((hw, i) => hw.title === item.title || `${charId}_hw_${i}` === item.id);
+      if (!stillExists) {
+        charStates.homework[item.title] = {
+          completedCount: item.completedCount,
+          isFavorite: item.isFavorite,
+        };
+      }
+    }
+
+    data.homework[charId] = [
+      ...defaults.homework.map((hw, i) => {
+        const id = `${charId}_hw_${i}`;
+        const existing = defaultItems.find((item) => item.title === hw.title) ?? defaultItems.find((item) => item.id === id);
+        const saved = charStates.homework[hw.title];
+        const totalCount = parseTotalCount(hw.title);
+        return {
+          id,
+          title: hw.title,
+          reward: hw.reward,
+          period: hw.period,
+          totalCount,
+          completedCount: Math.min(existing?.completedCount ?? saved?.completedCount ?? 0, totalCount),
+          isFavorite: existing?.isFavorite ?? saved?.isFavorite ?? false,
+          isDefault: true,
+          scope: toScope(hw.scope),
+        };
+      }),
+      ...customItems,
+    ];
+    savedStates[charId] = charStates;
+  }
+
+  for (const charId of Object.keys(data.purchaseItems ?? {})) {
+    const current = data.purchaseItems[charId] ?? [];
+    const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
+    const defaultItems = current.filter((item) => item.isDefault);
+    const customItems = current.filter((item) => !item.isDefault);
+
+    for (const item of defaultItems) {
+      const stillExists = defaults.purchaseItems.some((def, i) => def.itemName === item.itemName || `${charId}_pur_${i}` === item.id);
+      if (!stillExists) {
+        charStates.purchase[item.itemName] = {
+          completed: item.completed,
+          isFavorite: item.isFavorite,
+        };
+      }
+    }
+
+    data.purchaseItems[charId] = [
+      ...defaults.purchaseItems.map((item, i) => {
+        const id = `${charId}_pur_${i}`;
+        const existing = defaultItems.find((currentItem) => currentItem.itemName === item.itemName) ?? defaultItems.find((currentItem) => currentItem.id === id);
+        const saved = charStates.purchase[item.itemName];
+        return {
+          id,
+          itemName: item.itemName,
+          region: item.region,
+          npcName: item.npcName,
+          period: item.period,
+          completed: existing?.completed ?? saved?.completed ?? false,
+          isFavorite: existing?.isFavorite ?? saved?.isFavorite ?? false,
+          isDefault: true,
+          scope: toScope(item.scope),
+        };
+      }),
+      ...customItems,
+    ];
+    savedStates[charId] = charStates;
+  }
+
+  for (const charId of Object.keys(data.tradeItems ?? {})) {
+    const current = data.tradeItems[charId] ?? [];
+    const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
+    const defaultItems = current.filter((item) => item.isDefault);
+    const customItems = current.filter((item) => !item.isDefault);
+
+    for (const item of defaultItems) {
+      const stillExists = defaults.tradeItems.some((def, i) => def.itemName === item.itemName || `${charId}_trd_${i}` === item.id);
+      if (!stillExists) {
+        charStates.trade[item.itemName] = {
+          completed: item.completed,
+          isFavorite: item.isFavorite,
+        };
+      }
+    }
+
+    data.tradeItems[charId] = [
+      ...defaults.tradeItems.map((item, i) => {
+        const id = `${charId}_trd_${i}`;
+        const existing = defaultItems.find((currentItem) => currentItem.itemName === item.itemName) ?? defaultItems.find((currentItem) => currentItem.id === id);
+        const saved = charStates.trade[item.itemName];
+        const parsed = parseTradeItemName(item.itemName);
+        return {
+          id,
+          itemName: item.itemName,
+          region: item.region,
+          npcName: item.npcName,
+          period: item.period,
+          completed: existing?.completed ?? saved?.completed ?? false,
+          isFavorite: existing?.isFavorite ?? saved?.isFavorite ?? false,
+          isDefault: true,
+          scope: toScope(item.scope),
+          ...(parsed ?? {}),
+        };
+      }),
+      ...customItems,
+    ];
+    savedStates[charId] = charStates;
+  }
+
+  for (const charId of Object.keys(data.scrollItems ?? {})) {
+    const current = data.scrollItems![charId] ?? [];
+    const defaultItems = current.filter((item) => item.isDefault);
+    const customItems = current.filter((item) => !item.isDefault);
+
+    data.scrollItems![charId] = [
+      ...defaults.scrollItems.map((item, i) => {
+        const id = `${charId}_scroll_${i}`;
+        const existing = defaultItems.find((currentItem) => currentItem.title === item.title) ?? defaultItems.find((currentItem) => currentItem.id === id);
+        return {
+          id,
+          title: item.title,
+          scrollType: item.scrollType,
+          period: item.period,
+          totalCount: 3,
+          completedCount: Math.min(existing?.completedCount ?? 0, 3),
+          isFavorite: existing?.isFavorite ?? false,
+          isDefault: true,
+          scope: "character" as const,
+          region: item.region,
+          materials: item.materials === "-" ? ["-"] : item.materials.split(",").map((s) => s.trim()),
+          reward: item.reward,
+        };
+      }),
+      ...customItems,
+    ];
+  }
+
+  data.savedItemStates = savedStates;
 }
 
 function migrateIsDefault(data: AppData) {
@@ -91,8 +265,8 @@ function migrateIsDefault(data: AppData) {
   }
 }
 
-export function createHomeworkForChar(charId: string): HomeworkItem[] {
-  return DEFAULT_HOMEWORK.map((hw, i) => ({
+export function createHomeworkForChar(charId: string, defaultCards?: DefaultCardsData): HomeworkItem[] {
+  return getDefaultCards(defaultCards).homework.map((hw, i) => ({
     id: `${charId}_hw_${i}`,
     title: hw.title,
     reward: hw.reward,
@@ -105,8 +279,8 @@ export function createHomeworkForChar(charId: string): HomeworkItem[] {
   }));
 }
 
-export function createPurchaseForChar(charId: string): ShopItem[] {
-  return DEFAULT_PURCHASE_ITEMS.map((item, i) => ({
+export function createPurchaseForChar(charId: string, defaultCards?: DefaultCardsData): ShopItem[] {
+  return getDefaultCards(defaultCards).purchaseItems.map((item, i) => ({
     id: `${charId}_pur_${i}`,
     itemName: item.itemName,
     region: item.region,
@@ -119,8 +293,8 @@ export function createPurchaseForChar(charId: string): ShopItem[] {
   }));
 }
 
-export function createTradeForChar(charId: string): ShopItem[] {
-  return DEFAULT_TRADE_ITEMS.map((item, i) => {
+export function createTradeForChar(charId: string, defaultCards?: DefaultCardsData): ShopItem[] {
+  return getDefaultCards(defaultCards).tradeItems.map((item, i) => {
     const parsed = parseTradeItemName(item.itemName);
     return {
       id: `${charId}_trd_${i}`,
@@ -137,8 +311,8 @@ export function createTradeForChar(charId: string): ShopItem[] {
   });
 }
 
-export function createScrollForChar(charId: string): ScrollItem[] {
-  return DEFAULT_SCROLL_ITEMS.map((item, i) => ({
+export function createScrollForChar(charId: string, defaultCards?: DefaultCardsData): ScrollItem[] {
+  return getDefaultCards(defaultCards).scrollItems.map((item, i) => ({
     id: `${charId}_scroll_${i}`,
     title: item.title,
     scrollType: item.scrollType,
@@ -153,7 +327,7 @@ export function createScrollForChar(charId: string): ScrollItem[] {
   }));
 }
 
-function createDefaultData(): AppData {
+function createDefaultData(defaultCards?: DefaultCardsData): AppData {
   const defaultChar: Character = {
     id: "char_default",
     server: "몰리",
@@ -163,20 +337,20 @@ function createDefaultData(): AppData {
   };
   return {
     characters: [defaultChar],
-    homework: { [defaultChar.id]: createHomeworkForChar(defaultChar.id) },
-    purchaseItems: { [defaultChar.id]: createPurchaseForChar(defaultChar.id) },
-    tradeItems: { [defaultChar.id]: createTradeForChar(defaultChar.id) },
-    scrollItems: { [defaultChar.id]: createScrollForChar(defaultChar.id) },
+    homework: { [defaultChar.id]: createHomeworkForChar(defaultChar.id, defaultCards) },
+    purchaseItems: { [defaultChar.id]: createPurchaseForChar(defaultChar.id, defaultCards) },
+    tradeItems: { [defaultChar.id]: createTradeForChar(defaultChar.id, defaultCards) },
+    scrollItems: { [defaultChar.id]: createScrollForChar(defaultChar.id, defaultCards) },
     lastDailyReset: new Date().toISOString(),
     lastWeeklyReset: new Date().toISOString(),
   };
 }
 
-export function loadData(): AppData {
-  if (typeof window === "undefined") return createDefaultData();
+export function loadData(defaultCards?: DefaultCardsData): AppData {
+  if (typeof window === "undefined") return createDefaultData(defaultCards);
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return createDefaultData();
+    if (!raw) return createDefaultData(defaultCards);
     const parsed = JSON.parse(raw) as AppData;
     // 마이그레이션: purchaseItems/tradeItems/scrollItems 없으면 추가
     if (!parsed.purchaseItems) parsed.purchaseItems = {};
@@ -186,11 +360,12 @@ export function loadData(): AppData {
     migrateShopItems(parsed.purchaseItems);
     migrateShopItems(parsed.tradeItems);
     // 마이그레이션
-    migrateRenames(parsed);
+    migrateRenames(parsed, defaultCards);
     migrateIsDefault(parsed);
+    migrateNewDefaults(parsed, defaultCards);
     return parsed;
   } catch {
-    return createDefaultData();
+    return createDefaultData(defaultCards);
   }
 }
 
@@ -255,10 +430,11 @@ export function getNextWeeklyResetMs(): number {
   return nextResetUTC.getTime() - new Date().getTime();
 }
 
-export function applyResets(data: AppData): AppData {
+export function applyResets(data: AppData, defaultCards?: DefaultCardsData): AppData {
   // Firestore 로드 시에도 마이그레이션 적용
-  migrateRenames(data);
+  migrateRenames(data, defaultCards);
   migrateIsDefault(data);
+  migrateNewDefaults(data, defaultCards);
 
   const dailyReset = getTodayResetUTC();
   const weeklyReset = getWeeklyResetUTC();

@@ -116,6 +116,7 @@ export const DEFAULT_HOMEWORK: { title: string; reward: string; period: PeriodTy
   { title: "주간 레이드", reward: "원정의 증거2개", period: "weekly", scope: "off" },
   { title: "불길한 소환의 결계 7회", reward: "미스틱 다이스 열쇠 상자", period: "weekly", scope: "off" },
   { title: "검은 구멍 14회", reward: "-", period: "weekly", scope: "off" },
+  { title: "필드 보스 3회", reward: "골드 5만, 미스틱 다이스 열쇠 상자 2개, 마물 퇴치 증표 790개", period: "weekly", scope: "off" },
 ];
 
 // ── 기본 구매 / 물물교환 템플릿 ──
@@ -123,7 +124,7 @@ export const DEFAULT_HOMEWORK: { title: string; reward: string; period: PeriodTy
 export const DEFAULT_PURCHASE_ITEMS: { itemName: string; region: RegionName; npcName: string; period: PeriodType; scope?: string }[] = [
   { itemName: "보석 보물 상자 구매 10개(서버)", region: "캐시샵", npcName: "골드", period: "daily", scope: "on" },
   { itemName: "매일 무료 상품 구매 1개(서버)", region: "캐시샵", npcName: "추천픽", period: "daily", scope: "on" },
-  { itemName: "성수 5개(서버)", region: "던바튼", npcName: "크리스텔(봉헌소)", period: "weekly", scope: "on" },
+  { itemName: "성수 5개", region: "던바튼", npcName: "크리스텔(봉헌소)", period: "weekly", scope: "on" },
 ];
 
 export const DEFAULT_TRADE_ITEMS: { itemName: string; region: RegionName; npcName: string; period: PeriodType; scope?: string }[] = [

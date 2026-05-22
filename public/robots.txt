@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Disallow: /ctrl-a7x9k2m
