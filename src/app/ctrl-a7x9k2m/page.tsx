@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  isAdminUser,
+  isAdminFirebaseUser,
   getPublishedCards,
   getDraftCards,
   saveDraft,
@@ -76,7 +76,7 @@ export default function AdminPage() {
   // ── 권한 확인 ──
   useEffect(() => {
     if (authLoading) return;
-    if (user && isAdminUser(user.email)) {
+    if (isAdminFirebaseUser(user)) {
       setAuthorized(true);
     } else {
       // 비인가 접근 → 홈으로

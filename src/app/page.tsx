@@ -22,7 +22,7 @@ import { SortableList } from "@/components/SortableList";
 import { useAppState } from "@/hooks/useAppState";
 import { useAuth } from "@/hooks/useAuth";
 import { Download, Upload, Settings, UserCog } from "lucide-react";
-import { isAdminUser } from "@/lib/adminFirestore";
+import { isAdminFirebaseUser } from "@/lib/adminFirestore";
 import type { Character, RegionName } from "@/types";
 
 type FilterState = { favoriteOnly: boolean; searchQuery: string; regionFilter: RegionName[]; periodFilter: string; scopeFilter: string };
@@ -137,6 +137,7 @@ export default function Home() {
   const isShopTab = state.activeTab === "purchase" || state.activeTab === "trade";
   const isScrollTab = state.activeTab === "scroll";
   const isEventTab = state.activeTab === "event";
+  const isAdmin = isAdminFirebaseUser(user);
 
   // 대시보드
   return (
@@ -154,7 +155,7 @@ export default function Home() {
             >
               업데이트 노트
             </button>
-            {user && isAdminUser(user.email) && (
+            {isAdmin && (
               <button
                 onClick={() => (window.location.href = "/ctrl-a7x9k2m")}
                 className="p-1 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"

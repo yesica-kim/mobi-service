@@ -23,6 +23,15 @@ export function isAdminUser(email: string | null | undefined): boolean {
     .some((adminEmail) => adminEmail === normalizedEmail);
 }
 
+export function isAdminFirebaseUser(user: {
+  email?: string | null;
+  providerData?: { email?: string | null }[];
+} | null | undefined): boolean {
+  if (!user) return false;
+  if (isAdminUser(user.email)) return true;
+  return (user.providerData ?? []).some((provider) => isAdminUser(provider.email));
+}
+
 // ── Firestore 기본 카드 데이터 타입 ──
 export interface DefaultHomework {
   title: string;
