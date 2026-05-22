@@ -17,7 +17,10 @@ const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
 
 export function isAdminUser(email: string | null | undefined): boolean {
   if (!email || !ADMIN_EMAIL) return false;
-  return email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const normalizedEmail = email.trim().toLowerCase();
+  return ADMIN_EMAIL.split(",")
+    .map((item) => item.trim().replace(/^['"]|['"]$/g, "").toLowerCase())
+    .some((adminEmail) => adminEmail === normalizedEmail);
 }
 
 // ── Firestore 기본 카드 데이터 타입 ──
