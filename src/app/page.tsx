@@ -21,7 +21,7 @@ import { ProfileModal } from "@/components/ProfileModal";
 import { SortableList } from "@/components/SortableList";
 import { useAppState } from "@/hooks/useAppState";
 import { useAuth } from "@/hooks/useAuth";
-import { Download, Upload, Settings, UserCog } from "lucide-react";
+import { Download, Upload, Settings } from "lucide-react";
 import { isAdminFirebaseUser } from "@/lib/adminFirestore";
 import type { Character, HomeworkItem, RegionName, ScrollItem, ShopItem } from "@/types";
 
@@ -185,15 +185,6 @@ export default function Home() {
             >
               업데이트 노트
             </button>
-            {isAdmin && (
-              <button
-                onClick={() => (window.location.href = "/ctrl-a7x9k2m")}
-                className="flex items-center justify-center rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-red-400 transition-colors"
-                title="관리자"
-              >
-                <UserCog size={22} strokeWidth={1.5} />
-              </button>
-            )}
             {isGuest ? (
               <>
                 {/* 계정 데이터 내보내기 */}
@@ -541,6 +532,7 @@ export default function Home() {
         userEmail={user?.email}
         providerEmails={providerEmails}
         userPhoto={user?.photoURL}
+        isAdmin={isAdmin}
         isGuest={isGuest}
         onSignOut={signOut}
         onDeleteAccount={user ? deleteAccount : undefined}
