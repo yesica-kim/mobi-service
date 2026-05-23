@@ -15,6 +15,7 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     // 게스트 모드 체크
@@ -40,12 +41,23 @@ export function useAuth() {
 
   const signInWithGoogle = useCallback(async () => {
     try {
+      setAuthError(null);
       // 게스트 모드 해제
       localStorage.removeItem("mobimobi_guest");
       setIsGuest(false);
       await signInWithPopup(auth, googleProvider);
     } catch (err) {
       console.error("Google 로그인 실패:", err);
+      const code = typeof err === "object" && err && "code" in err ? String(err.code) : "";
+      if (code === "auth/unauthorized-domain") {
+        setAuthError("현재 접속 주소가 Firebase 로그인 승인 도메인에 등록되어 있지 않습니다.");
+      } else if (code === "auth/popup-closed-by-user") {
+        setAuthError("Google 로그인 창이 닫혔습니다. 다시 시도해 주세요.");
+      } else if (code === "auth/popup-blocked") {
+        setAuthError("브라우저가 Google 로그인 팝업을 차단했습니다. 팝업 허용 후 다시 시도해 주세요.");
+      } else {
+        setAuthError("Google 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      }
     }
   }, []);
 
@@ -97,6 +109,7 @@ export function useAuth() {
     user,
     loading,
     isGuest,
+    authError,
     signInWithGoogle,
     continueAsGuest,
     signOut,

@@ -80,7 +80,7 @@ function sortAllTabCards(cards: AllTabCard[], order: string[]) {
 }
 
 export default function Home() {
-  const { user, loading: authLoading, isGuest, signInWithGoogle, continueAsGuest, signOut, deleteAccount } = useAuth();
+  const { user, loading: authLoading, isGuest, authError, signInWithGoogle, continueAsGuest, signOut, deleteAccount } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingChar, setEditingChar] = useState<Character | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
@@ -118,6 +118,11 @@ export default function Home() {
             </svg>
             구글 계정으로 로그인
           </button>
+          {authError && (
+            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-center text-xs leading-relaxed text-red-200">
+              {authError}
+            </p>
+          )}
           <button
             onClick={continueAsGuest}
             className="rounded-2xl bg-slate-800 px-8 py-4 font-semibold text-slate-400 hover:bg-slate-700 hover:text-slate-300 transition-all"
@@ -537,6 +542,7 @@ export default function Home() {
         onSignOut={signOut}
         onDeleteAccount={user ? deleteAccount : undefined}
         onSignInWithGoogle={isGuest ? signInWithGoogle : undefined}
+        authError={authError}
         onImportData={(importedData) => {
           localStorage.setItem("mabimobi_data", JSON.stringify(importedData));
           window.location.reload();
