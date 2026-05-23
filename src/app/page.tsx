@@ -185,14 +185,13 @@ export default function Home() {
             >
               업데이트 노트
             </button>
-            {isAdmin && (
+            {user && !isGuest && (
               <button
                 onClick={() => (window.location.href = "/ctrl-a7x9k2m")}
-                className="flex items-center gap-1 rounded-lg bg-red-600/15 px-2 py-1 text-xs font-bold text-red-300 hover:bg-red-600/25 hover:text-red-200 transition-colors"
+                className="flex items-center justify-center rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-red-400 transition-colors"
                 title="관리자"
               >
-                <UserCog size={18} strokeWidth={1.7} />
-                <span>관리자</span>
+                <UserCog size={22} strokeWidth={1.5} />
               </button>
             )}
             {isGuest ? (
@@ -542,7 +541,6 @@ export default function Home() {
         userEmail={user?.email}
         providerEmails={providerEmails}
         userPhoto={user?.photoURL}
-        isAdmin={isAdmin}
         isGuest={isGuest}
         onSignOut={signOut}
         onDeleteAccount={user ? deleteAccount : undefined}

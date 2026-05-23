@@ -10,7 +10,6 @@ interface Props {
   providerEmails?: (string | null | undefined)[];
   userPhoto?: string | null;
   isGuest?: boolean;
-  isAdmin?: boolean;
   onSignOut: () => void;
   onDeleteAccount?: () => Promise<void>;
   onSignInWithGoogle?: () => void;
@@ -25,7 +24,7 @@ function formatFilename() {
   return `mobi-account-data-${date}.json`;
 }
 
-export function ProfileModal({ open, onClose, userName, userEmail, providerEmails = [], userPhoto, isGuest, isAdmin, onSignOut, onDeleteAccount, onSignInWithGoogle, onImportData }: Props) {
+export function ProfileModal({ open, onClose, userName, userEmail, providerEmails = [], userPhoto, isGuest, onSignOut, onDeleteAccount, onSignInWithGoogle, onImportData }: Props) {
   const [page, setPage] = useState<PageType>("menu");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLogoutWarning, setShowLogoutWarning] = useState(false);
@@ -183,22 +182,6 @@ export function ProfileModal({ open, onClose, userName, userEmail, providerEmail
                 />
 
                 <div className="border-t border-slate-700 my-2" />
-
-                {!isGuest && (
-                  <button
-                    onClick={() => { window.location.href = "/ctrl-a7x9k2m"; }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm transition-colors ${
-                      isAdmin
-                        ? "bg-red-600/15 text-red-200 hover:bg-red-600/25"
-                        : "text-slate-300 hover:bg-slate-700"
-                    }`}
-                  >
-                    <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A10.97 10.97 0 0112 15c2.577 0 4.947.888 6.82 2.376M15 11a3 3 0 11-6 0 3 3 0 016 0zm3.5 1.5l1.5.866m0 0v1.732m0-1.732l-1.5.866m-13 0L4 14.366m0 0v-1.732m0 1.732l1.5-.866" />
-                    </svg>
-                    <span>{isAdmin ? "관리자 페이지" : "관리자 페이지 확인"}</span>
-                  </button>
-                )}
 
                 <button
                   onClick={() => setPage("terms")}
