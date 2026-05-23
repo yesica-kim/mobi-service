@@ -50,6 +50,7 @@ function deepEqual(a: any, b: any): boolean {
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const [authorized, setAuthorized] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // 데이터 상태
@@ -79,9 +80,10 @@ export default function AdminPage() {
     if (isAdminFirebaseUser(user)) {
       setAuthorized(true);
     } else {
-      // 비인가 접근 → 홈으로
-      window.location.href = "/";
+      setAuthorized(false);
+      setLoading(false);
     }
+    setAuthChecked(true);
   }, [user, authLoading]);
 
   // ── 데이터 로드 ──
@@ -210,11 +212,36 @@ export default function AdminPage() {
   }, [editModal]);
 
   // ── 로딩/비인가 ──
-  if (authLoading || loading || !authorized) {
+  if (authLoading || !authChecked || (authorized && loading)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950">
         <div className="text-slate-400 text-sm">
           {authLoading ? "인증 확인 중..." : "데이터 불러오는 중..."}
+        </div>
+      </div>
+    );
+  }
+
+  if (!authorized) {
+    const emails = [user?.email, ...(user?.providerData?.map((provider) => provider.email) ?? [])]
+      .filter(Boolean)
+      .join(" / ");
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-6">
+        <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center">
+          <p className="text-sm font-bold text-red-400">관리자 권한을 확인할 수 없습니다</p>
+          <p className="mt-3 text-xs leading-relaxed text-slate-400">
+            현재 로그인 이메일
+          </p>
+          <p className="mt-1 break-all text-xs text-slate-300">
+            {emails || "로그인 정보 없음"}
+          </p>
+          <button
+            onClick={() => (window.location.href = "/")}
+            className="mt-5 w-full rounded-xl bg-slate-700 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-600"
+          >
+            홈으로 돌아가기
+          </button>
         </div>
       </div>
     );
