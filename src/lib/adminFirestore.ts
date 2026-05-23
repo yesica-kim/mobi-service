@@ -7,7 +7,6 @@ import {
   deleteDoc,
   query,
   orderBy,
-  Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { PeriodType, ScrollType, RegionName } from "@/types";
@@ -88,6 +87,56 @@ const PUBLISHED_DOC = "published";
 const DRAFT_DOC = "draft";
 const HISTORY_COLLECTION = "defaultCardsHistory";
 
+function sanitizeDefaultCardsData(data: DefaultCardsData): DefaultCardsData {
+  return {
+    homework: data.homework.map((item) => ({
+      title: item.title,
+      reward: item.reward,
+      period: item.period,
+      ...(item.scope ? { scope: item.scope } : {}),
+    })),
+    purchaseItems: data.purchaseItems.map((item) => ({
+      itemName: item.itemName,
+      region: item.region,
+      npcName: item.npcName,
+      period: item.period,
+      ...(item.scope ? { scope: item.scope } : {}),
+    })),
+    tradeItems: data.tradeItems.map((item) => ({
+      itemName: item.itemName,
+      region: item.region,
+      npcName: item.npcName,
+      period: item.period,
+      ...(item.scope ? { scope: item.scope } : {}),
+    })),
+    scrollItems: data.scrollItems.map((item) => ({
+      title: item.title,
+      scrollType: item.scrollType,
+      period: item.period,
+      region: item.region,
+      materials: item.materials,
+      reward: item.reward,
+    })),
+  };
+}
+
+export function getAdminFirestoreErrorMessage(error: unknown): string {
+  const code = typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code?: unknown }).code)
+    : "";
+  const message = typeof error === "object" && error !== null && "message" in error
+    ? String((error as { message?: unknown }).message)
+    : "";
+
+  if (code === "permission-denied") {
+    return "Firestore 권한 없음(permission-denied): defaultCards 쓰기 규칙 확인 필요";
+  }
+  if (code === "invalid-argument") {
+    return "Firestore 저장 데이터 오류(invalid-argument): 카드 값을 다시 확인해 주세요";
+  }
+  return code || message ? `Firestore 오류${code ? `(${code})` : ""}: ${message || "자세한 내용은 콘솔 확인"}` : "알 수 없는 오류";
+}
+
 // ── 읽기 ──
 export async function getPublishedCards(): Promise<DefaultCardsData | null> {
   try {
@@ -112,8 +161,9 @@ export async function getDraftCards(): Promise<DefaultCardsData | null> {
 // ── 쓰기 ──
 /** 로컬 업로드: draft에 저장 */
 export async function saveDraft(data: DefaultCardsData): Promise<void> {
+  const sanitized = sanitizeDefaultCardsData(data);
   await setDoc(doc(db, COLLECTION, DRAFT_DOC), {
-    ...data,
+    ...sanitized,
     updatedAt: new Date().toISOString(),
   });
 }
@@ -123,9 +173,10 @@ export async function publishDraft(
   newData: DefaultCardsData,
   changeSummary: string[]
 ): Promise<void> {
+  const sanitized = sanitizeDefaultCardsData(newData);
   // published에 저장
   await setDoc(doc(db, COLLECTION, PUBLISHED_DOC), {
-    ...newData,
+    ...sanitized,
     updatedAt: new Date().toISOString(),
   });
   // draft 삭제 (published와 동일하므로)
@@ -133,7 +184,7 @@ export async function publishDraft(
   // 히스토리 생성
   const historyId = new Date().toISOString();
   await setDoc(doc(db, HISTORY_COLLECTION, historyId), {
-    data: newData,
+    data: sanitized,
     summary: changeSummary,
     createdAt: historyId,
   });

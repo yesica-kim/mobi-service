@@ -12,6 +12,7 @@ import {
   getHistory,
   rollbackToHistory,
   generateChangeSummary,
+  getAdminFirestoreErrorMessage,
   type DefaultCardsData,
   type DefaultHomework,
   type DefaultPurchaseItem,
@@ -133,7 +134,7 @@ export default function AdminPage() {
       setDraftSaved(true);
       showStatus("로컬 업로드 완료 — localhost에서 확인하세요");
     } catch (e) {
-      showStatus("로컬 업로드 실패");
+      showStatus(`로컬 업로드 실패: ${getAdminFirestoreErrorMessage(e)}`);
       console.error(e);
     }
     setSaving(false);
@@ -150,7 +151,7 @@ export default function AdminPage() {
       setDraftSaved(false);
       showStatus("실섭 업로드 완료!");
     } catch (e) {
-      showStatus("실섭 업로드 실패");
+      showStatus(`실섭 업로드 실패: ${getAdminFirestoreErrorMessage(e)}`);
       console.error(e);
     }
     setSaving(false);
