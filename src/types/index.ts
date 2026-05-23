@@ -300,4 +300,6 @@ export interface AppData {
     purchase: Record<string, { completed: boolean; isFavorite: boolean }>;
     trade: Record<string, { completed: boolean; isFavorite: boolean }>;
   }>;
+  /** 전체 탭에서 서로 다른 카드 타입 간 공통 정렬 순서 */
+  allTabOrder?: Record<string, string[]>;
 }

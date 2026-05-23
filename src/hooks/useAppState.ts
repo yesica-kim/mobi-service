@@ -180,10 +180,12 @@ export function useAppState(uid?: string | null) {
         const hw = { ...prev.homework };
         const pur = { ...prev.purchaseItems };
         const trd = { ...prev.tradeItems };
+        const allTabOrder = { ...(prev.allTabOrder ?? {}) };
         delete hw[charId];
         delete pur[charId];
         delete trd[charId];
-        return { ...prev, characters: chars, homework: hw, purchaseItems: pur, tradeItems: trd };
+        delete allTabOrder[charId];
+        return { ...prev, characters: chars, homework: hw, purchaseItems: pur, tradeItems: trd, allTabOrder };
       });
       setData((prev) => {
         if (!prev) return prev;
@@ -698,13 +700,55 @@ export function useAppState(uid?: string | null) {
     [persist, selectedCharId]
   );
 
+  const reorderAllTabItem = useCallback(
+    (visibleIds: string[], oldIndex: number, newIndex: number) => {
+      if (!selectedCharId) return;
+      const activeId = visibleIds[oldIndex];
+      const overId = visibleIds[newIndex];
+      if (!activeId || !overId || activeId === overId) return;
+
+      persist((prev) => {
+        const charId = selectedCharId;
+        const allIds = [
+          ...(prev.homework[charId] ?? []).map((item) => item.id),
+          ...(prev.purchaseItems[charId] ?? []).map((item) => item.id),
+          ...(prev.tradeItems[charId] ?? []).map((item) => item.id),
+          ...((prev.scrollItems ?? {})[charId] ?? []).map((item) => item.id),
+        ];
+        const existingOrder = (prev.allTabOrder?.[charId] ?? []).filter((id) => allIds.includes(id));
+        const order = [
+          ...existingOrder,
+          ...allIds.filter((id) => !existingOrder.includes(id)),
+        ];
+        const from = order.indexOf(activeId);
+        const to = order.indexOf(overId);
+        if (from === -1 || to === -1) return prev;
+
+        const nextOrder = [...order];
+        const [moved] = nextOrder.splice(from, 1);
+        nextOrder.splice(to, 0, moved);
+
+        return {
+          ...prev,
+          allTabOrder: {
+            ...(prev.allTabOrder ?? {}),
+            [charId]: nextOrder,
+          },
+        };
+      });
+    },
+    [persist, selectedCharId]
+  );
+
   // ── 숙제 초기화 (기본 세팅으로) ──
   const resetHomework = useCallback(() => {
     if (!selectedCharId) return;
     persist((prev) => {
       // savedItemStates에서 해당 캐릭터 상태 초기화
       const savedStates = { ...(prev.savedItemStates ?? {}) };
+      const allTabOrder = { ...(prev.allTabOrder ?? {}) };
       delete savedStates[selectedCharId];
+      delete allTabOrder[selectedCharId];
       return {
         ...prev,
         homework: { ...prev.homework, [selectedCharId]: createHomeworkForChar(selectedCharId, runtimeDefaults ?? undefined) },
@@ -712,6 +756,7 @@ export function useAppState(uid?: string | null) {
         tradeItems: { ...prev.tradeItems, [selectedCharId]: createTradeForChar(selectedCharId, runtimeDefaults ?? undefined) },
         scrollItems: { ...(prev.scrollItems ?? {}), [selectedCharId]: createScrollForChar(selectedCharId, runtimeDefaults ?? undefined) },
         savedItemStates: savedStates,
+        allTabOrder,
       };
     });
   }, [persist, selectedCharId, runtimeDefaults]);
@@ -1013,6 +1058,11 @@ export function useAppState(uid?: string | null) {
     return data.tradeItems[selectedCharId] ?? [];
   }, [data, selectedCharId]);
 
+  const allTabOrder = useMemo(() => {
+    if (!data || !selectedCharId) return [];
+    return data.allTabOrder?.[selectedCharId] ?? [];
+  }, [data, selectedCharId]);
+
   const currentShopItems = useMemo((): ShopItem[] => {
     let items: ShopItem[] = [];
     if (activeTab === "purchase") items = allPurchaseItems;
@@ -1138,6 +1188,7 @@ export function useAppState(uid?: string | null) {
     progress,
     allPurchaseItems,
     allTradeItems,
+    allTabOrder,
     currentShopItems,
     toggleShopItem,
     toggleShopFavorite,
@@ -1163,6 +1214,7 @@ export function useAppState(uid?: string | null) {
     updateScrollItem,
     deleteScrollItem,
     reorderScrollItem,
+    reorderAllTabItem,
     exportCurrentPreset,
     importPreset,
     // 멤버십

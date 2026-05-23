@@ -23,7 +23,7 @@ import { useAppState } from "@/hooks/useAppState";
 import { useAuth } from "@/hooks/useAuth";
 import { Download, Upload, Settings, UserCog } from "lucide-react";
 import { isAdminFirebaseUser } from "@/lib/adminFirestore";
-import type { Character, RegionName } from "@/types";
+import type { Character, HomeworkItem, RegionName, ScrollItem, ShopItem } from "@/types";
 
 type FilterState = { favoriteOnly: boolean; searchQuery: string; regionFilter: RegionName[]; periodFilter: string; scopeFilter: string };
 
@@ -60,6 +60,23 @@ function filteredScroll(state: FilterState & { allScrollItems: any[]; scrollType
     items = items.filter((i: any) => i.title.toLowerCase().includes(q) || i.reward.toLowerCase().includes(q));
   }
   return items;
+}
+
+type AllTabCard =
+  | { id: string; type: "homework"; item: HomeworkItem }
+  | { id: string; type: "purchase"; item: ShopItem }
+  | { id: string; type: "trade"; item: ShopItem }
+  | { id: string; type: "scroll"; item: ScrollItem };
+
+function sortAllTabCards(cards: AllTabCard[], order: string[]) {
+  if (order.length === 0) return cards;
+  const orderIndex = new Map(order.map((id, index) => [id, index]));
+  return [...cards].sort((a, b) => {
+    const aIndex = orderIndex.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+    const bIndex = orderIndex.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+    if (aIndex !== bIndex) return aIndex - bIndex;
+    return cards.indexOf(a) - cards.indexOf(b);
+  });
 }
 
 export default function Home() {
@@ -138,6 +155,19 @@ export default function Home() {
   const isScrollTab = state.activeTab === "scroll";
   const isEventTab = state.activeTab === "event";
   const isAdmin = isAdminFirebaseUser(user);
+  const providerEmails = user?.providerData?.map((provider) => provider.email).filter(Boolean) ?? [];
+  const visiblePurchaseItems = filteredPurchase(state);
+  const visibleTradeItems = filteredTrade(state);
+  const visibleScrollItems = filteredScroll(state);
+  const allTabCards = sortAllTabCards(
+    [
+      ...state.currentHomework.map((item): AllTabCard => ({ id: item.id, type: "homework", item })),
+      ...visiblePurchaseItems.map((item): AllTabCard => ({ id: item.id, type: "purchase", item })),
+      ...visibleTradeItems.map((item): AllTabCard => ({ id: item.id, type: "trade", item })),
+      ...visibleScrollItems.map((item): AllTabCard => ({ id: item.id, type: "scroll", item })),
+    ],
+    state.allTabOrder
+  );
 
   // 대시보드
   return (
@@ -158,10 +188,11 @@ export default function Home() {
             {isAdmin && (
               <button
                 onClick={() => (window.location.href = "/ctrl-a7x9k2m")}
-                className="p-1 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
+                className="flex items-center gap-1 rounded-lg bg-red-600/15 px-2 py-1 text-xs font-bold text-red-300 hover:bg-red-600/25 hover:text-red-200 transition-colors"
                 title="관리자"
               >
-                <UserCog size={22} strokeWidth={1.5} />
+                <UserCog size={18} strokeWidth={1.7} />
+                <span>관리자</span>
               </button>
             )}
             {isGuest ? (
@@ -326,106 +357,49 @@ export default function Home() {
 
             {state.activeTab === "all" && (
               <div className="px-4 py-4 space-y-3">
-                {state.currentHomework.length > 0 || filteredPurchase(state).length > 0 || filteredTrade(state).length > 0 || filteredScroll(state).length > 0 ? (
-                  <>
-                    {state.currentHomework.some((hw) => hw.period === "daily") && (
-                      <div className="space-y-3">
-                        <SortableList
-                          items={state.currentHomework.filter((hw) => hw.period === "daily")}
-                          onReorder={(oldIdx, newIdx) => {
-                            const dailyItems = state.currentHomework.filter((hw) => hw.period === "daily");
-                            const allHw = state.currentHomework;
-                            const realOld = allHw.indexOf(dailyItems[oldIdx]);
-                            const realNew = allHw.indexOf(dailyItems[newIdx]);
-                            state.reorderHomework(realOld, realNew);
-                          }}
-                        >
-                          {state.currentHomework
-                            .filter((hw) => hw.period === "daily")
-                            .map((hw) => (
-                              <HomeworkCard key={hw.id} item={hw} onToggle={state.toggleHomework} onToggleFavorite={state.toggleFavorite} onUpdate={state.updateHomework} onDelete={state.deleteHomework} showPeriodLabel />
-                            ))}
-                        </SortableList>
-                      </div>
-                    )}
-                    {state.currentHomework.some((hw) => hw.period === "weekly") && (
-                      <div className="space-y-3">
-                        <SortableList
-                          items={state.currentHomework.filter((hw) => hw.period === "weekly")}
-                          onReorder={(oldIdx, newIdx) => {
-                            const weeklyItems = state.currentHomework.filter((hw) => hw.period === "weekly");
-                            const allHw = state.currentHomework;
-                            const realOld = allHw.indexOf(weeklyItems[oldIdx]);
-                            const realNew = allHw.indexOf(weeklyItems[newIdx]);
-                            state.reorderHomework(realOld, realNew);
-                          }}
-                        >
-                          {state.currentHomework
-                            .filter((hw) => hw.period === "weekly")
-                            .map((hw) => (
-                              <HomeworkCard key={hw.id} item={hw} onToggle={state.toggleHomework} onToggleFavorite={state.toggleFavorite} onUpdate={state.updateHomework} onDelete={state.deleteHomework} showPeriodLabel />
-                            ))}
-                        </SortableList>
-                      </div>
-                    )}
-                    {filteredPurchase(state).length > 0 && (
-                      <div className="space-y-3">
-                        <SortableList
-                          items={filteredPurchase(state)}
-                          onReorder={(oldIdx, newIdx) => state.reorderShopItem("purchase", oldIdx, newIdx)}
-                        >
-                          {filteredPurchase(state).map((item) => (
-                            <ShopCard
-                              key={item.id}
-                              item={item}
-                              onToggle={(id) => state.toggleShopItem(id, "purchase")}
-                              onToggleFavorite={(id) => state.toggleShopFavorite(id, "purchase")}
-                              onUpdate={(id, updates) => state.updateShopItem(id, "purchase", updates)}
-                              onDelete={(id) => state.deleteShopItem(id, "purchase")}
-                            />
-                          ))}
-                        </SortableList>
-                      </div>
-                    )}
-                    {filteredTrade(state).length > 0 && (
-                      <div className="space-y-3">
-                        <SortableList
-                          items={filteredTrade(state)}
-                          onReorder={(oldIdx, newIdx) => state.reorderShopItem("trade", oldIdx, newIdx)}
-                        >
-                          {filteredTrade(state).map((item) => (
-                            <ShopCard
-                              key={item.id}
-                              item={item}
-                              onToggle={(id) => state.toggleShopItem(id, "trade")}
-                              onToggleFavorite={(id) => state.toggleShopFavorite(id, "trade")}
-                              onUpdate={(id, updates) => state.updateShopItem(id, "trade", updates)}
-                              onDelete={(id) => state.deleteShopItem(id, "trade")}
-                            />
-                          ))}
-                        </SortableList>
-                      </div>
-                    )}
-                    {filteredScroll(state).length > 0 && (
-                      <div className="space-y-3">
-                        <SortableList
-                          items={filteredScroll(state)}
-                          onReorder={(oldIdx, newIdx) => state.reorderScrollItem(oldIdx, newIdx)}
-                        >
-                          {filteredScroll(state).map((item) => (
-                            <ScrollCard
-                              key={item.id}
-                              item={item}
-                              onToggle={state.toggleScrollItem}
-                              onToggleFavorite={state.toggleScrollFavorite}
-                              onUpdate={state.updateScrollItem}
-                              onDelete={state.deleteScrollItem}
-                            />
-                          ))}
-                        </SortableList>
-                      </div>
-                    )}
-                  </>
+                {allTabCards.length > 0 ? (
+                  <SortableList
+                    items={allTabCards}
+                    onReorder={(oldIdx, newIdx) => state.reorderAllTabItem(allTabCards.map((card) => card.id), oldIdx, newIdx)}
+                  >
+                    {allTabCards.map((card) => {
+                      if (card.type === "homework") {
+                        return (
+                          <HomeworkCard
+                            key={card.id}
+                            item={card.item}
+                            onToggle={state.toggleHomework}
+                            onToggleFavorite={state.toggleFavorite}
+                            onUpdate={state.updateHomework}
+                            onDelete={state.deleteHomework}
+                            showPeriodLabel
+                          />
+                        );
+                      }
+                      if (card.type === "scroll") {
+                        return (
+                          <ScrollCard
+                            key={card.id}
+                            item={card.item}
+                            onToggle={state.toggleScrollItem}
+                            onToggleFavorite={state.toggleScrollFavorite}
+                            onUpdate={state.updateScrollItem}
+                            onDelete={state.deleteScrollItem}
+                          />
+                        );
+                      }
+                      return (
+                        <ShopCard
+                          key={card.id}
+                          item={card.item}
+                          onToggle={(id) => state.toggleShopItem(id, card.type)}
+                          onToggleFavorite={(id) => state.toggleShopFavorite(id, card.type)}
+                          onUpdate={(id, updates) => state.updateShopItem(id, card.type, updates)}
+                          onDelete={(id) => state.deleteShopItem(id, card.type)}
+                        />
+                      );
+                    })}
+                  </SortableList>
                 ) : (
                   <EmptyState />
                 )}
@@ -467,16 +441,16 @@ export default function Home() {
                     onReorder={(oldIdx, newIdx) => state.reorderShopItem(state.activeTab as "purchase" | "trade", oldIdx, newIdx)}
                   >
                     {state.currentShopItems.map((item) => (
-                      <ShopCard
-                        key={item.id}
-                        item={item}
+                            <ShopCard
+                              key={item.id}
+                              item={item}
                         onToggle={(id) => state.toggleShopItem(id, state.activeTab as "purchase" | "trade")}
                         onToggleFavorite={(id) => state.toggleShopFavorite(id, state.activeTab as "purchase" | "trade")}
                         onUpdate={(id, updates) => state.updateShopItem(id, state.activeTab as "purchase" | "trade", updates)}
                         onDelete={(id) => state.deleteShopItem(id, state.activeTab as "purchase" | "trade")}
-                      />
-                    ))}
-                  </SortableList>
+                            />
+                          ))}
+                        </SortableList>
                 ) : (
                   <EmptyState />
                 )}
@@ -566,7 +540,9 @@ export default function Home() {
         onClose={() => setShowProfile(false)}
         userName={user?.displayName}
         userEmail={user?.email}
+        providerEmails={providerEmails}
         userPhoto={user?.photoURL}
+        isAdmin={isAdmin}
         isGuest={isGuest}
         onSignOut={signOut}
         onDeleteAccount={user ? deleteAccount : undefined}
