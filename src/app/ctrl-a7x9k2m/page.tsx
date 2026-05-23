@@ -113,9 +113,9 @@ export default function AdminPage() {
   }, [publishedData, editData]);
 
   // ── 액션 ──
-  const showStatus = (msg: string) => {
+  const showStatus = (msg: string, duration = 3000) => {
     setStatusMsg(msg);
-    setTimeout(() => setStatusMsg(""), 3000);
+    setTimeout(() => setStatusMsg(""), duration);
   };
 
   const handleReset = useCallback(async () => {
@@ -134,7 +134,7 @@ export default function AdminPage() {
       setDraftSaved(true);
       showStatus("로컬 업로드 완료 — localhost에서 확인하세요");
     } catch (e) {
-      showStatus(`로컬 업로드 실패: ${getAdminFirestoreErrorMessage(e)}`);
+      showStatus(`로컬 업로드 실패: ${getAdminFirestoreErrorMessage(e)}`, 12000);
       console.error(e);
     }
     setSaving(false);
@@ -151,7 +151,7 @@ export default function AdminPage() {
       setDraftSaved(false);
       showStatus("실섭 업로드 완료!");
     } catch (e) {
-      showStatus(`실섭 업로드 실패: ${getAdminFirestoreErrorMessage(e)}`);
+      showStatus(`실섭 업로드 실패: ${getAdminFirestoreErrorMessage(e)}`, 12000);
       console.error(e);
     }
     setSaving(false);
