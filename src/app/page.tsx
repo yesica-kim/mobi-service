@@ -185,7 +185,7 @@ export default function Home() {
             >
               업데이트 노트
             </button>
-            {user && !isGuest && (
+            {isAdmin && (
               <button
                 onClick={() => (window.location.href = "/ctrl-a7x9k2m")}
                 className="flex items-center justify-center rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-red-400 transition-colors"

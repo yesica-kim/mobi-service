@@ -14,12 +14,14 @@ import type { PeriodType, ScrollType, RegionName } from "@/types";
 
 // ── 관리자 이메일 체크 ──
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
+const FALLBACK_ADMIN_EMAILS = ["inchu594@gmail.com"];
 
 export function isAdminUser(email: string | null | undefined): boolean {
-  if (!email || !ADMIN_EMAIL) return false;
+  if (!email) return false;
   const normalizedEmail = email.trim().toLowerCase();
-  return ADMIN_EMAIL.split(",")
+  return [...ADMIN_EMAIL.split(","), ...FALLBACK_ADMIN_EMAILS]
     .map((item) => item.trim().replace(/^['"]|['"]$/g, "").toLowerCase())
+    .filter(Boolean)
     .some((adminEmail) => adminEmail === normalizedEmail);
 }
 
