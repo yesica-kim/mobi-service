@@ -159,7 +159,7 @@ export async function getDraftCards(): Promise<DefaultCardsData | null> {
 }
 
 // ── 쓰기 ──
-/** 로컬 업로드: draft에 저장 */
+/** Dev 저장: draft에 저장 */
 export async function saveDraft(data: DefaultCardsData): Promise<void> {
   const sanitized = sanitizeDefaultCardsData(data);
   await setDoc(doc(db, COLLECTION, DRAFT_DOC), {

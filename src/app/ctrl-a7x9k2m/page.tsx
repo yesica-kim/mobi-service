@@ -57,7 +57,7 @@ export default function AdminPage() {
   // 데이터 상태
   const [publishedData, setPublishedData] = useState<DefaultCardsData | null>(null);
   const [editData, setEditData] = useState<DefaultCardsData>(codeDefaultsToData());
-  const [draftSaved, setDraftSaved] = useState(false); // 로컬 업로드 완료 여부
+  const [draftSaved, setDraftSaved] = useState(false); // Dev 저장 완료 여부
 
   // UI 상태
   const [activeTab, setActiveTab] = useState<AdminTab>("homework");
@@ -127,14 +127,14 @@ export default function AdminPage() {
     showStatus("초기화 완료");
   }, [publishedData]);
 
-  const handleLocalUpload = useCallback(async () => {
+  const handleDevSave = useCallback(async () => {
     setSaving(true);
     try {
       await saveDraft(editData);
       setDraftSaved(true);
-      showStatus("로컬 업로드 완료 — localhost에서 확인하세요");
+      showStatus("Dev 저장 완료 — 개발 섭에서 확인하세요");
     } catch (e) {
-      showStatus(`로컬 업로드 실패: ${getAdminFirestoreErrorMessage(e)}`, 12000);
+      showStatus(`Dev 저장 실패: ${getAdminFirestoreErrorMessage(e)}`, 12000);
       console.error(e);
     }
     setSaving(false);
@@ -391,7 +391,7 @@ export default function AdminPage() {
               초기화
             </button>
             <button
-              onClick={handleLocalUpload}
+              onClick={handleDevSave}
               disabled={!hasChanges || saving}
               className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                 hasChanges && !saving
@@ -399,7 +399,7 @@ export default function AdminPage() {
                   : "bg-slate-800 text-slate-600 cursor-not-allowed"
               }`}
             >
-              {saving ? "저장 중..." : "로컬 업로드"}
+              {saving ? "저장 중..." : "Dev 저장"}
             </button>
             <button
               onClick={handlePublish}
