@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CharacterTabs } from "@/components/CharacterTabs";
 import { CharacterCreateModal } from "@/components/CharacterCreateModal";
 import { CharacterEditModal } from "@/components/CharacterEditModal";
@@ -81,12 +81,17 @@ function sortAllTabCards(cards: AllTabCard[], order: string[]) {
 
 export default function Home() {
   const { user, loading: authLoading, isGuest, authError, signInWithGoogle, continueAsGuest, signOut, deleteAccount } = useAuth();
+  const [isDevHost, setIsDevHost] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingChar, setEditingChar] = useState<Character | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showUpdateNotes, setShowUpdateNotes] = useState(false);
   const state = useAppState(user?.uid);
+
+  useEffect(() => {
+    setIsDevHost(window.location.hostname.includes("-git-dev-"));
+  }, []);
 
   // 인증 로딩
   if (authLoading) {
@@ -102,7 +107,7 @@ export default function Home() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-slate-950 px-6">
         <div className="text-center">
-          <h1 className="text-5xl font-extrabold text-blue-500 tracking-wider mb-3">mobimobi</h1>
+          <h1 className={`text-5xl font-extrabold tracking-wider mb-3 ${isDevHost ? "text-red-500" : "text-blue-500"}`}>mobimobi</h1>
           <p className="text-slate-400 text-sm">마비노기 숙제 트래커</p>
         </div>
         <div className="flex flex-col gap-3 w-full max-w-xs">
@@ -179,10 +184,20 @@ export default function Home() {
     <div className="min-h-screen bg-slate-950 flex flex-col">
       <header className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/50">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <h1
-            className="text-2xl font-bold text-blue-500 cursor-pointer"
+          <button
+            type="button"
+            className="flex items-center gap-2 cursor-pointer"
             onClick={() => window.location.reload()}
-          >mobimobi</h1>
+          >
+            <span className={`text-2xl font-bold ${isDevHost ? "text-red-500" : "text-blue-500"}`}>
+              mobimobi
+            </span>
+            {isDevHost && (
+              <span className="rounded-md bg-red-600 px-1.5 py-0.5 text-[11px] font-extrabold uppercase leading-none text-white">
+                dev
+              </span>
+            )}
+          </button>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowUpdateNotes(true)}
