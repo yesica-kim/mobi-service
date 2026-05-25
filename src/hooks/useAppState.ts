@@ -1349,17 +1349,23 @@ export function useAppState(uid?: string | null) {
 
     const dailyHw = hwSource.filter((hw) => hw.period === "daily");
     const weeklyHw = hwSource.filter((hw) => hw.period === "weekly");
+    const countTotal = <T extends { totalCount: number }>(items: T[]) =>
+      favoriteOnly ? items.length : items.reduce((sum, item) => sum + item.totalCount, 0);
+    const countDone = <T extends { completedCount: number; totalCount: number }>(items: T[]) =>
+      favoriteOnly
+        ? items.filter((item) => item.completedCount >= item.totalCount).length
+        : items.reduce((sum, item) => sum + item.completedCount, 0);
 
-    const dailyTotal = dailyHw.reduce((sum, hw) => sum + hw.totalCount, 0);
-    const dailyDone = dailyHw.reduce((sum, hw) => sum + hw.completedCount, 0);
-    const weeklyTotal = weeklyHw.reduce((sum, hw) => sum + hw.totalCount, 0);
-    const weeklyDone = weeklyHw.reduce((sum, hw) => sum + hw.completedCount, 0);
+    const dailyTotal = countTotal(dailyHw);
+    const dailyDone = countDone(dailyHw);
+    const weeklyTotal = countTotal(weeklyHw);
+    const weeklyDone = countDone(weeklyHw);
     const purTotal = purSource.length;
     const purDone = purSource.filter((i) => i.completed).length;
     const trdTotal = trdSource.length;
     const trdDone = trdSource.filter((i) => i.completed).length;
-    const scrTotal = scrSource.reduce((sum, s) => sum + s.totalCount, 0);
-    const scrDone = scrSource.reduce((sum, s) => sum + s.completedCount, 0);
+    const scrTotal = countTotal(scrSource);
+    const scrDone = countDone(scrSource);
 
     const total = dailyTotal + weeklyTotal + purTotal + trdTotal + scrTotal;
     const done = dailyDone + weeklyDone + purDone + trdDone + scrDone;

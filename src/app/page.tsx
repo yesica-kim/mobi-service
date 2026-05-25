@@ -114,6 +114,21 @@ function truncateNickname(name: string): string {
   return chars.length > 6 ? `${chars.slice(0, 6).join("")}...` : name;
 }
 
+function isMatrixCellDone(row: MatrixRow, item: HomeworkItem | ShopItem | ScrollItem | undefined): boolean {
+  if (!item) return false;
+  if (row.type === "purchase" || row.type === "trade") return (item as ShopItem).completed;
+  const countItem = item as HomeworkItem | ScrollItem;
+  return countItem.completedCount >= countItem.totalCount;
+}
+
+function isMatrixRowDone(row: MatrixRow): boolean {
+  const scope = row.sourceItem.scope ?? "character";
+  if (scope === "server") {
+    return row.cells.some((cell) => isMatrixCellDone(row, cell.item));
+  }
+  return row.cells.length > 0 && row.cells.every((cell) => isMatrixCellDone(row, cell.item));
+}
+
 function sortAllTabCards(cards: AllTabCard[], order: string[]) {
   if (order.length === 0) return cards;
   const orderIndex = new Map(order.map((id, index) => [id, index]));
@@ -891,8 +906,10 @@ function ListMatrixMobileCard({
   onQuickEdit: (row: MatrixRow) => void;
   onDeleteRow: (row: MatrixRow) => void;
 }) {
+  const rowDone = isMatrixRowDone(row);
+
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 px-3 py-3">
+    <div className={`rounded-2xl border border-slate-800 px-3 py-3 ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}>
       <div className="flex items-start gap-2">
         <button
           type="button"
@@ -1065,12 +1082,13 @@ function ListMatrixRow({
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+  const rowDone = isMatrixRowDone(row);
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="grid grid-cols-[minmax(188px,52vw)_1fr] bg-slate-900 md:grid-cols-[340px_1fr]"
+      className={`grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[340px_1fr] ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}
     >
       <div className="min-w-0 py-3 pl-2 pr-3">
         <div className="flex h-full min-w-0 items-center gap-2">
