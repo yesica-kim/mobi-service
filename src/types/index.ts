@@ -217,6 +217,7 @@ export interface HomeworkPreset {
   homework: Omit<HomeworkItem, "id" | "completedCount" | "isFavorite">[];
   purchaseItems: Omit<ShopItem, "id" | "completed" | "isFavorite">[];
   tradeItems: Omit<ShopItem, "id" | "completed" | "isFavorite">[];
+  scrollItems?: Omit<ScrollItem, "id" | "completedCount" | "isFavorite">[];
 }
 
 // ── 멤버십 ──

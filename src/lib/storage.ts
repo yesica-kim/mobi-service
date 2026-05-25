@@ -89,6 +89,7 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
 
   for (const charId of Object.keys(data.homework ?? {})) {
     const current = data.homework[charId] ?? [];
+    if (current.length === 0) continue;
     const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
     const defaultItems = current.filter((item) => item.isDefault);
     const customItems = current.filter((item) => !item.isDefault);
@@ -128,6 +129,7 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
 
   for (const charId of Object.keys(data.purchaseItems ?? {})) {
     const current = data.purchaseItems[charId] ?? [];
+    if (current.length === 0) continue;
     const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
     const defaultItems = current.filter((item) => item.isDefault);
     const customItems = current.filter((item) => !item.isDefault);
@@ -166,6 +168,7 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
 
   for (const charId of Object.keys(data.tradeItems ?? {})) {
     const current = data.tradeItems[charId] ?? [];
+    if (current.length === 0) continue;
     const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
     const defaultItems = current.filter((item) => item.isDefault);
     const customItems = current.filter((item) => !item.isDefault);
@@ -206,6 +209,7 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
 
   for (const charId of Object.keys(data.scrollItems ?? {})) {
     const current = data.scrollItems![charId] ?? [];
+    if (current.length === 0) continue;
     const defaultItems = current.filter((item) => item.isDefault);
     const customItems = current.filter((item) => !item.isDefault);
 
@@ -337,10 +341,10 @@ function createDefaultData(defaultCards?: DefaultCardsData): AppData {
   };
   return {
     characters: [defaultChar],
-    homework: { [defaultChar.id]: createHomeworkForChar(defaultChar.id, defaultCards) },
-    purchaseItems: { [defaultChar.id]: createPurchaseForChar(defaultChar.id, defaultCards) },
-    tradeItems: { [defaultChar.id]: createTradeForChar(defaultChar.id, defaultCards) },
-    scrollItems: { [defaultChar.id]: createScrollForChar(defaultChar.id, defaultCards) },
+    homework: { [defaultChar.id]: [] },
+    purchaseItems: { [defaultChar.id]: [] },
+    tradeItems: { [defaultChar.id]: [] },
+    scrollItems: { [defaultChar.id]: [] },
     lastDailyReset: new Date().toISOString(),
     lastWeeklyReset: new Date().toISOString(),
   };

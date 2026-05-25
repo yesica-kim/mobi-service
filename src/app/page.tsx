@@ -508,6 +508,7 @@ export default function Home() {
               onExportPreset={state.exportCurrentPreset}
               onImportPreset={state.importPreset}
               onCreateEmptyList={state.createEmptyHomeworkList}
+              hasAnyCard={state.hasAnyCard}
             />
             <WeeklyCountdown />
             <ProgressBar
@@ -572,6 +573,7 @@ export default function Home() {
                   if (row.type === "scroll") state.deleteScrollItem(row.sourceItem.id);
                   if (row.type === "purchase" || row.type === "trade") state.deleteShopItem(row.sourceItem.id, row.type);
                 }}
+                onLoadDefault={() => state.loadPreset("__default__")}
                 onReorder={(oldIdx, newIdx) => {
                   if (state.activeTab === "all") {
                     state.reorderAllTabItem(matrixRows.map((row) => row.sourceItem.id), oldIdx, newIdx);
@@ -646,7 +648,7 @@ export default function Home() {
                     })}
                   </SortableList>
                 ) : (
-                  <EmptyState />
+                  <EmptyState onLoadDefault={() => state.loadPreset("__default__")} />
                 )}
               </div>
             )}
@@ -682,7 +684,7 @@ export default function Home() {
                     ))}
                   </SortableList>
                 ) : (
-                  <EmptyState />
+                  <EmptyState onLoadDefault={() => state.loadPreset("__default__")} />
                 )}
               </div>
             )}
@@ -707,7 +709,7 @@ export default function Home() {
                           ))}
                         </SortableList>
                 ) : (
-                  <EmptyState />
+                  <EmptyState onLoadDefault={() => state.loadPreset("__default__")} />
                 )}
               </div>
             )}
@@ -732,7 +734,7 @@ export default function Home() {
                     ))}
                   </SortableList>
                 ) : (
-                  <EmptyState />
+                  <EmptyState onLoadDefault={() => state.loadPreset("__default__")} />
                 )}
               </div>
             )}
@@ -821,11 +823,20 @@ export default function Home() {
   );
 }
 
-function EmptyState() {
+function EmptyState({ onLoadDefault }: { onLoadDefault?: () => void }) {
   return (
     <div className="text-center py-16">
       <p className="text-4xl mb-3">📋</p>
-      <p className="text-slate-500 text-sm">표시할 항목이 없습니다.</p>
+      <p className="text-slate-500 text-sm">+ 숙제 추가 기능으로 나만의 숙제 리스트를 만들어보세요.</p>
+      {onLoadDefault && (
+        <button
+          type="button"
+          onClick={onLoadDefault}
+          className="mt-4 rounded-xl border border-slate-700 px-4 py-2 text-xs font-medium text-slate-300 transition-colors hover:border-blue-500 hover:text-blue-400"
+        >
+          기본 숙제 설정 불러오기
+        </button>
+      )}
     </div>
   );
 }
@@ -839,6 +850,7 @@ function ListMatrixView({
   onToggleFavorite,
   onQuickEdit,
   onDeleteRow,
+  onLoadDefault,
   onReorder,
 }: {
   rows: MatrixRow[];
@@ -849,12 +861,13 @@ function ListMatrixView({
   onToggleFavorite: (row: MatrixRow) => void;
   onQuickEdit: (row: MatrixRow) => void;
   onDeleteRow: (row: MatrixRow) => void;
+  onLoadDefault: () => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
 }) {
   if (rows.length === 0) {
     return (
       <div className="px-4 py-4">
-        <EmptyState />
+        <EmptyState onLoadDefault={onLoadDefault} />
       </div>
     );
   }

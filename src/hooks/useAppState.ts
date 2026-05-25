@@ -6,7 +6,7 @@ import { loadUserData, saveUserData } from "@/lib/firestore";
 import { loadRuntimeDefaultCards } from "@/lib/defaultCards";
 import type { DefaultCardsData } from "@/lib/adminFirestore";
 import type { AppData, Character, HomeworkItem, HomeworkPreset, MembershipInfo, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType} from "@/types";
-import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, MAX_CHARS_PER_SERVER, SERVERS, parseTotalCount, toScope } from "@/types";
+import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, DEFAULT_SCROLL_ITEMS, MAX_CHARS_PER_SERVER, SERVERS, parseTotalCount, toScope } from "@/types";
 
 function cloneHomeworkForChar(charId: string, item: HomeworkItem, index: number): HomeworkItem {
   return {
@@ -158,12 +158,12 @@ export function useAppState(uid?: string | null) {
         loaded = applyResets(loadData(defaults), defaults);
       }
 
-      // 기존 캐릭터에 scrollItems가 없으면 기본 스크롤 추가
+      // 기존 캐릭터에 scrollItems 필드 자체가 없으면 기본 스크롤 추가
       if (loaded.characters.length > 0) {
         const scrollItems = loaded.scrollItems ?? {};
         let updated = false;
         for (const char of loaded.characters) {
-          if (!scrollItems[char.id] || scrollItems[char.id].length === 0) {
+          if (!scrollItems[char.id]) {
             scrollItems[char.id] = createScrollForChar(char.id, defaults);
             updated = true;
           }
@@ -272,18 +272,10 @@ export function useAppState(uid?: string | null) {
         const sourcePurchase = sourceCharId ? prev.purchaseItems[sourceCharId] ?? [] : [];
         const sourceTrade = sourceCharId ? prev.tradeItems[sourceCharId] ?? [] : [];
         const sourceScroll = sourceCharId ? (prev.scrollItems ?? {})[sourceCharId] ?? [] : [];
-        const homework = sourceHomework.length > 0
-          ? sourceHomework.map((item, index) => cloneHomeworkForChar(id, item, index))
-          : createHomeworkForChar(id, runtimeDefaults ?? undefined);
-        const purchaseItems = sourcePurchase.length > 0
-          ? sourcePurchase.map((item, index) => cloneShopForChar(id, item, "pur", index))
-          : createPurchaseForChar(id, runtimeDefaults ?? undefined);
-        const tradeItems = sourceTrade.length > 0
-          ? sourceTrade.map((item, index) => cloneShopForChar(id, item, "trd", index))
-          : createTradeForChar(id, runtimeDefaults ?? undefined);
-        const scrollItems = sourceScroll.length > 0
-          ? sourceScroll.map((item, index) => cloneScrollForChar(id, item, index))
-          : createScrollForChar(id, runtimeDefaults ?? undefined);
+        const homework = sourceCharId ? sourceHomework.map((item, index) => cloneHomeworkForChar(id, item, index)) : [];
+        const purchaseItems = sourceCharId ? sourcePurchase.map((item, index) => cloneShopForChar(id, item, "pur", index)) : [];
+        const tradeItems = sourceCharId ? sourceTrade.map((item, index) => cloneShopForChar(id, item, "trd", index)) : [];
+        const scrollItems = sourceCharId ? sourceScroll.map((item, index) => cloneScrollForChar(id, item, index)) : [];
         const allTabOrder = { ...(prev.allTabOrder ?? {}) };
 
         if (sourceCharId) {
@@ -1045,6 +1037,13 @@ export function useAppState(uid?: string | null) {
     });
   }, [persist, selectedCharId]);
 
+  const hasAnyCard = useMemo(() => {
+    if (!data) return false;
+    const count = (records: Record<string, unknown[]> | undefined) =>
+      Object.values(records ?? {}).some((items) => items.length > 0);
+    return count(data.homework) || count(data.purchaseItems) || count(data.tradeItems) || count(data.scrollItems);
+  }, [data]);
+
   // 기본 프리셋
   const defaultPreset: HomeworkPreset = useMemo(() => ({
     id: "__default__",
@@ -1071,6 +1070,16 @@ export function useAppState(uid?: string | null) {
       period: item.period,
       scope: toScope(item.scope),
     })),
+    scrollItems: (runtimeDefaults?.scrollItems ?? DEFAULT_SCROLL_ITEMS).map((item) => ({
+      title: item.title,
+      scrollType: item.scrollType,
+      period: item.period,
+      totalCount: 3,
+      scope: "character" as const,
+      region: item.region,
+      materials: item.materials === "-" ? ["-"] : item.materials.split(",").map((s) => s.trim()),
+      reward: item.reward,
+    })),
   }), [runtimeDefaults]);
 
   // ── 프리셋 저장 ──
@@ -1080,6 +1089,7 @@ export function useAppState(uid?: string | null) {
       const hw = data.homework[selectedCharId] ?? [];
       const pur = data.purchaseItems[selectedCharId] ?? [];
       const trd = data.tradeItems[selectedCharId] ?? [];
+      const scr = (data.scrollItems ?? {})[selectedCharId] ?? [];
       const preset: HomeworkPreset = {
         id: `preset_${Date.now()}`,
         name,
@@ -1087,6 +1097,7 @@ export function useAppState(uid?: string | null) {
         homework: hw.map(({ id, completedCount, isFavorite, ...rest }) => rest),
         purchaseItems: pur.map(({ id, completed, isFavorite, ...rest }) => rest),
         tradeItems: trd.map(({ id, completed, isFavorite, ...rest }) => rest),
+        scrollItems: scr.map(({ id, completedCount, isFavorite, ...rest }) => rest),
       };
       persist((prev) => ({
         ...prev,
@@ -1109,65 +1120,78 @@ export function useAppState(uid?: string | null) {
       }
       if (!preset) return;
       persist((prev) => {
-        // 1. 현재 상태를 savedItemStates에 저장 (기존 저장분과 병합)
-        const prevHw = prev.homework[selectedCharId] ?? [];
-        const prevPur = prev.purchaseItems[selectedCharId] ?? [];
-        const prevTrd = prev.tradeItems[selectedCharId] ?? [];
-
         const savedStates = { ...(prev.savedItemStates ?? {}) };
-        const charStates = savedStates[selectedCharId] ?? { homework: {}, purchase: {}, trade: {} };
+        const nextHomework = { ...prev.homework };
+        const nextPurchase = { ...prev.purchaseItems };
+        const nextTrade = { ...prev.tradeItems };
+        const nextScroll = { ...(prev.scrollItems ?? {}) };
+        const allTabOrder = { ...(prev.allTabOrder ?? {}) };
 
-        // 기존 저장분과 현재 상태 병합 (현재가 우선)
-        const mergedHw = { ...charStates.homework };
-        for (const h of prevHw) { mergedHw[h.title] = { completedCount: h.completedCount, isFavorite: h.isFavorite }; }
-        const mergedPur = { ...charStates.purchase };
-        for (const p of prevPur) { mergedPur[p.itemName] = { completed: p.completed, isFavorite: p.isFavorite }; }
-        const mergedTrd = { ...charStates.trade };
-        for (const t of prevTrd) { mergedTrd[t.itemName] = { completed: t.completed, isFavorite: t.isFavorite }; }
+        for (const char of prev.characters) {
+          const charId = char.id;
+          const prevHw = prev.homework[charId] ?? [];
+          const prevPur = prev.purchaseItems[charId] ?? [];
+          const prevTrd = prev.tradeItems[charId] ?? [];
+          const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
+          const mergedHw = { ...charStates.homework };
+          for (const h of prevHw) { mergedHw[h.title] = { completedCount: h.completedCount, isFavorite: h.isFavorite }; }
+          const mergedPur = { ...charStates.purchase };
+          for (const p of prevPur) { mergedPur[p.itemName] = { completed: p.completed, isFavorite: p.isFavorite }; }
+          const mergedTrd = { ...charStates.trade };
+          for (const t of prevTrd) { mergedTrd[t.itemName] = { completed: t.completed, isFavorite: t.isFavorite }; }
 
-        savedStates[selectedCharId] = { homework: mergedHw, purchase: mergedPur, trade: mergedTrd };
+          savedStates[charId] = { homework: mergedHw, purchase: mergedPur, trade: mergedTrd };
+          delete allTabOrder[charId];
 
-        // 2. 프리셋 아이템 생성 + 저장된 상태 복원
+          nextHomework[charId] = preset!.homework.map((hw, i) => {
+            const saved = mergedHw[hw.title];
+            const totalCount = hw.totalCount || parseTotalCount(hw.title);
+            return {
+              ...hw,
+              id: `${charId}_hw_${i}`,
+              completedCount: Math.min(saved?.completedCount ?? 0, totalCount),
+              isFavorite: saved?.isFavorite ?? false,
+              totalCount,
+            };
+          });
+          nextPurchase[charId] = preset!.purchaseItems.map((item, i) => {
+            const saved = mergedPur[item.itemName];
+            return {
+              ...item,
+              id: `${charId}_pur_${i}`,
+              completed: saved?.completed ?? false,
+              isFavorite: saved?.isFavorite ?? false,
+            };
+          });
+          nextTrade[charId] = preset!.tradeItems.map((item, i) => {
+            const saved = mergedTrd[item.itemName];
+            return {
+              ...item,
+              id: `${charId}_trd_${i}`,
+              completed: saved?.completed ?? false,
+              isFavorite: saved?.isFavorite ?? false,
+            };
+          });
+          nextScroll[charId] = (preset!.scrollItems ?? []).map((item, i) => {
+            const totalCount = item.totalCount || 3;
+            return {
+              ...item,
+              id: `${charId}_scroll_${i}`,
+              completedCount: 0,
+              isFavorite: false,
+              totalCount,
+            };
+          });
+        }
+
         return {
           ...prev,
           savedItemStates: savedStates,
-          homework: {
-            ...prev.homework,
-            [selectedCharId]: preset!.homework.map((hw, i) => {
-              const saved = mergedHw[hw.title];
-              return {
-                ...hw,
-                id: `${selectedCharId}_hw_${i}`,
-                completedCount: saved?.completedCount ?? 0,
-                isFavorite: saved?.isFavorite ?? false,
-                totalCount: hw.totalCount || parseTotalCount(hw.title),
-              };
-            }),
-          },
-          purchaseItems: {
-            ...prev.purchaseItems,
-            [selectedCharId]: preset!.purchaseItems.map((item, i) => {
-              const saved = mergedPur[item.itemName];
-              return {
-                ...item,
-                id: `${selectedCharId}_pur_${i}`,
-                completed: saved?.completed ?? false,
-                isFavorite: saved?.isFavorite ?? false,
-              };
-            }),
-          },
-          tradeItems: {
-            ...prev.tradeItems,
-            [selectedCharId]: preset!.tradeItems.map((item, i) => {
-              const saved = mergedTrd[item.itemName];
-              return {
-                ...item,
-                id: `${selectedCharId}_trd_${i}`,
-                completed: saved?.completed ?? false,
-                isFavorite: saved?.isFavorite ?? false,
-              };
-            }),
-          },
+          homework: nextHomework,
+          purchaseItems: nextPurchase,
+          tradeItems: nextTrade,
+          scrollItems: nextScroll,
+          allTabOrder,
         };
       });
     },
@@ -1192,6 +1216,7 @@ export function useAppState(uid?: string | null) {
     const hw = data.homework[selectedCharId] ?? [];
     const pur = data.purchaseItems[selectedCharId] ?? [];
     const trd = data.tradeItems[selectedCharId] ?? [];
+    const scr = (data.scrollItems ?? {})[selectedCharId] ?? [];
     const char = data.characters.find((c) => c.id === selectedCharId);
     return {
       id: `preset_export_${Date.now()}`,
@@ -1200,6 +1225,7 @@ export function useAppState(uid?: string | null) {
       homework: hw.map(({ id, completedCount, isFavorite, ...rest }) => rest),
       purchaseItems: pur.map(({ id, completed, isFavorite, ...rest }) => rest),
       tradeItems: trd.map(({ id, completed, isFavorite, ...rest }) => rest),
+      scrollItems: scr.map(({ id, completedCount, isFavorite, ...rest }) => rest),
     };
   }, [selectedCharId, data]);
 
@@ -1487,6 +1513,7 @@ export function useAppState(uid?: string | null) {
     updateShopItem,
     resetHomework,
     createEmptyHomeworkList,
+    hasAnyCard,
     savePreset,
     loadPreset,
     deletePreset,
