@@ -26,6 +26,7 @@ import { isAdminFirebaseUser } from "@/lib/adminFirestore";
 import type { Character, HomeworkItem, RegionName, ScrollItem, ShopItem } from "@/types";
 
 type FilterState = { favoriteOnly: boolean; searchQuery: string; regionFilter: RegionName[]; periodFilter: string; scopeFilter: string };
+type ViewMode = "character" | "list";
 
 function filteredPurchase(state: FilterState & { allPurchaseItems: any[] }) {
   let items = state.favoriteOnly ? state.allPurchaseItems.filter((i: any) => i.isFavorite) : state.allPurchaseItems;
@@ -68,6 +69,11 @@ type AllTabCard =
   | { id: string; type: "trade"; item: ShopItem }
   | { id: string; type: "scroll"; item: ScrollItem };
 
+type MatrixRow =
+  | { id: string; type: "homework"; label: string; meta: string; totalCount: number; cells: { char: Character; item?: HomeworkItem }[] }
+  | { id: string; type: "purchase" | "trade"; label: string; meta: string; cells: { char: Character; item?: ShopItem }[] }
+  | { id: string; type: "scroll"; label: string; meta: string; totalCount: number; cells: { char: Character; item?: ScrollItem }[] };
+
 function sortAllTabCards(cards: AllTabCard[], order: string[]) {
   if (order.length === 0) return cards;
   const orderIndex = new Map(order.map((id, index) => [id, index]));
@@ -82,6 +88,7 @@ function sortAllTabCards(cards: AllTabCard[], order: string[]) {
 export default function Home() {
   const { user, loading: authLoading, isGuest, authError, signInWithGoogle, continueAsGuest, signOut, deleteAccount } = useAuth();
   const [isDevHost, setIsDevHost] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("character");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingChar, setEditingChar] = useState<Character | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
@@ -178,6 +185,65 @@ export default function Home() {
     ],
     state.allTabOrder
   );
+  const matrixRows: MatrixRow[] = (() => {
+    const makeHomeworkRow = (item: HomeworkItem): MatrixRow | null => {
+      const index = state.allHomework.indexOf(item);
+      if (index === -1) return null;
+      return {
+        id: `homework-${item.id}`,
+        type: "homework",
+        label: item.title,
+        meta: item.period === "daily" ? "일간 숙제" : "주간 숙제",
+        totalCount: item.totalCount,
+        cells: state.serverChars.map((char) => ({ char, item: state.homeworkByChar[char.id]?.[index] })),
+      };
+    };
+    const makeShopRow = (item: ShopItem, type: "purchase" | "trade"): MatrixRow | null => {
+      const source = type === "purchase" ? state.allPurchaseItems : state.allTradeItems;
+      const byChar = type === "purchase" ? state.purchaseItemsByChar : state.tradeItemsByChar;
+      const index = source.indexOf(item);
+      if (index === -1) return null;
+      return {
+        id: `${type}-${item.id}`,
+        type,
+        label: item.itemName,
+        meta: `${type === "purchase" ? "구매" : "물물교환"} · ${item.region}`,
+        cells: state.serverChars.map((char) => ({ char, item: byChar[char.id]?.[index] })),
+      };
+    };
+    const makeScrollRow = (item: ScrollItem): MatrixRow | null => {
+      const index = state.allScrollItems.indexOf(item);
+      if (index === -1) return null;
+      return {
+        id: `scroll-${item.id}`,
+        type: "scroll",
+        label: item.title,
+        meta: `임무게시판 · ${item.scrollType} · ${item.region}`,
+        totalCount: item.totalCount,
+        cells: state.serverChars.map((char) => ({ char, item: state.scrollItemsByChar[char.id]?.[index] })),
+      };
+    };
+
+    if (state.activeTab === "all") {
+      return allTabCards
+        .map((card) => {
+          if (card.type === "homework") return makeHomeworkRow(card.item);
+          if (card.type === "scroll") return makeScrollRow(card.item);
+          return makeShopRow(card.item, card.type);
+        })
+        .filter(Boolean) as MatrixRow[];
+    }
+    if (state.activeTab === "daily" || state.activeTab === "weekly") {
+      return state.currentHomework.map(makeHomeworkRow).filter(Boolean) as MatrixRow[];
+    }
+    if (state.activeTab === "purchase" || state.activeTab === "trade") {
+      return state.currentShopItems.map((item) => makeShopRow(item, state.activeTab as "purchase" | "trade")).filter(Boolean) as MatrixRow[];
+    }
+    if (state.activeTab === "scroll") {
+      return state.currentScrollItems.map(makeScrollRow).filter(Boolean) as MatrixRow[];
+    }
+    return [];
+  })();
 
   // 대시보드
   return (
@@ -293,21 +359,48 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto pb-8 flex-1 w-full">
+      <main className={`${viewMode === "list" ? "max-w-6xl" : "max-w-lg"} mx-auto pb-8 flex-1 w-full`}>
         <ServerTabs
           servers={state.activeServers}
           selected={state.selectedServer}
           onChange={state.setSelectedServer}
         />
 
-        <CharacterTabs
-          characters={state.serverChars}
-          selectedId={state.selectedCharId}
-          onSelect={state.setSelectedCharId}
-          onAdd={() => setShowCreateModal(true)}
-          onEdit={(c) => setEditingChar(c)}
-          onReorder={state.reorderCharacters}
-        />
+        {state.serverChars.length > 0 && (
+          <div className="px-4 pt-3">
+            <div className="grid grid-cols-2 rounded-xl bg-slate-900 p-1">
+              <button
+                type="button"
+                onClick={() => setViewMode("character")}
+                className={`rounded-lg py-2 text-sm font-semibold transition-colors ${
+                  viewMode === "character" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                캐릭터별
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`rounded-lg py-2 text-sm font-semibold transition-colors ${
+                  viewMode === "list" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                리스트별
+              </button>
+            </div>
+          </div>
+        )}
+
+        {viewMode === "character" && (
+          <CharacterTabs
+            characters={state.serverChars}
+            selectedId={state.selectedCharId}
+            onSelect={state.setSelectedCharId}
+            onAdd={() => setShowCreateModal(true)}
+            onEdit={(c) => setEditingChar(c)}
+            onReorder={state.reorderCharacters}
+          />
+        )}
 
         <MembershipBanner
           server={state.selectedServer}
@@ -318,24 +411,28 @@ export default function Home() {
 
         {state.selectedChar ? (
           <>
-            <HomeworkToolbar
-              presets={state.presets}
-              onReset={state.resetHomework}
-              onSavePreset={state.savePreset}
-              onLoadPreset={state.loadPreset}
-              onDeletePreset={state.deletePreset}
-              onExportPreset={state.exportCurrentPreset}
-              onImportPreset={state.importPreset}
-            />
+            {viewMode === "character" && (
+              <HomeworkToolbar
+                presets={state.presets}
+                onReset={state.resetHomework}
+                onSavePreset={state.savePreset}
+                onLoadPreset={state.loadPreset}
+                onDeletePreset={state.deletePreset}
+                onExportPreset={state.exportCurrentPreset}
+                onImportPreset={state.importPreset}
+              />
+            )}
             <WeeklyCountdown />
-            <ProgressBar
-              done={state.progress.done}
-              total={state.progress.total}
-              pct={state.progress.pct}
-              categories={state.progress.categories}
-              favoriteOnly={state.favoriteOnly}
-              onFavoriteToggle={state.setFavoriteOnly}
-            />
+            {viewMode === "character" && (
+              <ProgressBar
+                done={state.progress.done}
+                total={state.progress.total}
+                pct={state.progress.pct}
+                categories={state.progress.categories}
+                favoriteOnly={state.favoriteOnly}
+                onFavoriteToggle={state.setFavoriteOnly}
+              />
+            )}
 
             <PeriodToggle active={state.activeTab} onChange={state.setActiveTab} />
 
@@ -365,7 +462,23 @@ export default function Home() {
               </button>
             </div>
 
-            {state.activeTab === "all" && (
+            {viewMode === "list" && (
+              <ListMatrixView
+                rows={matrixRows}
+                characters={state.serverChars}
+                onToggleHomework={(charId, item) => {
+                  const nextIndex = item.completedCount >= item.totalCount ? 0 : item.completedCount;
+                  state.toggleHomeworkForChar(charId, item.id, nextIndex);
+                }}
+                onToggleShop={(charId, item, type) => state.toggleShopItemForChar(charId, item.id, type)}
+                onToggleScroll={(charId, item) => {
+                  const nextIndex = item.completedCount >= item.totalCount ? 0 : item.completedCount;
+                  state.toggleScrollItemForChar(charId, item.id, nextIndex);
+                }}
+              />
+            )}
+
+            {viewMode === "character" && state.activeTab === "all" && (
               <div className="px-4 py-4 space-y-3">
                 {allTabCards.length > 0 ? (
                   <SortableList
@@ -416,7 +529,7 @@ export default function Home() {
               </div>
             )}
 
-            {(state.activeTab === "daily" || state.activeTab === "weekly") && (
+            {viewMode === "character" && (state.activeTab === "daily" || state.activeTab === "weekly") && (
               <div className="px-4 py-4 space-y-3">
                 {state.currentHomework.length > 0 ? (
                   <SortableList
@@ -443,7 +556,7 @@ export default function Home() {
               </div>
             )}
 
-            {isShopTab && (
+            {viewMode === "character" && isShopTab && (
               <div className="px-4 py-4 space-y-3">
                 {state.currentShopItems.length > 0 ? (
                   <SortableList
@@ -467,7 +580,7 @@ export default function Home() {
               </div>
             )}
 
-            {isScrollTab && (
+            {viewMode === "character" && isScrollTab && (
               <div className="px-4 py-4 space-y-3">
                 {state.currentScrollItems.length > 0 ? (
                   <SortableList
@@ -491,7 +604,7 @@ export default function Home() {
               </div>
             )}
 
-            {isEventTab && (
+            {viewMode === "character" && isEventTab && (
               <div className="px-4 py-4">
                 <div className="text-center py-16">
                   <p className="text-4xl mb-3">🎉</p>
@@ -573,6 +686,125 @@ function EmptyState() {
     <div className="text-center py-16">
       <p className="text-4xl mb-3">📋</p>
       <p className="text-slate-500 text-sm">표시할 항목이 없습니다.</p>
+    </div>
+  );
+}
+
+function ListMatrixView({
+  rows,
+  characters,
+  onToggleHomework,
+  onToggleShop,
+  onToggleScroll,
+}: {
+  rows: MatrixRow[];
+  characters: Character[];
+  onToggleHomework: (charId: string, item: HomeworkItem) => void;
+  onToggleShop: (charId: string, item: ShopItem, type: "purchase" | "trade") => void;
+  onToggleScroll: (charId: string, item: ScrollItem) => void;
+}) {
+  if (rows.length === 0) {
+    return (
+      <div className="px-4 py-4">
+        <EmptyState />
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-4">
+      <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/70">
+        <div className="grid grid-cols-[minmax(156px,42vw)_1fr] md:grid-cols-[260px_1fr] border-b border-slate-800 bg-slate-950/80">
+          <div className="px-3 py-3 text-xs font-bold text-slate-300">항목</div>
+          <div className="overflow-x-auto">
+            <div
+              className="grid min-w-max"
+              style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(72px, 88px))` }}
+            >
+              {characters.map((char) => (
+                <div key={char.id} className="px-2 py-3 text-center text-xs font-bold text-slate-300">
+                  <span className="block truncate">{char.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="divide-y divide-slate-800/80">
+          {rows.map((row) => (
+            <div key={row.id} className="grid grid-cols-[minmax(156px,42vw)_1fr] md:grid-cols-[260px_1fr]">
+              <div className="min-w-0 bg-slate-900 px-3 py-3">
+                <div className="truncate text-sm font-semibold text-slate-100">{row.label}</div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <span className="rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400">
+                    {row.meta}
+                  </span>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <div
+                  className="grid min-w-max"
+                  style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(72px, 88px))` }}
+                >
+                  {row.cells.map((cell) => {
+                    if (!cell.item) {
+                      return (
+                        <div key={cell.char.id} className="flex items-center justify-center px-2 py-3">
+                          <span className="text-xs text-slate-700">-</span>
+                        </div>
+                      );
+                    }
+
+                    if (row.type === "purchase" || row.type === "trade") {
+                      const item = cell.item as ShopItem;
+                      return (
+                        <div key={cell.char.id} className="flex items-center justify-center px-2 py-3">
+                          <button
+                            type="button"
+                            onClick={() => onToggleShop(cell.char.id, item, row.type)}
+                            className={`h-9 w-9 rounded-lg border text-sm font-bold transition-colors ${
+                              item.completed
+                                ? "border-blue-400 bg-blue-500 text-white"
+                                : "border-slate-700 bg-slate-950 text-slate-600 hover:border-blue-500 hover:text-blue-300"
+                            }`}
+                            title={`${cell.char.name} ${row.label}`}
+                          >
+                            {item.completed ? "✓" : ""}
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    const item = cell.item as HomeworkItem | ScrollItem;
+                    const done = item.completedCount >= item.totalCount;
+                    return (
+                      <div key={cell.char.id} className="flex items-center justify-center px-2 py-3">
+                        <button
+                          type="button"
+                          onClick={() => row.type === "homework"
+                            ? onToggleHomework(cell.char.id, item as HomeworkItem)
+                            : onToggleScroll(cell.char.id, item as ScrollItem)
+                          }
+                          className={`h-9 min-w-9 rounded-lg border px-2 text-xs font-bold transition-colors ${
+                            done
+                              ? "border-blue-400 bg-blue-500 text-white"
+                              : item.completedCount > 0
+                              ? "border-amber-400 bg-amber-500/20 text-amber-200"
+                              : "border-slate-700 bg-slate-950 text-slate-600 hover:border-blue-500 hover:text-blue-300"
+                          }`}
+                          title={`${cell.char.name} ${row.label}`}
+                        >
+                          {item.totalCount > 1 ? `${item.completedCount}/${item.totalCount}` : done ? "✓" : ""}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

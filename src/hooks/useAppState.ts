@@ -214,6 +214,12 @@ export function useAppState(uid?: string | null) {
     [selectedServer]
   );
 
+  const getCharServerCharIds = useCallback((prev: AppData, charId: string): string[] => {
+    const server = prev.characters.find((c) => c.id === charId)?.server;
+    if (!server) return [charId];
+    return prev.characters.filter((c) => c.server === server).map((c) => c.id);
+  }, []);
+
   // ── 숙제 토글 ──
   const toggleHomework = useCallback(
     (hwId: string, checkIndex: number) => {
@@ -250,6 +256,41 @@ export function useAppState(uid?: string | null) {
       });
     },
     [persist, selectedCharId, getSameServerCharIds]
+  );
+
+  const toggleHomeworkForChar = useCallback(
+    (charId: string, hwId: string, checkIndex: number) => {
+      persist((prev) => {
+        const currentList = prev.homework[charId] ?? [];
+        const target = currentList.find((hw) => hw.id === hwId);
+        if (!target) return prev;
+
+        const newCount = checkIndex < target.completedCount ? checkIndex : checkIndex + 1;
+        const hwIndex = currentList.indexOf(target);
+
+        if (target.scope === "server") {
+          const charIds = getCharServerCharIds(prev, charId);
+          const newHomework = { ...prev.homework };
+          for (const cid of charIds) {
+            newHomework[cid] = (newHomework[cid] ?? []).map((hw, i) =>
+              i === hwIndex ? { ...hw, completedCount: newCount } : hw
+            );
+          }
+          return { ...prev, homework: newHomework };
+        }
+
+        return {
+          ...prev,
+          homework: {
+            ...prev.homework,
+            [charId]: currentList.map((hw) =>
+              hw.id === hwId ? { ...hw, completedCount: newCount } : hw
+            ),
+          },
+        };
+      });
+    },
+    [persist, getCharServerCharIds]
   );
 
   const toggleFavorite = useCallback(
@@ -332,6 +373,42 @@ export function useAppState(uid?: string | null) {
       });
     },
     [persist, selectedCharId, getSameServerCharIds]
+  );
+
+  const toggleShopItemForChar = useCallback(
+    (charId: string, itemId: string, type: "purchase" | "trade") => {
+      const key = type === "purchase" ? "purchaseItems" : "tradeItems";
+      persist((prev) => {
+        const currentList = prev[key][charId] ?? [];
+        const target = currentList.find((item) => item.id === itemId);
+        if (!target) return prev;
+
+        const newCompleted = !target.completed;
+        const itemIndex = currentList.indexOf(target);
+
+        if (target.scope === "server") {
+          const charIds = getCharServerCharIds(prev, charId);
+          const newItems = { ...prev[key] };
+          for (const cid of charIds) {
+            newItems[cid] = (newItems[cid] ?? []).map((item, i) =>
+              i === itemIndex ? { ...item, completed: newCompleted } : item
+            );
+          }
+          return { ...prev, [key]: newItems };
+        }
+
+        return {
+          ...prev,
+          [key]: {
+            ...prev[key],
+            [charId]: currentList.map((item) =>
+              item.id === itemId ? { ...item, completed: newCompleted } : item
+            ),
+          },
+        };
+      });
+    },
+    [persist, getCharServerCharIds]
   );
 
   const toggleShopFavorite = useCallback(
@@ -617,6 +694,26 @@ export function useAppState(uid?: string | null) {
       });
     },
     [persist, selectedCharId]
+  );
+
+  const toggleScrollItemForChar = useCallback(
+    (charId: string, itemId: string, checkIndex: number) => {
+      persist((prev) => {
+        const scrollItems = prev.scrollItems ?? {};
+        const list = scrollItems[charId] ?? [];
+        const target = list.find((s) => s.id === itemId);
+        if (!target) return prev;
+        const newCount = checkIndex < target.completedCount ? checkIndex : checkIndex + 1;
+        return {
+          ...prev,
+          scrollItems: {
+            ...scrollItems,
+            [charId]: list.map((s) => s.id === itemId ? { ...s, completedCount: newCount } : s),
+          },
+        };
+      });
+    },
+    [persist]
   );
 
   const toggleScrollFavorite = useCallback(
@@ -1171,6 +1268,7 @@ export function useAppState(uid?: string | null) {
     setActiveTab,
     currentHomework,
     toggleHomework,
+    toggleHomeworkForChar,
     toggleFavorite,
     updateHomework,
     favoriteOnly,
@@ -1191,6 +1289,7 @@ export function useAppState(uid?: string | null) {
     allTabOrder,
     currentShopItems,
     toggleShopItem,
+    toggleShopItemForChar,
     toggleShopFavorite,
     updateShopItem,
     resetHomework,
@@ -1206,10 +1305,15 @@ export function useAppState(uid?: string | null) {
     reorderShopItem,
     reorderCharacters,
     allHomework,
+    homeworkByChar: data?.homework ?? {},
     allScrollItems,
+    purchaseItemsByChar: data?.purchaseItems ?? {},
+    tradeItemsByChar: data?.tradeItems ?? {},
+    scrollItemsByChar: data?.scrollItems ?? {},
     currentScrollItems,
     addScrollItem,
     toggleScrollItem,
+    toggleScrollItemForChar,
     toggleScrollFavorite,
     updateScrollItem,
     deleteScrollItem,
