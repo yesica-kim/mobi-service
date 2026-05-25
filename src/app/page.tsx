@@ -814,7 +814,22 @@ function ListMatrixView({
 
   return (
     <div className="px-4 py-4">
-      <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/70">
+      <div className="space-y-3 md:hidden">
+        {rows.map((row) => (
+          <ListMatrixMobileCard
+            key={row.id}
+            row={row}
+            onToggleHomework={onToggleHomework}
+            onToggleShop={onToggleShop}
+            onToggleScroll={onToggleScroll}
+            onToggleFavorite={onToggleFavorite}
+            onQuickEdit={onQuickEdit}
+            onDeleteRow={onDeleteRow}
+          />
+        ))}
+      </div>
+
+      <div className="hidden overflow-hidden rounded-xl border border-slate-800 bg-slate-900/70 md:block">
         <div className="grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[340px_1fr] border-b border-slate-800 bg-slate-950/80">
           <div className="py-3 pl-2 pr-3 text-sm font-bold text-slate-300">
             <div className="flex items-center">
@@ -854,6 +869,164 @@ function ListMatrixView({
             ))}
           </div>
         </SortableList>
+      </div>
+    </div>
+  );
+}
+
+function ListMatrixMobileCard({
+  row,
+  onToggleHomework,
+  onToggleShop,
+  onToggleScroll,
+  onToggleFavorite,
+  onQuickEdit,
+  onDeleteRow,
+}: {
+  row: MatrixRow;
+  onToggleHomework: (charId: string, item: HomeworkItem) => void;
+  onToggleShop: (charId: string, item: ShopItem, type: "purchase" | "trade") => void;
+  onToggleScroll: (charId: string, item: ScrollItem) => void;
+  onToggleFavorite: (row: MatrixRow) => void;
+  onQuickEdit: (row: MatrixRow) => void;
+  onDeleteRow: (row: MatrixRow) => void;
+}) {
+  return (
+    <div className="rounded-2xl bg-slate-800 px-3 py-3">
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          onClick={() => onToggleFavorite(row)}
+          className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-base transition-colors ${
+            row.sourceItem.isFavorite ? "text-yellow-400 hover:bg-slate-700/70" : "text-slate-600 hover:bg-slate-700/70 hover:text-slate-400"
+          }`}
+          title={row.sourceItem.isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
+        >
+          {row.sourceItem.isFavorite ? "★" : "☆"}
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1">
+            {row.badges.map((badge) => (
+              <span
+                key={`${row.id}-mobile-${badge.label}`}
+                className={`flex-shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${badge.className}`}
+              >
+                {badge.label}
+              </span>
+            ))}
+          </div>
+          <div className="mt-1.5 whitespace-normal break-keep text-[15px] font-semibold leading-snug text-white">
+            {row.label}
+          </div>
+          {row.details.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {row.details.map((detail, idx) => (
+                <span
+                  key={`${row.id}-mobile-detail-${idx}-${detail.label}`}
+                  className={`rounded-md px-1.5 py-0.5 text-[11px] ${detail.className}`}
+                >
+                  {detail.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {!row.sourceItem.isDefault && (
+          <div className="flex flex-shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onQuickEdit(row)}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-slate-300"
+              title="수정"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => onDeleteRow(row)}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-red-400"
+              title="삭제"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {row.cells.map((cell) => {
+          if (!cell.item) {
+            return (
+              <div key={cell.char.id} className="flex min-h-[46px] items-center justify-between rounded-xl border border-slate-700/60 bg-slate-900/40 px-2.5 py-2">
+                <div className="min-w-0">
+                  <div className="truncate text-[11px] font-semibold text-slate-500">{cell.char.subClass}</div>
+                  <div className="truncate text-xs font-bold text-slate-500">{truncateNickname(cell.char.name)}</div>
+                </div>
+                <span className="text-xs text-slate-700">-</span>
+              </div>
+            );
+          }
+
+          if (row.type === "purchase" || row.type === "trade") {
+            const item = cell.item as ShopItem;
+            return (
+              <button
+                key={cell.char.id}
+                type="button"
+                onClick={() => onToggleShop(cell.char.id, item, row.type)}
+                className={`flex min-h-[46px] items-center justify-between rounded-xl border px-2.5 py-2 text-left transition-colors ${
+                  item.completed
+                    ? "border-blue-400 bg-blue-500 text-white"
+                    : "border-slate-700 bg-slate-900/40 text-slate-400 hover:border-blue-500 hover:text-blue-300"
+                }`}
+                title={`${cell.char.name} ${row.label}`}
+              >
+                <span className="min-w-0">
+                  <span className={`block truncate text-[11px] font-semibold ${item.completed ? "text-blue-100" : "text-slate-500"}`}>{cell.char.subClass}</span>
+                  <span className="block truncate text-xs font-bold">{truncateNickname(cell.char.name)}</span>
+                </span>
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-current/40 text-sm font-bold">
+                  {item.completed ? "✓" : ""}
+                </span>
+              </button>
+            );
+          }
+
+          const item = cell.item as HomeworkItem | ScrollItem;
+          const done = item.completedCount >= item.totalCount;
+          return (
+            <button
+              key={cell.char.id}
+              type="button"
+              onClick={() => row.type === "homework"
+                ? onToggleHomework(cell.char.id, item as HomeworkItem)
+                : onToggleScroll(cell.char.id, item as ScrollItem)
+              }
+              className={`flex min-h-[46px] items-center justify-between rounded-xl border px-2.5 py-2 text-left transition-colors ${
+                done
+                  ? "border-blue-400 bg-blue-500 text-white"
+                  : item.completedCount > 0
+                  ? "border-amber-400 bg-amber-500/20 text-amber-200"
+                  : "border-slate-700 bg-slate-900/40 text-slate-400 hover:border-blue-500 hover:text-blue-300"
+              }`}
+              title={`${cell.char.name} ${row.label}`}
+            >
+              <span className="min-w-0">
+                <span className={`block truncate text-[11px] font-semibold ${done ? "text-blue-100" : "text-slate-500"}`}>{cell.char.subClass}</span>
+                <span className="block truncate text-xs font-bold">{truncateNickname(cell.char.name)}</span>
+              </span>
+              <span className="flex h-8 min-w-8 flex-shrink-0 items-center justify-center rounded-lg border border-current/40 px-1 text-xs font-bold">
+                {item.totalCount > 1 ? `${item.completedCount}/${item.totalCount}` : done ? "✓" : ""}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
