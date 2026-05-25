@@ -461,28 +461,24 @@ export default function Home() {
 
         {state.selectedChar ? (
           <>
-            {viewMode === "character" && (
-              <HomeworkToolbar
-                presets={state.presets}
-                onReset={state.resetHomework}
-                onSavePreset={state.savePreset}
-                onLoadPreset={state.loadPreset}
-                onDeletePreset={state.deletePreset}
-                onExportPreset={state.exportCurrentPreset}
-                onImportPreset={state.importPreset}
-              />
-            )}
+            <HomeworkToolbar
+              presets={state.presets}
+              onReset={state.resetHomework}
+              onSavePreset={state.savePreset}
+              onLoadPreset={state.loadPreset}
+              onDeletePreset={state.deletePreset}
+              onExportPreset={state.exportCurrentPreset}
+              onImportPreset={state.importPreset}
+            />
             <WeeklyCountdown />
-            {viewMode === "character" && (
-              <ProgressBar
-                done={state.progress.done}
-                total={state.progress.total}
-                pct={state.progress.pct}
-                categories={state.progress.categories}
-                favoriteOnly={state.favoriteOnly}
-                onFavoriteToggle={state.setFavoriteOnly}
-              />
-            )}
+            <ProgressBar
+              done={state.progress.done}
+              total={state.progress.total}
+              pct={state.progress.pct}
+              categories={state.progress.categories}
+              favoriteOnly={state.favoriteOnly}
+              onFavoriteToggle={state.setFavoriteOnly}
+            />
 
             <PeriodToggle active={state.activeTab} onChange={state.setActiveTab} />
 
@@ -968,15 +964,15 @@ function ListMatrixRow({
           </div>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="h-full overflow-x-auto">
         <div
-          className="grid min-w-max"
+          className="grid h-full min-w-max"
           style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(54px, 64px))` }}
         >
           {row.cells.map((cell) => {
             if (!cell.item) {
               return (
-                <div key={cell.char.id} className="flex items-center justify-center px-1 py-3">
+                <div key={cell.char.id} className="flex min-h-full items-center justify-center px-1 py-3">
                   <span className="text-xs text-slate-700">-</span>
                 </div>
               );
@@ -985,7 +981,7 @@ function ListMatrixRow({
             if (row.type === "purchase" || row.type === "trade") {
               const item = cell.item as ShopItem;
               return (
-                <div key={cell.char.id} className="flex items-center justify-center px-1 py-3">
+                <div key={cell.char.id} className="flex min-h-full items-center justify-center px-1 py-3">
                   <button
                     type="button"
                     onClick={() => onToggleShop(cell.char.id, item, row.type)}
@@ -1005,7 +1001,7 @@ function ListMatrixRow({
             const item = cell.item as HomeworkItem | ScrollItem;
             const done = item.completedCount >= item.totalCount;
             return (
-              <div key={cell.char.id} className="flex items-center justify-center px-1 py-3">
+              <div key={cell.char.id} className="flex min-h-full items-center justify-center px-1 py-3">
                 <button
                   type="button"
                   onClick={() => row.type === "homework"

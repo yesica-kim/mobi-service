@@ -121,7 +121,7 @@ export function CharacterTabs({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={characters.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
-        <div className="flex gap-2 overflow-x-auto px-4 py-2 scrollbar-hide border-b border-slate-800/50">
+        <div className="flex items-end gap-2 overflow-x-auto px-4 py-2 scrollbar-hide border-b border-slate-800/50">
           {characters.map((c) => (
             <SortableCharTab
               key={c.id}
@@ -133,7 +133,7 @@ export function CharacterTabs({
           ))}
           <button
             onClick={onAdd}
-            className="flex-shrink-0 rounded-xl border-2 border-dashed border-slate-600 px-5 py-2 text-sm font-semibold text-slate-400 transition-colors hover:border-blue-500 hover:text-blue-400 mt-[14px]"
+            className="flex h-[52px] flex-shrink-0 items-center rounded-xl border-2 border-dashed border-slate-600 px-5 text-sm font-semibold text-slate-400 transition-colors hover:border-blue-500 hover:text-blue-400"
           >
             + 캐릭터 추가
           </button>
