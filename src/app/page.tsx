@@ -21,6 +21,8 @@ import { ProfileModal } from "@/components/ProfileModal";
 import { SortableList } from "@/components/SortableList";
 import { useAppState } from "@/hooks/useAppState";
 import { useAuth } from "@/hooks/useAuth";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Download, Upload, Settings } from "lucide-react";
 import { isAdminFirebaseUser } from "@/lib/adminFirestore";
 import type { Character, HomeworkItem, RegionName, ScrollItem, ShopItem } from "@/types";
@@ -96,9 +98,15 @@ type AllTabCard =
   | { id: string; type: "scroll"; item: ScrollItem };
 
 type MatrixRow =
-  | { id: string; type: "homework"; label: string; badges: Badge[]; sourceItem: HomeworkItem; cells: { char: Character; item?: HomeworkItem }[] }
-  | { id: string; type: "purchase" | "trade"; label: string; badges: Badge[]; sourceItem: ShopItem; cells: { char: Character; item?: ShopItem }[] }
-  | { id: string; type: "scroll"; label: string; badges: Badge[]; sourceItem: ScrollItem; cells: { char: Character; item?: ScrollItem }[] };
+  | { id: string; type: "homework"; label: string; badges: Badge[]; details: Badge[]; sourceItem: HomeworkItem; cells: { char: Character; item?: HomeworkItem }[] }
+  | { id: string; type: "purchase" | "trade"; label: string; badges: Badge[]; details: Badge[]; sourceItem: ShopItem; cells: { char: Character; item?: ShopItem }[] }
+  | { id: string; type: "scroll"; label: string; badges: Badge[]; details: Badge[]; sourceItem: ScrollItem; cells: { char: Character; item?: ScrollItem }[] };
+
+function splitTags(value: string | string[] | undefined): string[] {
+  if (!value) return [];
+  const list = Array.isArray(value) ? value : value.split(",");
+  return list.map((item) => item.trim()).filter((item) => item && item !== "-");
+}
 
 function sortAllTabCards(cards: AllTabCard[], order: string[]) {
   if (order.length === 0) return cards;
@@ -220,6 +228,7 @@ export default function Home() {
         type: "homework",
         label: item.title,
         badges: [PERIOD_BADGES[item.period], ...(item.scope === "server" ? [SERVER_BADGE] : [])],
+        details: splitTags(item.reward).map((label) => ({ label, className: "border border-slate-600/50 text-slate-400" })),
         sourceItem: item,
         cells: state.serverChars.map((char) => ({ char, item: state.homeworkByChar[char.id]?.[index] })),
       };
@@ -239,6 +248,7 @@ export default function Home() {
           ...(item.scope === "server" ? [SERVER_BADGE] : []),
           REGION_BADGES[item.region] ?? { label: item.region, className: "bg-blue-600/20 text-blue-400" },
         ],
+        details: splitTags(item.npcName).map((label) => ({ label, className: "text-slate-400" })),
         cells: state.serverChars.map((char) => ({ char, item: byChar[char.id]?.[index] })),
       };
     };
@@ -255,6 +265,10 @@ export default function Home() {
           ...(item.scope === "server" ? [SERVER_BADGE] : []),
           SCROLL_TYPE_BADGES[item.scrollType] ?? { label: item.scrollType, className: "bg-blue-600/20 text-blue-400" },
           REGION_BADGES[item.region] ?? { label: item.region, className: "bg-blue-600/20 text-blue-400" },
+        ],
+        details: [
+          ...splitTags(item.scrollType !== "토벌" ? item.materials : []).map((label) => ({ label, className: "bg-slate-700 text-slate-400" })),
+          ...splitTags(item.reward).map((label) => ({ label, className: "text-slate-500" })),
         ],
         cells: state.serverChars.map((char) => ({ char, item: state.scrollItemsByChar[char.id]?.[index] })),
       };
@@ -525,6 +539,28 @@ export default function Home() {
                   if (row.type === "scroll") state.deleteScrollItem(row.sourceItem.id);
                   if (row.type === "purchase" || row.type === "trade") state.deleteShopItem(row.sourceItem.id, row.type);
                 }}
+                onReorder={(oldIdx, newIdx) => {
+                  if (state.activeTab === "all") {
+                    state.reorderAllTabItem(matrixRows.map((row) => row.sourceItem.id), oldIdx, newIdx);
+                    return;
+                  }
+                  if (state.activeTab === "daily" || state.activeTab === "weekly") {
+                    const item1 = matrixRows[oldIdx]?.sourceItem as HomeworkItem | undefined;
+                    const item2 = matrixRows[newIdx]?.sourceItem as HomeworkItem | undefined;
+                    if (!item1 || !item2) return;
+                    const realOld = state.allHomework.indexOf(item1);
+                    const realNew = state.allHomework.indexOf(item2);
+                    if (realOld !== -1 && realNew !== -1) state.reorderHomework(realOld, realNew);
+                    return;
+                  }
+                  if (state.activeTab === "purchase" || state.activeTab === "trade") {
+                    state.reorderShopItem(state.activeTab as "purchase" | "trade", oldIdx, newIdx);
+                    return;
+                  }
+                  if (state.activeTab === "scroll") {
+                    state.reorderScrollItem(oldIdx, newIdx);
+                  }
+                }}
               />
             )}
 
@@ -748,6 +784,7 @@ function ListMatrixView({
   onToggleScroll,
   onQuickEdit,
   onDeleteRow,
+  onReorder,
 }: {
   rows: MatrixRow[];
   characters: Character[];
@@ -756,6 +793,7 @@ function ListMatrixView({
   onToggleScroll: (charId: string, item: ScrollItem) => void;
   onQuickEdit: (row: MatrixRow) => void;
   onDeleteRow: (row: MatrixRow) => void;
+  onReorder: (oldIndex: number, newIndex: number) => void;
 }) {
   if (rows.length === 0) {
     return (
@@ -784,110 +822,190 @@ function ListMatrixView({
           </div>
         </div>
 
-        <div className="divide-y divide-slate-800/80">
-          {rows.map((row) => (
-            <div key={row.id} className="grid grid-cols-[minmax(156px,42vw)_1fr] md:grid-cols-[260px_1fr]">
-              <div className="min-w-0 bg-slate-900 px-3 py-3">
-                <div className="flex min-w-0 items-start gap-2">
-                  <div className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100">{row.label}</div>
-                  {!row.sourceItem.isDefault && (
-                    <div className="flex flex-shrink-0 items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => onQuickEdit(row)}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
-                        title="수정"
-                      >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDeleteRow(row)}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
-                        title="삭제"
-                      >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-1.5 flex flex-wrap gap-1">
-                  {row.badges.map((badge) => (
-                    <span
-                      key={`${row.id}-${badge.label}`}
-                      className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badge.className}`}
-                    >
-                      {badge.label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <div
-                  className="grid min-w-max"
-                  style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(72px, 88px))` }}
-                >
-                  {row.cells.map((cell) => {
-                    if (!cell.item) {
-                      return (
-                        <div key={cell.char.id} className="flex items-center justify-center px-2 py-3">
-                          <span className="text-xs text-slate-700">-</span>
-                        </div>
-                      );
-                    }
+        <SortableList items={rows} onReorder={onReorder}>
+          <div className="divide-y divide-slate-800/80">
+            {rows.map((row) => (
+              <ListMatrixRow
+                key={row.id}
+                row={row}
+                characters={characters}
+                onToggleHomework={onToggleHomework}
+                onToggleShop={onToggleShop}
+                onToggleScroll={onToggleScroll}
+                onQuickEdit={onQuickEdit}
+                onDeleteRow={onDeleteRow}
+              />
+            ))}
+          </div>
+        </SortableList>
+      </div>
+    </div>
+  );
+}
 
-                    if (row.type === "purchase" || row.type === "trade") {
-                      const item = cell.item as ShopItem;
-                      return (
-                        <div key={cell.char.id} className="flex items-center justify-center px-2 py-3">
-                          <button
-                            type="button"
-                            onClick={() => onToggleShop(cell.char.id, item, row.type)}
-                            className={`h-9 w-9 rounded-lg border text-sm font-bold transition-colors ${
-                              item.completed
-                                ? "border-blue-400 bg-blue-500 text-white"
-                                : "border-slate-700 bg-slate-950 text-slate-600 hover:border-blue-500 hover:text-blue-300"
-                            }`}
-                            title={`${cell.char.name} ${row.label}`}
-                          >
-                            {item.completed ? "✓" : ""}
-                          </button>
-                        </div>
-                      );
-                    }
+function ListMatrixRow({
+  row,
+  characters,
+  onToggleHomework,
+  onToggleShop,
+  onToggleScroll,
+  onQuickEdit,
+  onDeleteRow,
+}: {
+  row: MatrixRow;
+  characters: Character[];
+  onToggleHomework: (charId: string, item: HomeworkItem) => void;
+  onToggleShop: (charId: string, item: ShopItem, type: "purchase" | "trade") => void;
+  onToggleScroll: (charId: string, item: ScrollItem) => void;
+  onQuickEdit: (row: MatrixRow) => void;
+  onDeleteRow: (row: MatrixRow) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: row.id });
 
-                    const item = cell.item as HomeworkItem | ScrollItem;
-                    const done = item.completedCount >= item.totalCount;
-                    return (
-                      <div key={cell.char.id} className="flex items-center justify-center px-2 py-3">
-                        <button
-                          type="button"
-                          onClick={() => row.type === "homework"
-                            ? onToggleHomework(cell.char.id, item as HomeworkItem)
-                            : onToggleScroll(cell.char.id, item as ScrollItem)
-                          }
-                          className={`h-9 min-w-9 rounded-lg border px-2 text-xs font-bold transition-colors ${
-                            done
-                              ? "border-blue-400 bg-blue-500 text-white"
-                              : item.completedCount > 0
-                              ? "border-amber-400 bg-amber-500/20 text-amber-200"
-                              : "border-slate-700 bg-slate-950 text-slate-600 hover:border-blue-500 hover:text-blue-300"
-                          }`}
-                          title={`${cell.char.name} ${row.label}`}
-                        >
-                          {item.totalCount > 1 ? `${item.completedCount}/${item.totalCount}` : done ? "✓" : ""}
-                        </button>
-                      </div>
-                    );
-                  })}
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="grid grid-cols-[minmax(156px,42vw)_1fr] bg-slate-900 md:grid-cols-[260px_1fr]"
+    >
+      <div className="min-w-0 px-3 py-3">
+        <div className="flex min-w-0 items-start gap-2">
+          <button
+            {...attributes}
+            {...listeners}
+            className="-ml-2 -mt-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-800 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
+            title="드래그하여 순서 변경"
+          >
+            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+              <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+              <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+            </svg>
+          </button>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-start gap-2">
+              <div className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100">{row.label}</div>
+              {!row.sourceItem.isDefault && (
+                <div className="flex flex-shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onQuickEdit(row)}
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                    title="수정"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteRow(row)}
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
+                    title="삭제"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
-          ))}
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {row.badges.map((badge) => (
+                <span
+                  key={`${row.id}-${badge.label}`}
+                  className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badge.className}`}
+                >
+                  {badge.label}
+                </span>
+              ))}
+            </div>
+            {row.details.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {row.details.map((detail, idx) => (
+                  <span
+                    key={`${row.id}-detail-${idx}-${detail.label}`}
+                    className={`rounded-md px-1.5 py-0.5 text-[11px] ${detail.className}`}
+                  >
+                    {detail.label}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <div
+          className="grid min-w-max"
+          style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(72px, 88px))` }}
+        >
+          {row.cells.map((cell) => {
+            if (!cell.item) {
+              return (
+                <div key={cell.char.id} className="flex items-center justify-center px-2 py-3">
+                  <span className="text-xs text-slate-700">-</span>
+                </div>
+              );
+            }
+
+            if (row.type === "purchase" || row.type === "trade") {
+              const item = cell.item as ShopItem;
+              return (
+                <div key={cell.char.id} className="flex items-center justify-center px-2 py-3">
+                  <button
+                    type="button"
+                    onClick={() => onToggleShop(cell.char.id, item, row.type)}
+                    className={`h-9 w-9 rounded-lg border text-sm font-bold transition-colors ${
+                      item.completed
+                        ? "border-blue-400 bg-blue-500 text-white"
+                        : "border-slate-700 bg-slate-950 text-slate-600 hover:border-blue-500 hover:text-blue-300"
+                    }`}
+                    title={`${cell.char.name} ${row.label}`}
+                  >
+                    {item.completed ? "✓" : ""}
+                  </button>
+                </div>
+              );
+            }
+
+            const item = cell.item as HomeworkItem | ScrollItem;
+            const done = item.completedCount >= item.totalCount;
+            return (
+              <div key={cell.char.id} className="flex items-center justify-center px-2 py-3">
+                <button
+                  type="button"
+                  onClick={() => row.type === "homework"
+                    ? onToggleHomework(cell.char.id, item as HomeworkItem)
+                    : onToggleScroll(cell.char.id, item as ScrollItem)
+                  }
+                  className={`h-9 min-w-9 rounded-lg border px-2 text-xs font-bold transition-colors ${
+                    done
+                      ? "border-blue-400 bg-blue-500 text-white"
+                      : item.completedCount > 0
+                      ? "border-amber-400 bg-amber-500/20 text-amber-200"
+                      : "border-slate-700 bg-slate-950 text-slate-600 hover:border-blue-500 hover:text-blue-300"
+                  }`}
+                  title={`${cell.char.name} ${row.label}`}
+                >
+                  {item.totalCount > 1 ? `${item.completedCount}/${item.totalCount}` : done ? "✓" : ""}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
