@@ -12,7 +12,7 @@ import { ServerTabs } from "@/components/ServerTabs";
 import { WeeklyCountdown } from "@/components/WeeklyCountdown";
 import { ShopCard } from "@/components/ShopCard";
 import { ScrollCard } from "@/components/ScrollCard";
-import { AddCardModal } from "@/components/AddCardModal";
+import { AddCardModal, type EditCard } from "@/components/AddCardModal";
 import { SearchFilterBar } from "@/components/SearchFilterBar";
 import { MembershipBanner } from "@/components/MembershipBanner";
 import { MemoSection } from "@/components/MemoSection";
@@ -159,6 +159,7 @@ export default function Home() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingChar, setEditingChar] = useState<Character | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
+  const [editingCard, setEditingCard] = useState<EditCard | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [showUpdateNotes, setShowUpdateNotes] = useState(false);
   const state = useAppState(user?.uid);
@@ -281,7 +282,7 @@ export default function Home() {
           item.scope === "server" ? SERVER_BADGE : CHARACTER_BADGE,
           REGION_BADGES[item.region] ?? { label: item.region, className: "bg-blue-600/20 text-blue-400" },
         ],
-        details: splitTags(item.npcName).map((label) => ({ label, className: "text-slate-400" })),
+        details: splitTags(item.npcName).map((label) => ({ label, className: "px-0 py-0 text-slate-400" })),
         cells: state.serverChars.map((char) => ({ char, item: byChar[char.id]?.[index] })),
       };
     };
@@ -559,14 +560,7 @@ export default function Home() {
                   if (row.type === "scroll") state.toggleScrollFavorite(row.sourceItem.id);
                   if (row.type === "purchase" || row.type === "trade") state.toggleShopFavorite(row.sourceItem.id, row.type);
                 }}
-                onQuickEdit={(row) => {
-                  const current = row.type === "homework" ? row.sourceItem.title : row.type === "scroll" ? row.sourceItem.title : row.sourceItem.itemName;
-                  const next = window.prompt("카드 이름 수정", current)?.trim();
-                  if (!next || next === current) return;
-                  if (row.type === "homework") state.updateHomework(row.sourceItem.id, { title: next });
-                  if (row.type === "scroll") state.updateScrollItem(row.sourceItem.id, { title: next });
-                  if (row.type === "purchase" || row.type === "trade") state.updateShopItem(row.sourceItem.id, row.type, { itemName: next });
-                }}
+                onQuickEdit={(row) => setEditingCard({ type: row.type, item: row.sourceItem } as EditCard)}
                 onDeleteRow={(row) => {
                   if (!window.confirm(`'${row.label}'을 삭제하시겠습니까?`)) return;
                   if (row.type === "homework") state.deleteHomework(row.sourceItem.id);
@@ -615,6 +609,7 @@ export default function Home() {
                             onToggleFavorite={state.toggleFavorite}
                             onUpdate={state.updateHomework}
                             onDelete={state.deleteHomework}
+                            onEditRequest={(item) => setEditingCard({ type: "homework", item })}
                             showPeriodLabel
                           />
                         );
@@ -628,6 +623,7 @@ export default function Home() {
                             onToggleFavorite={state.toggleScrollFavorite}
                             onUpdate={state.updateScrollItem}
                             onDelete={state.deleteScrollItem}
+                            onEditRequest={(item) => setEditingCard({ type: "scroll", item })}
                           />
                         );
                       }
@@ -639,6 +635,7 @@ export default function Home() {
                           onToggleFavorite={(id) => state.toggleShopFavorite(id, card.type)}
                           onUpdate={(id, updates) => state.updateShopItem(id, card.type, updates)}
                           onDelete={(id) => state.deleteShopItem(id, card.type)}
+                          onEditRequest={(item) => setEditingCard({ type: card.type, item })}
                         />
                       );
                     })}
@@ -667,7 +664,16 @@ export default function Home() {
                     }}
                   >
                     {state.currentHomework.map((hw) => (
-                      <HomeworkCard key={hw.id} item={hw} onToggle={state.toggleHomework} onToggleFavorite={state.toggleFavorite} onUpdate={state.updateHomework} onDelete={state.deleteHomework} showPeriodLabel />
+                      <HomeworkCard
+                        key={hw.id}
+                        item={hw}
+                        onToggle={state.toggleHomework}
+                        onToggleFavorite={state.toggleFavorite}
+                        onUpdate={state.updateHomework}
+                        onDelete={state.deleteHomework}
+                        onEditRequest={(item) => setEditingCard({ type: "homework", item })}
+                        showPeriodLabel
+                      />
                     ))}
                   </SortableList>
                 ) : (
@@ -691,6 +697,7 @@ export default function Home() {
                         onToggleFavorite={(id) => state.toggleShopFavorite(id, state.activeTab as "purchase" | "trade")}
                         onUpdate={(id, updates) => state.updateShopItem(id, state.activeTab as "purchase" | "trade", updates)}
                         onDelete={(id) => state.deleteShopItem(id, state.activeTab as "purchase" | "trade")}
+                        onEditRequest={(item) => setEditingCard({ type: state.activeTab as "purchase" | "trade", item })}
                             />
                           ))}
                         </SortableList>
@@ -715,6 +722,7 @@ export default function Home() {
                         onToggleFavorite={state.toggleScrollFavorite}
                         onUpdate={state.updateScrollItem}
                         onDelete={state.deleteScrollItem}
+                        onEditRequest={(item) => setEditingCard({ type: "scroll", item })}
                       />
                     ))}
                   </SortableList>
@@ -772,11 +780,18 @@ export default function Home() {
         serverCharCount={state.serverCharCount}
       />
       <AddCardModal
-        open={showAddCard}
-        onClose={() => setShowAddCard(false)}
+        open={showAddCard || !!editingCard}
+        onClose={() => {
+          setShowAddCard(false);
+          setEditingCard(null);
+        }}
         onAddHomework={state.addHomework}
         onAddShopItem={state.addShopItem}
         onAddScrollItem={state.addScrollItem}
+        editCard={editingCard}
+        onUpdateHomework={state.updateHomework}
+        onUpdateShopItem={state.updateShopItem}
+        onUpdateScrollItem={state.updateScrollItem}
       />
       <ProfileModal
         open={showProfile}
@@ -857,8 +872,8 @@ function ListMatrixView({
       </div>
 
       <div className="hidden overflow-hidden rounded-xl border border-slate-800 bg-slate-900/70 md:block">
-        <div className="grid grid-cols-[minmax(188px,52vw)_1fr] border-b border-slate-800 bg-slate-950/80 md:grid-cols-[300px_1fr]">
-          <div className="flex min-h-[62px] items-center border-r border-slate-700/70 py-3 pl-2 pr-3 text-sm font-bold text-slate-300">
+        <div className="grid grid-cols-[minmax(188px,52vw)_1fr] border-b border-slate-800 bg-slate-950/80 md:grid-cols-[340px_1fr]">
+          <div className="flex min-h-[62px] items-center py-3 pl-2 pr-3 text-sm font-bold text-slate-300">
             <div className="flex items-center">
               <span className="w-16 flex-shrink-0" />
               <span>항목</span>
@@ -867,10 +882,10 @@ function ListMatrixView({
           <div className="overflow-x-auto">
             <div
               className="grid min-w-max"
-              style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(72px, 72px))` }}
+              style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(60px, 60px))` }}
             >
               {characters.map((char) => (
-                <div key={char.id} className="border-r border-slate-700/70 px-1 py-3 text-center font-bold last:border-r-0">
+                <div key={char.id} className="px-0.5 py-3 text-center font-bold">
                   <span className="block truncate text-xs text-slate-400/80">{char.subClass}</span>
                   <span className="block truncate text-sm text-slate-300">{truncateNickname(char.name)}</span>
                 </div>
@@ -1100,9 +1115,9 @@ function ListMatrixRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[300px_1fr] ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}
+      className={`grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[340px_1fr] ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}
     >
-      <div className="min-w-0 border-r border-slate-700/70 py-3 pl-2 pr-3">
+      <div className="min-w-0 py-3 pl-2 pr-3">
         <div className="flex h-full min-w-0 items-center gap-2">
           <div className="flex w-16 flex-shrink-0 items-center justify-center gap-0.5">
             <button
@@ -1129,7 +1144,7 @@ function ListMatrixRow({
             </button>
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-start gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1">
                   {row.badges.map((badge) => (
@@ -1186,12 +1201,12 @@ function ListMatrixRow({
       <div className="h-full overflow-x-auto">
         <div
           className="grid h-full min-w-max"
-          style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(72px, 72px))` }}
+          style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(60px, 60px))` }}
         >
           {row.cells.map((cell) => {
             if (!cell.item) {
               return (
-                <div key={cell.char.id} className="flex min-h-full items-center justify-center border-r border-slate-700/70 px-1 py-3 last:border-r-0">
+                <div key={cell.char.id} className="flex min-h-full items-center justify-center px-0.5 py-3">
                   <span className="text-xs text-slate-700">-</span>
                 </div>
               );
@@ -1200,7 +1215,7 @@ function ListMatrixRow({
             if (row.type === "purchase" || row.type === "trade") {
               const item = cell.item as ShopItem;
               return (
-                <div key={cell.char.id} className="flex min-h-full items-center justify-center border-r border-slate-700/70 px-1 py-3 last:border-r-0">
+                <div key={cell.char.id} className="flex min-h-full items-center justify-center px-0.5 py-3">
                   <button
                     type="button"
                     onClick={() => onToggleShop(cell.char.id, item, row.type)}
@@ -1220,7 +1235,7 @@ function ListMatrixRow({
             const item = cell.item as HomeworkItem | ScrollItem;
             const done = item.completedCount >= item.totalCount;
             return (
-              <div key={cell.char.id} className="flex min-h-full items-center justify-center border-r border-slate-700/70 px-1 py-3 last:border-r-0">
+              <div key={cell.char.id} className="flex min-h-full items-center justify-center px-0.5 py-3">
                 <button
                   type="button"
                   onClick={() => row.type === "homework"

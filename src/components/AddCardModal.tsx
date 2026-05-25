@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { PeriodType, ScopeType, RegionName, ScrollType } from "@/types";
+import { useEffect, useState } from "react";
+import type { HomeworkItem, PeriodType, ScopeType, RegionName, ScrollItem, ScrollType, ShopItem } from "@/types";
 import { REGIONS, SCROLL_TYPES } from "@/types";
 
 type CardType = "daily" | "weekly" | "purchase" | "trade" | "scroll";
@@ -12,7 +12,16 @@ interface Props {
   onAddHomework: (hw: { title: string; reward: string; period: PeriodType; totalCount: number; scope: ScopeType }) => void;
   onAddShopItem: (type: "purchase" | "trade", item: { itemName: string; region: RegionName; npcName: string; period: PeriodType; scope: ScopeType }) => void;
   onAddScrollItem?: (item: { title: string; scrollType: ScrollType; period: PeriodType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => void;
+  editCard?: EditCard | null;
+  onUpdateHomework?: (id: string, updates: Partial<Pick<HomeworkItem, "title" | "reward" | "totalCount" | "scope">>) => void;
+  onUpdateShopItem?: (id: string, type: "purchase" | "trade", updates: Partial<Pick<ShopItem, "itemName" | "region" | "npcName" | "period" | "scope">>) => void;
+  onUpdateScrollItem?: (id: string, updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "period" | "totalCount" | "materials" | "reward" | "region">>) => void;
 }
+
+export type EditCard =
+  | { type: "homework"; item: HomeworkItem }
+  | { type: "purchase" | "trade"; item: ShopItem }
+  | { type: "scroll"; item: ScrollItem };
 
 const TYPE_OPTIONS: { value: CardType; label: string; color: string }[] = [
   { value: "daily", label: "일일 숙제", color: "bg-blue-600" },
@@ -22,7 +31,17 @@ const TYPE_OPTIONS: { value: CardType; label: string; color: string }[] = [
   { value: "scroll", label: "임무게시판", color: "bg-indigo-600" },
 ];
 
-export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAddScrollItem }: Props) {
+export function AddCardModal({
+  open,
+  onClose,
+  onAddHomework,
+  onAddShopItem,
+  onAddScrollItem,
+  editCard,
+  onUpdateHomework,
+  onUpdateShopItem,
+  onUpdateScrollItem,
+}: Props) {
   const [cardType, setCardType] = useState<CardType>("daily");
   const [title, setTitle] = useState("");
   const [reward, setReward] = useState("");
@@ -40,6 +59,38 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
   const [scrollReward, setScrollReward] = useState("");
   const [materials, setMaterials] = useState<string[]>([]);
   const [materialInput, setMaterialInput] = useState("");
+  const isEditing = !!editCard;
+
+  useEffect(() => {
+    if (!open || !editCard) return;
+    if (editCard.type === "homework") {
+      setCardType(editCard.item.period);
+      setTitle(editCard.item.title);
+      setReward(editCard.item.reward === "-" ? "" : editCard.item.reward);
+      setTotalCount(editCard.item.totalCount || 1);
+      setScope(editCard.item.scope ?? "character");
+      return;
+    }
+    if (editCard.type === "purchase" || editCard.type === "trade") {
+      setCardType(editCard.type);
+      setItemName(editCard.item.itemName);
+      setRegion(editCard.item.region);
+      setNpcName(editCard.item.npcName === "-" ? "" : editCard.item.npcName);
+      setShopPeriod(editCard.item.period ?? "daily");
+      setScope(editCard.item.scope ?? "character");
+      return;
+    }
+    if (editCard.type === "scroll") {
+      setCardType("scroll");
+      setTitle(editCard.item.title);
+      setScrollType(editCard.item.scrollType);
+      setScrollPeriod(editCard.item.period ?? "weekly");
+      setScrollTotalCount(editCard.item.totalCount || 3);
+      setScrollRegion(editCard.item.region || "던바튼");
+      setScrollReward(editCard.item.reward === "-" ? "" : editCard.item.reward);
+      setMaterials(editCard.item.materials?.filter((item) => item && item !== "-") ?? []);
+    }
+  }, [editCard, open]);
 
   if (!open) return null;
 
@@ -48,6 +99,41 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
   const isScroll = cardType === "scroll";
 
   const handleSubmit = () => {
+    if (isEditing && editCard) {
+      if (editCard.type === "homework") {
+        if (!title.trim()) return;
+        onUpdateHomework?.(editCard.item.id, {
+          title: title.trim(),
+          reward: reward.trim() || "-",
+          totalCount,
+          scope,
+        });
+      } else if (editCard.type === "purchase" || editCard.type === "trade") {
+        if (!itemName.trim()) return;
+        onUpdateShopItem?.(editCard.item.id, editCard.type, {
+          itemName: itemName.trim(),
+          region,
+          npcName: npcName.trim() || "-",
+          period: shopPeriod,
+          scope,
+        });
+      } else {
+        if (!title.trim()) return;
+        onUpdateScrollItem?.(editCard.item.id, {
+          title: title.trim(),
+          scrollType,
+          period: scrollPeriod,
+          totalCount: scrollTotalCount,
+          materials,
+          region: scrollRegion,
+          reward: scrollReward.trim() || "-",
+        });
+      }
+      resetFields();
+      onClose();
+      return;
+    }
+
     if (isHomework) {
       if (!title.trim()) return;
       onAddHomework({
@@ -124,7 +210,7 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
       <div className="relative z-10 w-full">
         <div className="bg-slate-800 rounded-2xl p-6 w-80 mx-auto max-h-[80vh] overflow-y-auto">
-          <h3 className="text-white text-sm font-semibold text-center mb-4">숙제 추가</h3>
+          <h3 className="text-white text-sm font-semibold text-center mb-4">{isEditing ? "카드 수정" : "숙제 추가"}</h3>
 
           {/* Type 선택 */}
           <div className="space-y-2 mb-4">
@@ -133,7 +219,8 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
               {TYPE_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setCardType(opt.value)}
+                  onClick={() => { if (!isEditing) setCardType(opt.value); }}
+                  disabled={isEditing && cardType !== opt.value}
                   className={`text-xs px-3 py-2 rounded-xl font-medium transition-colors ${
                     cardType === opt.value
                       ? `${opt.color} text-white`
@@ -406,7 +493,7 @@ export function AddCardModal({ open, onClose, onAddHomework, onAddShopItem, onAd
               disabled={!canSubmit}
               className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              추가
+              {isEditing ? "저장" : "추가"}
             </button>
           </div>
         </div>

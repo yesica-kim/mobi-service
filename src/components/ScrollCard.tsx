@@ -30,9 +30,10 @@ interface Props {
   onToggleFavorite: (id: string) => void;
   onUpdate?: (id: string, updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "period" | "totalCount" | "materials" | "reward" | "region" | "tags">>) => void;
   onDelete?: (id: string) => void;
+  onEditRequest?: (item: ScrollItem) => void;
 }
 
-export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete }: Props) {
+export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete, onEditRequest }: Props) {
   const totalCount = item.totalCount || 3;
   const completedCount = item.completedCount || 0;
   const fullyDone = completedCount >= totalCount;
@@ -329,7 +330,7 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
           {/* 수정/삭제 + 체크 */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {onUpdate && !item.isDefault && (
-              <button onClick={() => setEditing(true)} className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-700/70 hover:text-slate-400 transition-colors" title="수정">
+              <button onClick={() => onEditRequest ? onEditRequest(item) : setEditing(true)} className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-700/70 hover:text-slate-400 transition-colors" title="수정">
                 <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
