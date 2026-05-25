@@ -359,7 +359,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className={`${viewMode === "list" ? "max-w-6xl" : "max-w-lg"} mx-auto pb-8 flex-1 w-full`}>
+      <main className={`${viewMode === "list" ? "max-w-[840px]" : "max-w-lg"} mx-auto pb-8 flex-1 w-full`}>
         <ServerTabs
           servers={state.activeServers}
           selected={state.selectedServer}
