@@ -136,7 +136,7 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
               <p className="text-slate-200 font-semibold">숙제 설정은 전체 서버와 캐릭터 모두 동일하게 적용됩니다.</p>
               <p><span className="text-slate-200 font-medium">설정 저장</span> : 현재 숙제 리스트 설정을 저장합니다.</p>
               <p><span className="text-slate-200 font-medium">설정 리스트</span> : 저장된 숙제 리스트 설정을 선택하여 불러올 수 있습니다.</p>
-              <p><span className="text-slate-200 font-medium">숙제 초기화</span> : 체크 항목을 전체 선택 해제합니다.</p>
+              <p><span className="text-slate-200 font-medium">체크박스 전체 해제</span> : 체크 항목을 전체 선택 해제합니다.</p>
               <p><span className="text-slate-200 font-medium">숙제 리스트 내보내기</span> : 현재 설정한 숙제 리스트를 로컬에 파일로 저장할 수 있습니다.</p>
               <p><span className="text-slate-200 font-medium">숙제 리스트 가져오기</span> : 로컬에 저장된 파일을 불러와 설정할 수 있습니다.</p>
               <p><span className="text-slate-200 font-medium">새 숙제 리스트 만들기</span> : 빈 리스트에서 원하는 카드만 직접 추가합니다.</p>
@@ -169,7 +169,7 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
               설정 리스트
             </button>
 
-            {/* 숙제 초기화 */}
+            {/* 체크박스 전체 해제 */}
             <button
               onClick={() => setShowResetConfirm(true)}
               className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
@@ -177,7 +177,7 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
               <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              숙제 초기화
+              체크박스 전체 해제
             </button>
           </div>
 
