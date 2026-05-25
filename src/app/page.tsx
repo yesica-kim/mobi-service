@@ -129,6 +129,18 @@ function isMatrixRowDone(row: MatrixRow): boolean {
   return row.cells.length > 0 && row.cells.every((cell) => isMatrixCellDone(row, cell.item));
 }
 
+function matrixCompleteCheckClass(row: MatrixRow): string {
+  if (row.type === "scroll") return "border-indigo-500 bg-indigo-600 text-white";
+  return (row.sourceItem.scope ?? "character") === "server"
+    ? "border-teal-500 bg-teal-600 text-white"
+    : "border-blue-500 bg-blue-600 text-white";
+}
+
+function matrixEmptyCheckClass(row: MatrixRow): string {
+  const hoverColor = row.type === "scroll" ? "hover:border-indigo-500 hover:text-indigo-300" : "hover:border-blue-500 hover:text-blue-300";
+  return `border-slate-600 bg-slate-900/70 text-slate-500 ${hoverColor}`;
+}
+
 function sortAllTabCards(cards: AllTabCard[], order: string[]) {
   if (order.length === 0) return cards;
   const orderIndex = new Map(order.map((id, index) => [id, index]));
@@ -845,8 +857,8 @@ function ListMatrixView({
       </div>
 
       <div className="hidden overflow-hidden rounded-xl border border-slate-800 bg-slate-900/70 md:block">
-        <div className="grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[340px_1fr] border-b border-slate-800 bg-slate-950/80">
-          <div className="py-3 pl-2 pr-3 text-sm font-bold text-slate-300">
+        <div className="grid grid-cols-[minmax(188px,52vw)_1fr] border-b border-slate-800 bg-slate-950/80 md:grid-cols-[300px_1fr]">
+          <div className="flex min-h-[62px] items-center border-r border-slate-700/70 py-3 pl-2 pr-3 text-sm font-bold text-slate-300">
             <div className="flex items-center">
               <span className="w-16 flex-shrink-0" />
               <span>항목</span>
@@ -855,10 +867,10 @@ function ListMatrixView({
           <div className="overflow-x-auto">
             <div
               className="grid min-w-max"
-              style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(96px, 96px))` }}
+              style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(72px, 72px))` }}
             >
               {characters.map((char) => (
-                <div key={char.id} className="px-1 py-3 text-center font-bold">
+                <div key={char.id} className="border-r border-slate-700/70 px-1 py-3 text-center font-bold last:border-r-0">
                   <span className="block truncate text-xs text-slate-400/80">{char.subClass}</span>
                   <span className="block truncate text-sm text-slate-300">{truncateNickname(char.name)}</span>
                 </div>
@@ -868,7 +880,7 @@ function ListMatrixView({
         </div>
 
         <SortableList items={rows} onReorder={onReorder}>
-          <div className="divide-y divide-slate-800/80">
+          <div className="divide-y divide-slate-700/70">
             {rows.map((row) => (
               <ListMatrixRow
                 key={row.id}
@@ -980,7 +992,7 @@ function ListMatrixMobileCard({
         {row.cells.map((cell) => {
           if (!cell.item) {
             return (
-              <div key={cell.char.id} className="flex min-h-[46px] items-center justify-between rounded-xl border border-slate-700 bg-slate-950 px-2.5 py-2">
+              <div key={cell.char.id} className="flex min-h-[46px] items-center justify-between rounded-xl border border-slate-700 bg-slate-900/70 px-2.5 py-2">
                 <div className="min-w-0">
                   <div className="truncate text-[11px] font-semibold text-slate-500">{cell.char.subClass}</div>
                   <div className="truncate text-xs font-bold text-slate-500">{truncateNickname(cell.char.name)}</div>
@@ -999,8 +1011,8 @@ function ListMatrixMobileCard({
                 onClick={() => onToggleShop(cell.char.id, item, row.type)}
                 className={`flex min-h-[46px] items-center justify-between rounded-xl border px-2.5 py-2 text-left transition-colors ${
                   item.completed
-                    ? "border-blue-400 bg-blue-500 text-white"
-                    : "border-slate-700 bg-slate-950 text-slate-400 hover:border-blue-500 hover:text-blue-300"
+                    ? matrixCompleteCheckClass(row)
+                    : `${matrixEmptyCheckClass(row)} text-slate-400`
                 }`}
                 title={`${cell.char.name} ${row.label}`}
               >
@@ -1025,12 +1037,12 @@ function ListMatrixMobileCard({
                 ? onToggleHomework(cell.char.id, item as HomeworkItem)
                 : onToggleScroll(cell.char.id, item as ScrollItem)
               }
-              className={`flex min-h-[46px] items-center justify-between rounded-xl border px-2.5 py-2 text-left transition-colors ${
+                className={`flex min-h-[46px] items-center justify-between rounded-xl border px-2.5 py-2 text-left transition-colors ${
                 done
-                  ? "border-blue-400 bg-blue-500 text-white"
+                  ? matrixCompleteCheckClass(row)
                   : item.completedCount > 0
                   ? "border-amber-400 bg-amber-500/20 text-amber-200"
-                  : "border-slate-700 bg-slate-950 text-slate-400 hover:border-blue-500 hover:text-blue-300"
+                  : `${matrixEmptyCheckClass(row)} text-slate-400`
               }`}
               title={`${cell.char.name} ${row.label}`}
             >
@@ -1088,9 +1100,9 @@ function ListMatrixRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[340px_1fr] ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}
+      className={`grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[300px_1fr] ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}
     >
-      <div className="min-w-0 py-3 pl-2 pr-3">
+      <div className="min-w-0 border-r border-slate-700/70 py-3 pl-2 pr-3">
         <div className="flex h-full min-w-0 items-center gap-2">
           <div className="flex w-16 flex-shrink-0 items-center justify-center gap-0.5">
             <button
@@ -1174,12 +1186,12 @@ function ListMatrixRow({
       <div className="h-full overflow-x-auto">
         <div
           className="grid h-full min-w-max"
-          style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(96px, 96px))` }}
+          style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(72px, 72px))` }}
         >
           {row.cells.map((cell) => {
             if (!cell.item) {
               return (
-                <div key={cell.char.id} className="flex min-h-full items-center justify-center px-1 py-3">
+                <div key={cell.char.id} className="flex min-h-full items-center justify-center border-r border-slate-700/70 px-1 py-3 last:border-r-0">
                   <span className="text-xs text-slate-700">-</span>
                 </div>
               );
@@ -1188,14 +1200,14 @@ function ListMatrixRow({
             if (row.type === "purchase" || row.type === "trade") {
               const item = cell.item as ShopItem;
               return (
-                <div key={cell.char.id} className="flex min-h-full items-center justify-center px-1 py-3">
+                <div key={cell.char.id} className="flex min-h-full items-center justify-center border-r border-slate-700/70 px-1 py-3 last:border-r-0">
                   <button
                     type="button"
                     onClick={() => onToggleShop(cell.char.id, item, row.type)}
                     className={`h-9 w-9 rounded-lg border text-sm font-bold transition-colors ${
                       item.completed
-                        ? "border-blue-400 bg-blue-500 text-white"
-                        : "border-slate-700 bg-slate-950 text-slate-600 hover:border-blue-500 hover:text-blue-300"
+                        ? matrixCompleteCheckClass(row)
+                        : matrixEmptyCheckClass(row)
                     }`}
                     title={`${cell.char.name} ${row.label}`}
                   >
@@ -1208,7 +1220,7 @@ function ListMatrixRow({
             const item = cell.item as HomeworkItem | ScrollItem;
             const done = item.completedCount >= item.totalCount;
             return (
-              <div key={cell.char.id} className="flex min-h-full items-center justify-center px-1 py-3">
+              <div key={cell.char.id} className="flex min-h-full items-center justify-center border-r border-slate-700/70 px-1 py-3 last:border-r-0">
                 <button
                   type="button"
                   onClick={() => row.type === "homework"
@@ -1217,10 +1229,10 @@ function ListMatrixRow({
                   }
                   className={`h-9 min-w-9 rounded-lg border px-2 text-xs font-bold transition-colors ${
                     done
-                      ? "border-blue-400 bg-blue-500 text-white"
+                      ? matrixCompleteCheckClass(row)
                       : item.completedCount > 0
                       ? "border-amber-400 bg-amber-500/20 text-amber-200"
-                      : "border-slate-700 bg-slate-950 text-slate-600 hover:border-blue-500 hover:text-blue-300"
+                      : matrixEmptyCheckClass(row)
                   }`}
                   title={`${cell.char.name} ${row.label}`}
                 >

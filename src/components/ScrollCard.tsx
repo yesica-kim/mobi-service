@@ -349,7 +349,7 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
                   ? "border-indigo-500 bg-indigo-600 text-white"
                   : completedCount > 0
                   ? "border-amber-400 bg-amber-500/20 text-amber-200"
-                  : "border-slate-600 text-slate-600 hover:border-indigo-500 hover:text-indigo-300"
+                  : "border-slate-600 bg-slate-900/70 text-slate-500 hover:border-indigo-500 hover:text-indigo-300"
               }`}
             >
               {totalCount > 1 ? `${completedCount}/${totalCount}` : fullyDone ? "✓" : ""}

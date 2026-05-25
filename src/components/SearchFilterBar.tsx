@@ -68,7 +68,7 @@ export function SearchFilterBar({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="카드 검색..."
-            className="w-full bg-slate-800 text-white text-sm rounded-xl pl-9 pr-8 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500 border border-slate-700/50"
+            className="h-12 w-full rounded-xl border border-slate-700/70 bg-slate-900 pl-9 pr-8 text-sm text-white outline-none placeholder-slate-500 focus:ring-2 focus:ring-blue-500"
           />
           {searchQuery && (
             <button
@@ -81,12 +81,12 @@ export function SearchFilterBar({
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`relative flex-shrink-0 p-2.5 rounded-xl border transition-colors ${
+          className={`relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border transition-colors ${
             hasActiveFilter
               ? "bg-blue-600/20 border-blue-500/50 text-blue-400"
               : showFilters
               ? "bg-slate-700 border-slate-600 text-slate-300"
-              : "bg-slate-800 border-slate-700/50 text-slate-500 hover:text-slate-300"
+              : "bg-slate-900 border-slate-700/70 text-slate-500 hover:text-slate-300"
           }`}
           title="필터"
         >

@@ -282,7 +282,7 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
                   ? scope === "server" ? "border-teal-500 bg-teal-600 text-white" : "border-blue-500 bg-blue-600 text-white"
                   : completedCount > 0
                   ? "border-amber-400 bg-amber-500/20 text-amber-200"
-                  : "border-slate-600 text-slate-600 hover:border-blue-500 hover:text-blue-300"
+                  : "border-slate-600 bg-slate-900/70 text-slate-500 hover:border-blue-500 hover:text-blue-300"
               }`}
             >
               {totalCount > 1 ? `${completedCount}/${totalCount}` : fullyDone ? "✓" : ""}

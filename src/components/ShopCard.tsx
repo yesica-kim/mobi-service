@@ -312,7 +312,7 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
               className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm font-bold transition-all ${
                 item.completed
                   ? scope === "server" ? "border-teal-500 bg-teal-600 text-white" : "border-blue-500 bg-blue-600 text-white"
-                  : "border-slate-600 text-slate-600 hover:border-blue-500 hover:text-blue-300"
+                  : "border-slate-600 bg-slate-900/70 text-slate-500 hover:border-blue-500 hover:text-blue-300"
               }`}
             >
               {item.completed ? "✓" : ""}
