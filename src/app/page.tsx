@@ -49,6 +49,10 @@ const REGION_BADGES: Record<string, Badge> = {
   "캐시샵": { label: "캐시샵", className: "bg-fuchsia-600/20 text-fuchsia-400" },
 };
 
+const REGION_DETAIL_BADGES: Record<string, string> = Object.fromEntries(
+  Object.entries(REGION_BADGES).map(([region, badge]) => [region, `font-semibold ${badge.className}`])
+);
+
 const SCROLL_TYPE_BADGES: Record<string, Badge> = {
   "제작": { label: "제작", className: "bg-indigo-600/20 text-indigo-400" },
   "채집": { label: "채집", className: "bg-emerald-600/20 text-emerald-400" },
@@ -246,9 +250,11 @@ export default function Home() {
         badges: [
           PERIOD_BADGES[item.period ?? "daily"],
           ...(item.scope === "server" ? [SERVER_BADGE] : []),
-          REGION_BADGES[item.region] ?? { label: item.region, className: "bg-blue-600/20 text-blue-400" },
         ],
-        details: splitTags(item.npcName).map((label) => ({ label, className: "text-slate-400" })),
+        details: [
+          { label: item.region, className: REGION_DETAIL_BADGES[item.region] ?? "font-semibold bg-blue-600/20 text-blue-400" },
+          ...splitTags(item.npcName).map((label) => ({ label, className: "text-slate-400" })),
+        ],
         cells: state.serverChars.map((char) => ({ char, item: byChar[char.id]?.[index] })),
       };
     };
@@ -264,9 +270,9 @@ export default function Home() {
           PERIOD_BADGES[item.period ?? "weekly"],
           ...(item.scope === "server" ? [SERVER_BADGE] : []),
           SCROLL_TYPE_BADGES[item.scrollType] ?? { label: item.scrollType, className: "bg-blue-600/20 text-blue-400" },
-          REGION_BADGES[item.region] ?? { label: item.region, className: "bg-blue-600/20 text-blue-400" },
         ],
         details: [
+          { label: item.region, className: REGION_DETAIL_BADGES[item.region] ?? "font-semibold bg-blue-600/20 text-blue-400" },
           ...splitTags(item.scrollType !== "토벌" ? item.materials : []).map((label) => ({ label, className: "bg-slate-700 text-slate-400" })),
           ...splitTags(item.reward).map((label) => ({ label, className: "text-slate-500" })),
         ],
@@ -409,7 +415,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className={`${viewMode === "list" ? "max-w-[840px]" : "max-w-lg"} mx-auto pb-8 flex-1 w-full`}>
+      <main className="mx-auto w-full max-w-[840px] flex-1 pb-8">
         <ServerTabs
           servers={state.activeServers}
           selected={state.selectedServer}
@@ -426,7 +432,7 @@ export default function Home() {
                   viewMode === "list" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                리스트별
+                숙제별
               </button>
               <button
                 type="button"
@@ -913,7 +919,17 @@ function ListMatrixRow({
               >
                 {row.sourceItem.isFavorite ? "★" : "☆"}
               </button>
-              <div className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100">{row.label}</div>
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                {row.badges.map((badge) => (
+                  <span
+                    key={`${row.id}-${badge.label}`}
+                    className={`flex-shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${badge.className}`}
+                  >
+                    {badge.label}
+                  </span>
+                ))}
+                <div className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100">{row.label}</div>
+              </div>
               {!row.sourceItem.isDefault && (
                 <div className="flex flex-shrink-0 items-center gap-1">
                   <button
@@ -938,16 +954,6 @@ function ListMatrixRow({
                   </button>
                 </div>
               )}
-            </div>
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {row.badges.map((badge) => (
-                <span
-                  key={`${row.id}-${badge.label}`}
-                  className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badge.className}`}
-                >
-                  {badge.label}
-                </span>
-              ))}
             </div>
             {row.details.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">

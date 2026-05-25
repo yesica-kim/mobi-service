@@ -100,12 +100,12 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
-            멤버십 등록
+            판타지 라이프 토탈 멤버십 등록
           </button>
         ) : (
           <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-300 font-semibold">멤버십 등록</span>
+              <span className="text-xs text-slate-300 font-semibold">판타지 라이프 토탈 멤버십 등록</span>
               <button onClick={() => { setShowRegister(false); setCustomDays(""); setRegisterMode("30day"); }} className="text-slate-500 hover:text-slate-300">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -184,7 +184,7 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
             <span className={isExpired ? "text-red-400" : isUrgent ? "text-amber-400" : "text-slate-300"}>
-              멤버십
+              판타지 라이프 토탈 멤버십
             </span>
             <span className={`font-bold ${isExpired ? "text-red-400" : isUrgent ? "text-amber-400" : "text-blue-400"}`}>
               {isExpired ? "만료됨" : `D-${daysLeft}`}
