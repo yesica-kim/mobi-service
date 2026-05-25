@@ -29,7 +29,7 @@ import type { Character, HomeworkItem, RegionName, ScrollItem, ShopItem } from "
 
 type FilterState = { favoriteOnly: boolean; searchQuery: string; regionFilter: RegionName[]; periodFilter: string; scopeFilter: string };
 type ViewMode = "character" | "list";
-type Badge = { label: string; className: string };
+type Badge = { label: string; className: string; plain?: boolean };
 
 const PERIOD_BADGES: Record<"daily" | "weekly", Badge> = {
   daily: { label: "일간", className: "bg-orange-600/20 text-orange-400" },
@@ -112,6 +112,10 @@ function splitTags(value: string | string[] | undefined): string[] {
 function truncateNickname(name: string): string {
   const chars = Array.from(name);
   return chars.length > 6 ? `${chars.slice(0, 6).join("")}...` : name;
+}
+
+function matrixCharacterColumns(count: number): string {
+  return count <= 6 ? `repeat(${count}, minmax(0, 1fr))` : `repeat(${count}, minmax(72px, 72px))`;
 }
 
 function isMatrixCellDone(row: MatrixRow, item: HomeworkItem | ShopItem | ScrollItem | undefined): boolean {
@@ -282,7 +286,7 @@ export default function Home() {
           item.scope === "server" ? SERVER_BADGE : CHARACTER_BADGE,
           REGION_BADGES[item.region] ?? { label: item.region, className: "bg-blue-600/20 text-blue-400" },
         ],
-        details: splitTags(item.npcName).map((label) => ({ label, className: "px-0 py-0 text-slate-400" })),
+        details: splitTags(item.npcName).map((label) => ({ label, className: "text-slate-400", plain: true })),
         cells: state.serverChars.map((char) => ({ char, item: byChar[char.id]?.[index] })),
       };
     };
@@ -503,6 +507,7 @@ export default function Home() {
               onDeletePreset={state.deletePreset}
               onExportPreset={state.exportCurrentPreset}
               onImportPreset={state.importPreset}
+              onCreateEmptyList={state.createEmptyHomeworkList}
             />
             <WeeklyCountdown />
             <ProgressBar
@@ -881,13 +886,13 @@ function ListMatrixView({
           </div>
           <div className="overflow-x-auto">
             <div
-              className="grid min-w-max"
-              style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(60px, 60px))` }}
+              className={`grid ${characters.length > 6 ? "min-w-max" : "min-w-0"}`}
+              style={{ gridTemplateColumns: matrixCharacterColumns(characters.length) }}
             >
               {characters.map((char) => (
                 <div key={char.id} className="px-0.5 py-3 text-center font-bold">
                   <span className="block truncate text-xs text-slate-400/80">{char.subClass}</span>
-                  <span className="block truncate text-sm text-slate-300">{truncateNickname(char.name)}</span>
+                  <span className="block truncate text-sm text-slate-300" title={char.name}>{truncateNickname(char.name)}</span>
                 </div>
               ))}
             </div>
@@ -965,13 +970,13 @@ function ListMatrixMobileCard({
           </div>
           {row.details.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1">
-              {row.details.map((detail, idx) => (
-                <span
-                  key={`${row.id}-mobile-detail-${idx}-${detail.label}`}
-                  className={`rounded-md px-1.5 py-0.5 text-[11px] ${detail.className}`}
-                >
-                  {detail.label}
-                </span>
+                {row.details.map((detail, idx) => (
+                  <span
+                    key={`${row.id}-mobile-detail-${idx}-${detail.label}`}
+                    className={detail.plain ? `text-[11px] ${detail.className}` : `rounded-md px-1.5 py-0.5 text-[11px] ${detail.className}`}
+                  >
+                    {detail.label}
+                  </span>
               ))}
             </div>
           )}
@@ -1188,7 +1193,7 @@ function ListMatrixRow({
                 {row.details.map((detail, idx) => (
                   <span
                     key={`${row.id}-detail-${idx}-${detail.label}`}
-                    className={`rounded-md px-1.5 py-0.5 text-[11px] ${detail.className}`}
+                    className={detail.plain ? `text-[11px] ${detail.className}` : `rounded-md px-1.5 py-0.5 text-[11px] ${detail.className}`}
                   >
                     {detail.label}
                   </span>
@@ -1200,8 +1205,8 @@ function ListMatrixRow({
       </div>
       <div className="h-full overflow-x-auto">
         <div
-          className="grid h-full min-w-max"
-          style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(60px, 60px))` }}
+          className={`grid h-full ${characters.length > 6 ? "min-w-max" : "min-w-0"}`}
+          style={{ gridTemplateColumns: matrixCharacterColumns(characters.length) }}
         >
           {row.cells.map((cell) => {
             if (!cell.item) {

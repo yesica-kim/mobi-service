@@ -216,11 +216,10 @@ export function AddCardModal({
           <div className="space-y-2 mb-4">
             <span className="text-xs text-slate-500">Type</span>
             <div className="grid grid-cols-2 gap-2">
-              {TYPE_OPTIONS.map((opt) => (
+              {(isEditing ? TYPE_OPTIONS.filter((opt) => opt.value === cardType) : TYPE_OPTIONS).map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => { if (!isEditing) setCardType(opt.value); }}
-                  disabled={isEditing && cardType !== opt.value}
+                  onClick={() => setCardType(opt.value)}
                   className={`text-xs px-3 py-2 rounded-xl font-medium transition-colors ${
                     cardType === opt.value
                       ? `${opt.color} text-white`

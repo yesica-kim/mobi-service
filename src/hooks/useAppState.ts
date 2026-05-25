@@ -1023,6 +1023,28 @@ export function useAppState(uid?: string | null) {
     });
   }, [persist, selectedCharId, runtimeDefaults]);
 
+  const createEmptyHomeworkList = useCallback(() => {
+    if (!selectedCharId) return;
+    persist((prev) => {
+      const savedStates = { ...(prev.savedItemStates ?? {}) };
+      const allTabOrder = { ...(prev.allTabOrder ?? {}) };
+      for (const char of prev.characters) {
+        delete savedStates[char.id];
+        delete allTabOrder[char.id];
+      }
+      const emptyByChar = Object.fromEntries(prev.characters.map((char) => [char.id, []]));
+      return {
+        ...prev,
+        homework: { ...prev.homework, ...emptyByChar },
+        purchaseItems: { ...prev.purchaseItems, ...emptyByChar },
+        tradeItems: { ...prev.tradeItems, ...emptyByChar },
+        scrollItems: { ...(prev.scrollItems ?? {}), ...emptyByChar },
+        savedItemStates: savedStates,
+        allTabOrder,
+      };
+    });
+  }, [persist, selectedCharId]);
+
   // 기본 프리셋
   const defaultPreset: HomeworkPreset = useMemo(() => ({
     id: "__default__",
@@ -1464,6 +1486,7 @@ export function useAppState(uid?: string | null) {
     toggleShopFavorite,
     updateShopItem,
     resetHomework,
+    createEmptyHomeworkList,
     savePreset,
     loadPreset,
     deletePreset,

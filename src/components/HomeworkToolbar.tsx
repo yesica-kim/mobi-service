@@ -11,9 +11,10 @@ interface Props {
   onDeletePreset: (presetId: string) => void;
   onExportPreset: () => HomeworkPreset | null;
   onImportPreset: (preset: HomeworkPreset) => void;
+  onCreateEmptyList: () => void;
 }
 
-export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, onDeletePreset, onExportPreset, onImportPreset }: Props) {
+export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, onDeletePreset, onExportPreset, onImportPreset, onCreateEmptyList }: Props) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
@@ -21,6 +22,7 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<HomeworkPreset | null>(null);
   const [showLoadConfirm, setShowLoadConfirm] = useState<HomeworkPreset | null>(null);
   const [showImportConfirm, setShowImportConfirm] = useState<HomeworkPreset | null>(null);
+  const [showCreateEmptyConfirm, setShowCreateEmptyConfirm] = useState(false);
   const [presetName, setPresetName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -133,6 +135,7 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
               <p><span className="text-slate-200 font-medium">숙제 초기화</span> : 체크 항목을 전체 선택 해제합니다.</p>
               <p><span className="text-slate-200 font-medium">숙제 리스트 내보내기</span> : 현재 설정한 숙제 리스트를 로컬에 파일로 저장할 수 있습니다.</p>
               <p><span className="text-slate-200 font-medium">숙제 리스트 가져오기</span> : 로컬에 저장된 파일을 불러와 설정할 수 있습니다.</p>
+              <p><span className="text-slate-200 font-medium">숙제 리스트 만들기</span> : 빈 리스트에서 원하는 카드만 직접 추가합니다.</p>
             </div>
           )}
         </div>
@@ -196,6 +199,15 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
               </svg>
               숙제 리스트 가져오기
             </button>
+            <button
+              onClick={() => setShowCreateEmptyConfirm(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+            >
+              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              숙제 리스트 만들기
+            </button>
             <input
               ref={fileInputRef}
               type="file"
@@ -226,6 +238,36 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
                 className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors"
               >
                 초기화
+              </button>
+            </div>
+          </div>
+        </ModalOverlay>
+      )}
+
+      {showCreateEmptyConfirm && (
+        <ModalOverlay onClose={() => setShowCreateEmptyConfirm(false)}>
+          <div className="bg-slate-800 rounded-2xl p-6 w-80 mx-auto">
+            <p className="text-white text-sm text-center mb-2">
+              빈 숙제 리스트를 만드시겠습니까?
+            </p>
+            <p className="text-slate-400 text-xs text-center leading-relaxed mb-6">
+              현재 카드 리스트가 비워지고, 직접 추가한 카드로 새 리스트를 만들 수 있습니다.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCreateEmptyConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  onCreateEmptyList();
+                  setShowCreateEmptyConfirm(false);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+              >
+                만들기
               </button>
             </div>
           </div>
