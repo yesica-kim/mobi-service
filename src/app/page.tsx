@@ -525,6 +525,11 @@ export default function Home() {
                   const nextIndex = item.completedCount >= item.totalCount ? 0 : item.completedCount;
                   state.toggleScrollItemForChar(charId, item.id, nextIndex);
                 }}
+                onToggleFavorite={(row) => {
+                  if (row.type === "homework") state.toggleFavorite(row.sourceItem.id);
+                  if (row.type === "scroll") state.toggleScrollFavorite(row.sourceItem.id);
+                  if (row.type === "purchase" || row.type === "trade") state.toggleShopFavorite(row.sourceItem.id, row.type);
+                }}
                 onQuickEdit={(row) => {
                   const current = row.type === "homework" ? row.sourceItem.title : row.type === "scroll" ? row.sourceItem.title : row.sourceItem.itemName;
                   const next = window.prompt("카드 이름 수정", current)?.trim();
@@ -782,6 +787,7 @@ function ListMatrixView({
   onToggleHomework,
   onToggleShop,
   onToggleScroll,
+  onToggleFavorite,
   onQuickEdit,
   onDeleteRow,
   onReorder,
@@ -791,6 +797,7 @@ function ListMatrixView({
   onToggleHomework: (charId: string, item: HomeworkItem) => void;
   onToggleShop: (charId: string, item: ShopItem, type: "purchase" | "trade") => void;
   onToggleScroll: (charId: string, item: ScrollItem) => void;
+  onToggleFavorite: (row: MatrixRow) => void;
   onQuickEdit: (row: MatrixRow) => void;
   onDeleteRow: (row: MatrixRow) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
@@ -832,6 +839,7 @@ function ListMatrixView({
                 onToggleHomework={onToggleHomework}
                 onToggleShop={onToggleShop}
                 onToggleScroll={onToggleScroll}
+                onToggleFavorite={onToggleFavorite}
                 onQuickEdit={onQuickEdit}
                 onDeleteRow={onDeleteRow}
               />
@@ -849,6 +857,7 @@ function ListMatrixRow({
   onToggleHomework,
   onToggleShop,
   onToggleScroll,
+  onToggleFavorite,
   onQuickEdit,
   onDeleteRow,
 }: {
@@ -857,6 +866,7 @@ function ListMatrixRow({
   onToggleHomework: (charId: string, item: HomeworkItem) => void;
   onToggleShop: (charId: string, item: ShopItem, type: "purchase" | "trade") => void;
   onToggleScroll: (charId: string, item: ScrollItem) => void;
+  onToggleFavorite: (row: MatrixRow) => void;
   onQuickEdit: (row: MatrixRow) => void;
   onDeleteRow: (row: MatrixRow) => void;
 }) {
@@ -897,6 +907,16 @@ function ListMatrixRow({
           </button>
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-start gap-2">
+              <button
+                type="button"
+                onClick={() => onToggleFavorite(row)}
+                className={`-ml-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-base transition-colors ${
+                  row.sourceItem.isFavorite ? "text-yellow-400" : "text-slate-600 hover:bg-slate-800 hover:text-slate-400"
+                }`}
+                title={row.sourceItem.isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
+              >
+                {row.sourceItem.isFavorite ? "★" : "☆"}
+              </button>
               <div className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100">{row.label}</div>
               {!row.sourceItem.isDefault && (
                 <div className="flex flex-shrink-0 items-center gap-1">

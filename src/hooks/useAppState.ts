@@ -8,6 +8,119 @@ import type { DefaultCardsData } from "@/lib/adminFirestore";
 import type { AppData, Character, HomeworkItem, HomeworkPreset, MembershipInfo, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType} from "@/types";
 import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, MAX_CHARS_PER_SERVER, SERVERS, parseTotalCount, toScope } from "@/types";
 
+function cloneHomeworkForChar(charId: string, item: HomeworkItem, index: number): HomeworkItem {
+  return {
+    ...item,
+    id: `${charId}_hw_clone_${Date.now()}_${index}`,
+    completedCount: 0,
+    isFavorite: false,
+  };
+}
+
+function cloneShopForChar(charId: string, item: ShopItem, prefix: "pur" | "trd", index: number): ShopItem {
+  return {
+    ...item,
+    id: `${charId}_${prefix}_clone_${Date.now()}_${index}`,
+    completed: false,
+    isFavorite: false,
+  };
+}
+
+function cloneScrollForChar(charId: string, item: ScrollItem, index: number): ScrollItem {
+  return {
+    ...item,
+    id: `${charId}_scroll_clone_${Date.now()}_${index}`,
+    completedCount: 0,
+    isFavorite: false,
+  };
+}
+
+function pickTemplateList<T>(records: Record<string, T[]>, charIds: string[]): T[] {
+  return charIds.reduce<T[]>((template, charId) => {
+    const list = records[charId] ?? [];
+    return list.length > template.length ? list : template;
+  }, []);
+}
+
+function normalizeRecordByTemplate<T>(
+  records: Record<string, T[]>,
+  charIds: string[],
+  getKey: (item: T) => string,
+  cloneItem: (charId: string, item: T, index: number) => T
+): { records: Record<string, T[]>; changed: boolean } {
+  const template = pickTemplateList(records, charIds);
+  if (template.length === 0) return { records, changed: false };
+
+  let changed = false;
+  const normalized: Record<string, T[]> = { ...records };
+
+  for (const charId of charIds) {
+    const current = records[charId] ?? [];
+    const used = new Set<number>();
+    const next = template.map((templateItem, index) => {
+      const templateKey = getKey(templateItem);
+      const existingIndex = current.findIndex((item, itemIndex) => !used.has(itemIndex) && getKey(item) === templateKey);
+      if (existingIndex !== -1) {
+        used.add(existingIndex);
+        return current[existingIndex];
+      }
+      changed = true;
+      return cloneItem(charId, templateItem, index);
+    });
+
+    if (current.length !== next.length || next.some((item, index) => item !== current[index])) {
+      changed = true;
+      normalized[charId] = next;
+    }
+  }
+
+  return { records: normalized, changed };
+}
+
+function normalizeCharacterCardLists(data: AppData): { data: AppData; changed: boolean } {
+  const charIds = data.characters.map((char) => char.id);
+  if (charIds.length === 0) return { data, changed: false };
+
+  const homework = normalizeRecordByTemplate(
+    data.homework,
+    charIds,
+    (item) => `${item.period}|${item.scope ?? "character"}|${item.title}|${item.reward}`,
+    cloneHomeworkForChar
+  );
+  const purchaseItems = normalizeRecordByTemplate(
+    data.purchaseItems,
+    charIds,
+    (item) => `${item.period}|${item.scope ?? "character"}|${item.region}|${item.npcName}|${item.itemName}`,
+    (charId, item, index) => cloneShopForChar(charId, item, "pur", index)
+  );
+  const tradeItems = normalizeRecordByTemplate(
+    data.tradeItems,
+    charIds,
+    (item) => `${item.period}|${item.scope ?? "character"}|${item.region}|${item.npcName}|${item.itemName}`,
+    (charId, item, index) => cloneShopForChar(charId, item, "trd", index)
+  );
+  const scrollItems = normalizeRecordByTemplate(
+    data.scrollItems ?? {},
+    charIds,
+    (item) => `${item.period}|${item.scope ?? "character"}|${item.region}|${item.scrollType}|${item.title}|${item.reward}`,
+    cloneScrollForChar
+  );
+
+  const changed = homework.changed || purchaseItems.changed || tradeItems.changed || scrollItems.changed;
+  if (!changed) return { data, changed: false };
+
+  return {
+    data: {
+      ...data,
+      homework: homework.records,
+      purchaseItems: purchaseItems.records,
+      tradeItems: tradeItems.records,
+      scrollItems: scrollItems.records,
+    },
+    changed: true,
+  };
+}
+
 export function useAppState(uid?: string | null) {
   const [data, setData] = useState<AppData | null>(null);
   const [runtimeDefaults, setRuntimeDefaults] = useState<DefaultCardsData | null>(null);
@@ -58,6 +171,13 @@ export function useAppState(uid?: string | null) {
         if (updated) {
           loaded = { ...loaded, scrollItems };
         }
+      }
+
+      const normalized = normalizeCharacterCardLists(loaded);
+      if (normalized.changed) {
+        loaded = normalized.data;
+        saveData(loaded);
+        if (uid) await saveUserData(uid, loaded);
       }
 
       if (cancelled) return;
@@ -146,18 +266,59 @@ export function useAppState(uid?: string | null) {
     (char: Omit<Character, "id">) => {
       const id = `char_${Date.now()}`;
       const newChar: Character = { id, ...char };
-      persist((prev) => ({
-        ...prev,
-        characters: [...prev.characters, newChar],
-        homework: { ...prev.homework, [id]: createHomeworkForChar(id, runtimeDefaults ?? undefined) },
-        purchaseItems: { ...prev.purchaseItems, [id]: createPurchaseForChar(id, runtimeDefaults ?? undefined) },
-        tradeItems: { ...prev.tradeItems, [id]: createTradeForChar(id, runtimeDefaults ?? undefined) },
-        scrollItems: { ...(prev.scrollItems ?? {}), [id]: createScrollForChar(id, runtimeDefaults ?? undefined) },
-      }));
+      persist((prev) => {
+        const sourceCharId = selectedCharId ?? prev.characters[0]?.id;
+        const sourceHomework = sourceCharId ? prev.homework[sourceCharId] ?? [] : [];
+        const sourcePurchase = sourceCharId ? prev.purchaseItems[sourceCharId] ?? [] : [];
+        const sourceTrade = sourceCharId ? prev.tradeItems[sourceCharId] ?? [] : [];
+        const sourceScroll = sourceCharId ? (prev.scrollItems ?? {})[sourceCharId] ?? [] : [];
+        const homework = sourceHomework.length > 0
+          ? sourceHomework.map((item, index) => cloneHomeworkForChar(id, item, index))
+          : createHomeworkForChar(id, runtimeDefaults ?? undefined);
+        const purchaseItems = sourcePurchase.length > 0
+          ? sourcePurchase.map((item, index) => cloneShopForChar(id, item, "pur", index))
+          : createPurchaseForChar(id, runtimeDefaults ?? undefined);
+        const tradeItems = sourceTrade.length > 0
+          ? sourceTrade.map((item, index) => cloneShopForChar(id, item, "trd", index))
+          : createTradeForChar(id, runtimeDefaults ?? undefined);
+        const scrollItems = sourceScroll.length > 0
+          ? sourceScroll.map((item, index) => cloneScrollForChar(id, item, index))
+          : createScrollForChar(id, runtimeDefaults ?? undefined);
+        const allTabOrder = { ...(prev.allTabOrder ?? {}) };
+
+        if (sourceCharId) {
+          const idMap = new Map<string, string>([
+            ...sourceHomework.map((item, index) => [item.id, homework[index]?.id ?? ""] as const),
+            ...sourcePurchase.map((item, index) => [item.id, purchaseItems[index]?.id ?? ""] as const),
+            ...sourceTrade.map((item, index) => [item.id, tradeItems[index]?.id ?? ""] as const),
+            ...sourceScroll.map((item, index) => [item.id, scrollItems[index]?.id ?? ""] as const),
+          ]);
+          const mappedOrder = (allTabOrder[sourceCharId] ?? [])
+            .map((itemId) => idMap.get(itemId))
+            .filter((itemId): itemId is string => Boolean(itemId));
+          const allIds = [
+            ...homework.map((item) => item.id),
+            ...purchaseItems.map((item) => item.id),
+            ...tradeItems.map((item) => item.id),
+            ...scrollItems.map((item) => item.id),
+          ];
+          allTabOrder[id] = [...mappedOrder, ...allIds.filter((itemId) => !mappedOrder.includes(itemId))];
+        }
+
+        return {
+          ...prev,
+          characters: [...prev.characters, newChar],
+          homework: { ...prev.homework, [id]: homework },
+          purchaseItems: { ...prev.purchaseItems, [id]: purchaseItems },
+          tradeItems: { ...prev.tradeItems, [id]: tradeItems },
+          scrollItems: { ...(prev.scrollItems ?? {}), [id]: scrollItems },
+          allTabOrder,
+        };
+      });
       setSelectedServer(char.server);
       setSelectedCharId(id);
     },
-    [persist, runtimeDefaults]
+    [persist, runtimeDefaults, selectedCharId]
   );
 
   const updateCharacter = useCallback(
