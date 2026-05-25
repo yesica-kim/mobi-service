@@ -27,6 +27,32 @@ import type { Character, HomeworkItem, RegionName, ScrollItem, ShopItem } from "
 
 type FilterState = { favoriteOnly: boolean; searchQuery: string; regionFilter: RegionName[]; periodFilter: string; scopeFilter: string };
 type ViewMode = "character" | "list";
+type Badge = { label: string; className: string };
+
+const PERIOD_BADGES: Record<"daily" | "weekly", Badge> = {
+  daily: { label: "일간", className: "bg-orange-600/20 text-orange-400" },
+  weekly: { label: "주간", className: "bg-green-600/20 text-green-400" },
+};
+
+const SERVER_BADGE: Badge = { label: "서버", className: "bg-teal-600/20 text-teal-400" };
+
+const REGION_BADGES: Record<string, Badge> = {
+  "콜헨": { label: "콜헨", className: "bg-red-600/20 text-red-400" },
+  "티르코네일": { label: "티르코네일", className: "bg-sky-600/20 text-sky-400" },
+  "두갈드아일": { label: "두갈드아일", className: "bg-amber-600/20 text-amber-400" },
+  "던바튼": { label: "던바튼", className: "bg-violet-600/20 text-violet-400" },
+  "가이레흐 언덕": { label: "가이레흐 언덕", className: "bg-pink-600/20 text-pink-400" },
+  "반호르": { label: "반호르", className: "bg-orange-600/20 text-orange-400" },
+  "이멘마하": { label: "이멘마하", className: "bg-cyan-600/20 text-cyan-400" },
+  "캐시샵": { label: "캐시샵", className: "bg-fuchsia-600/20 text-fuchsia-400" },
+};
+
+const SCROLL_TYPE_BADGES: Record<string, Badge> = {
+  "제작": { label: "제작", className: "bg-indigo-600/20 text-indigo-400" },
+  "채집": { label: "채집", className: "bg-emerald-600/20 text-emerald-400" },
+  "요리": { label: "요리", className: "bg-amber-600/20 text-amber-400" },
+  "토벌": { label: "토벌", className: "bg-red-600/20 text-red-400" },
+};
 
 function filteredPurchase(state: FilterState & { allPurchaseItems: any[] }) {
   let items = state.favoriteOnly ? state.allPurchaseItems.filter((i: any) => i.isFavorite) : state.allPurchaseItems;
@@ -70,9 +96,9 @@ type AllTabCard =
   | { id: string; type: "scroll"; item: ScrollItem };
 
 type MatrixRow =
-  | { id: string; type: "homework"; label: string; meta: string; totalCount: number; cells: { char: Character; item?: HomeworkItem }[] }
-  | { id: string; type: "purchase" | "trade"; label: string; meta: string; cells: { char: Character; item?: ShopItem }[] }
-  | { id: string; type: "scroll"; label: string; meta: string; totalCount: number; cells: { char: Character; item?: ScrollItem }[] };
+  | { id: string; type: "homework"; label: string; badges: Badge[]; totalCount: number; cells: { char: Character; item?: HomeworkItem }[] }
+  | { id: string; type: "purchase" | "trade"; label: string; badges: Badge[]; cells: { char: Character; item?: ShopItem }[] }
+  | { id: string; type: "scroll"; label: string; badges: Badge[]; totalCount: number; cells: { char: Character; item?: ScrollItem }[] };
 
 function sortAllTabCards(cards: AllTabCard[], order: string[]) {
   if (order.length === 0) return cards;
@@ -88,7 +114,7 @@ function sortAllTabCards(cards: AllTabCard[], order: string[]) {
 export default function Home() {
   const { user, loading: authLoading, isGuest, authError, signInWithGoogle, continueAsGuest, signOut, deleteAccount } = useAuth();
   const [isDevHost, setIsDevHost] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("character");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingChar, setEditingChar] = useState<Character | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
@@ -193,7 +219,7 @@ export default function Home() {
         id: `homework-${item.id}`,
         type: "homework",
         label: item.title,
-        meta: item.period === "daily" ? "일간 숙제" : "주간 숙제",
+        badges: [PERIOD_BADGES[item.period], ...(item.scope === "server" ? [SERVER_BADGE] : [])],
         totalCount: item.totalCount,
         cells: state.serverChars.map((char) => ({ char, item: state.homeworkByChar[char.id]?.[index] })),
       };
@@ -207,7 +233,11 @@ export default function Home() {
         id: `${type}-${item.id}`,
         type,
         label: item.itemName,
-        meta: `${type === "purchase" ? "구매" : "물물교환"} · ${item.region}`,
+        badges: [
+          PERIOD_BADGES[item.period ?? "daily"],
+          ...(item.scope === "server" ? [SERVER_BADGE] : []),
+          REGION_BADGES[item.region] ?? { label: item.region, className: "bg-blue-600/20 text-blue-400" },
+        ],
         cells: state.serverChars.map((char) => ({ char, item: byChar[char.id]?.[index] })),
       };
     };
@@ -218,7 +248,12 @@ export default function Home() {
         id: `scroll-${item.id}`,
         type: "scroll",
         label: item.title,
-        meta: `임무게시판 · ${item.scrollType} · ${item.region}`,
+        badges: [
+          PERIOD_BADGES[item.period ?? "weekly"],
+          ...(item.scope === "server" ? [SERVER_BADGE] : []),
+          SCROLL_TYPE_BADGES[item.scrollType] ?? { label: item.scrollType, className: "bg-blue-600/20 text-blue-400" },
+          REGION_BADGES[item.region] ?? { label: item.region, className: "bg-blue-600/20 text-blue-400" },
+        ],
         totalCount: item.totalCount,
         cells: state.serverChars.map((char) => ({ char, item: state.scrollItemsByChar[char.id]?.[index] })),
       };
@@ -371,21 +406,21 @@ export default function Home() {
             <div className="grid grid-cols-2 rounded-xl bg-slate-900 p-1">
               <button
                 type="button"
-                onClick={() => setViewMode("character")}
-                className={`rounded-lg py-2 text-sm font-semibold transition-colors ${
-                  viewMode === "character" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                캐릭터별
-              </button>
-              <button
-                type="button"
                 onClick={() => setViewMode("list")}
                 className={`rounded-lg py-2 text-sm font-semibold transition-colors ${
                   viewMode === "list" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 리스트별
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("character")}
+                className={`rounded-lg py-2 text-sm font-semibold transition-colors ${
+                  viewMode === "character" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                캐릭터별
               </button>
             </div>
           </div>
@@ -735,10 +770,15 @@ function ListMatrixView({
             <div key={row.id} className="grid grid-cols-[minmax(156px,42vw)_1fr] md:grid-cols-[260px_1fr]">
               <div className="min-w-0 bg-slate-900 px-3 py-3">
                 <div className="truncate text-sm font-semibold text-slate-100">{row.label}</div>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  <span className="rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400">
-                    {row.meta}
-                  </span>
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {row.badges.map((badge) => (
+                    <span
+                      key={`${row.id}-${badge.label}`}
+                      className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badge.className}`}
+                    >
+                      {badge.label}
+                    </span>
+                  ))}
                 </div>
               </div>
               <div className="overflow-x-auto">
