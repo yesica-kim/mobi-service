@@ -415,7 +415,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[800px] flex-1 pb-8">
+      <main className="mx-auto w-full max-w-[780px] flex-1 pb-8">
         <ServerTabs
           servers={state.activeServers}
           selected={state.selectedServer}
@@ -815,16 +815,22 @@ function ListMatrixView({
   return (
     <div className="px-4 py-4">
       <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/70">
-        <div className="grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[320px_1fr] border-b border-slate-800 bg-slate-950/80">
-          <div className="px-3 py-3 text-xs font-bold text-slate-300">항목</div>
+        <div className="grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[340px_1fr] border-b border-slate-800 bg-slate-950/80">
+          <div className="px-3 py-3 text-sm font-bold text-slate-300">
+            <div className="flex items-center">
+              <span className="w-20 flex-shrink-0" />
+              <span>항목</span>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <div
               className="grid min-w-max"
               style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(54px, 64px))` }}
             >
               {characters.map((char) => (
-                <div key={char.id} className="px-1 py-3 text-center text-[11px] font-bold text-slate-300">
-                  <span className="block truncate">{char.name}</span>
+                <div key={char.id} className="px-1 py-3 text-center font-bold">
+                  <span className="block truncate text-xs text-slate-400/80">{char.subClass}</span>
+                  <span className="block truncate text-sm text-slate-300">{char.name}</span>
                 </div>
               ))}
             </div>
@@ -891,34 +897,36 @@ function ListMatrixRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="grid grid-cols-[minmax(188px,52vw)_1fr] bg-slate-900 md:grid-cols-[320px_1fr]"
+      className="grid grid-cols-[minmax(188px,52vw)_1fr] bg-slate-900 md:grid-cols-[340px_1fr]"
     >
       <div className="min-w-0 px-3 py-3">
-        <div className="flex min-w-0 items-start gap-2">
-          <button
-            {...attributes}
-            {...listeners}
-            className="-ml-2 -mt-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-800 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
-            title="드래그하여 순서 변경"
-          >
-            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-              <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
-              <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
-              <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
-            </svg>
-          </button>
+        <div className="flex h-full min-w-0 items-center gap-2">
+          <div className="flex w-20 flex-shrink-0 items-center justify-center gap-1">
+            <button
+              {...attributes}
+              {...listeners}
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-800 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
+              title="드래그하여 순서 변경"
+            >
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+                <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+                <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleFavorite(row)}
+              className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-base transition-colors ${
+                row.sourceItem.isFavorite ? "text-yellow-400" : "text-slate-600 hover:bg-slate-800 hover:text-slate-400"
+              }`}
+              title={row.sourceItem.isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
+            >
+              {row.sourceItem.isFavorite ? "★" : "☆"}
+            </button>
+          </div>
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-start gap-2">
-              <button
-                type="button"
-                onClick={() => onToggleFavorite(row)}
-                className={`-ml-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-base transition-colors ${
-                  row.sourceItem.isFavorite ? "text-yellow-400" : "text-slate-600 hover:bg-slate-800 hover:text-slate-400"
-                }`}
-                title={row.sourceItem.isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
-              >
-                {row.sourceItem.isFavorite ? "★" : "☆"}
-              </button>
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 {row.badges.map((badge) => (
                   <span

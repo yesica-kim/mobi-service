@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { MembershipInfo, ServerName } from "@/types";
 
 interface Props {
@@ -9,27 +9,48 @@ interface Props {
   onUpdate: (server: ServerName, info: MembershipInfo | null) => void;
 }
 
-function getDaysLeft(expiresAt: string): number {
-  const now = new Date();
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const todayKST = new Date(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate());
-  const expDate = new Date(expiresAt + "T00:00:00");
-  return Math.ceil((expDate.getTime() - todayKST.getTime()) / (1000 * 60 * 60 * 24));
+function getMembershipResetTime(expiresAt: string): Date {
+  return new Date(`${expiresAt}T06:00:00+09:00`);
+}
+
+function toKstDateString(date: Date): string {
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  const year = kst.getUTCFullYear();
+  const month = String(kst.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(kst.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getRemainingTime(expiresAt: string, now: Date) {
+  const diffMs = getMembershipResetTime(expiresAt).getTime() - now.getTime();
+  const totalMinutes = Math.max(0, Math.floor(diffMs / (1000 * 60)));
+  return {
+    isExpired: diffMs <= 0,
+    totalMinutes,
+    days: Math.floor(totalMinutes / (60 * 24)),
+    hours: Math.floor((totalMinutes % (60 * 24)) / 60),
+    minutes: totalMinutes % 60,
+  };
+}
+
+function formatRemainingTime(remaining: ReturnType<typeof getRemainingTime>): string {
+  return `${remaining.days}일 ${remaining.hours}시간 ${remaining.minutes}분 남음`;
 }
 
 function addDaysToDate(baseDate: string | undefined, days: number): string {
-  const d = baseDate ? new Date(baseDate + "T00:00:00") : new Date();
-  // 기존 만료일이 오늘 이전이면 오늘 기준으로 계산
-  if (d.getTime() < new Date().setHours(0, 0, 0, 0)) {
+  const d = baseDate ? new Date(`${baseDate}T00:00:00+09:00`) : new Date();
+  // 기존 만료일 오전 6시가 지났으면 오늘 기준으로 계산
+  if (baseDate && getMembershipResetTime(baseDate).getTime() < Date.now()) {
     const today = new Date();
-    today.setDate(today.getDate() + days);
-    return today.toISOString().slice(0, 10);
+    today.setUTCDate(today.getUTCDate() + days);
+    return toKstDateString(today);
   }
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  d.setUTCDate(d.getUTCDate() + days);
+  return toKstDateString(d);
 }
 
 export function MembershipBanner({ server, membership, onUpdate }: Props) {
+  const [now, setNow] = useState(() => new Date());
   const [showRegister, setShowRegister] = useState(false);
   const [showAddDays, setShowAddDays] = useState(false);
   const [showEditDays, setShowEditDays] = useState(false);
@@ -38,10 +59,15 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
   const [customDays, setCustomDays] = useState("");
   const [editDays, setEditDays] = useState("");
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   if (!server) return null;
 
   const info = membership?.[server];
-  const daysLeft = info ? getDaysLeft(info.expiresAt) : null;
+  const remaining = info ? getRemainingTime(info.expiresAt, now) : null;
 
   const handleRegister = () => {
     let days: number;
@@ -76,9 +102,7 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
   const handleEditDays = () => {
     const days = parseInt(editDays, 10);
     if (!days || days < 1) return;
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    onUpdate(server, { expiresAt: d.toISOString().slice(0, 10) });
+    onUpdate(server, { expiresAt: addDaysToDate(undefined, days) });
     setShowEditDays(false);
     setEditDays("");
   };
@@ -166,8 +190,8 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
   }
 
   // 등록됨
-  const isExpired = daysLeft !== null && daysLeft <= 0;
-  const isUrgent = daysLeft !== null && daysLeft > 0 && daysLeft <= 3;
+  const isExpired = remaining?.isExpired ?? false;
+  const isUrgent = remaining ? !remaining.isExpired && remaining.totalMinutes <= 60 * 24 * 3 : false;
 
   return (
     <div className="px-4 pt-2">
@@ -178,8 +202,8 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
           ? "bg-amber-600/10 border border-amber-500/30"
           : "bg-slate-800/60 border border-slate-700/50"
       }`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <svg className={`w-3.5 h-3.5 ${isExpired ? "text-red-400" : isUrgent ? "text-amber-400" : "text-blue-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
@@ -187,9 +211,9 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
               판타지 라이프 토탈 멤버십
             </span>
             <span className={`font-bold ${isExpired ? "text-red-400" : isUrgent ? "text-amber-400" : "text-blue-400"}`}>
-              {isExpired ? "만료됨" : `D-${daysLeft}`}
+              {isExpired || !remaining ? "만료됨" : formatRemainingTime(remaining)}
             </span>
-            <span className="text-slate-500 text-[10px]">({info.expiresAt}까지)</span>
+            <span className="text-slate-500 text-[10px]">({info.expiresAt} 06:00까지)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <button
@@ -202,7 +226,7 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
               </svg>
             </button>
             <button
-              onClick={() => { setShowEditDays(!showEditDays); setShowAddDays(false); setEditDays(daysLeft && daysLeft > 0 ? String(daysLeft) : ""); }}
+              onClick={() => { setShowEditDays(!showEditDays); setShowAddDays(false); setEditDays(remaining && !remaining.isExpired ? String(Math.max(1, Math.ceil(remaining.totalMinutes / (60 * 24)))) : ""); }}
               className="text-slate-500 hover:text-blue-400 transition-colors"
               title="기간 변경"
             >
