@@ -892,7 +892,7 @@ function ListMatrixMobileCard({
   onDeleteRow: (row: MatrixRow) => void;
 }) {
   return (
-    <div className="rounded-2xl bg-slate-800 px-3 py-3">
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 px-3 py-3">
       <div className="flex items-start gap-2">
         <button
           type="button"
@@ -963,7 +963,7 @@ function ListMatrixMobileCard({
         {row.cells.map((cell) => {
           if (!cell.item) {
             return (
-              <div key={cell.char.id} className="flex min-h-[46px] items-center justify-between rounded-xl border border-slate-700/60 bg-slate-900/40 px-2.5 py-2">
+              <div key={cell.char.id} className="flex min-h-[46px] items-center justify-between rounded-xl border border-slate-700 bg-slate-950 px-2.5 py-2">
                 <div className="min-w-0">
                   <div className="truncate text-[11px] font-semibold text-slate-500">{cell.char.subClass}</div>
                   <div className="truncate text-xs font-bold text-slate-500">{truncateNickname(cell.char.name)}</div>
@@ -983,7 +983,7 @@ function ListMatrixMobileCard({
                 className={`flex min-h-[46px] items-center justify-between rounded-xl border px-2.5 py-2 text-left transition-colors ${
                   item.completed
                     ? "border-blue-400 bg-blue-500 text-white"
-                    : "border-slate-700 bg-slate-900/40 text-slate-400 hover:border-blue-500 hover:text-blue-300"
+                    : "border-slate-700 bg-slate-950 text-slate-400 hover:border-blue-500 hover:text-blue-300"
                 }`}
                 title={`${cell.char.name} ${row.label}`}
               >
@@ -1013,7 +1013,7 @@ function ListMatrixMobileCard({
                   ? "border-blue-400 bg-blue-500 text-white"
                   : item.completedCount > 0
                   ? "border-amber-400 bg-amber-500/20 text-amber-200"
-                  : "border-slate-700 bg-slate-900/40 text-slate-400 hover:border-blue-500 hover:text-blue-300"
+                  : "border-slate-700 bg-slate-950 text-slate-400 hover:border-blue-500 hover:text-blue-300"
               }`}
               title={`${cell.char.name} ${row.label}`}
             >
