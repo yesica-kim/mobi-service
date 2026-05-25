@@ -26,6 +26,11 @@ interface Props {
   onReorder?: (oldIndex: number, newIndex: number) => void;
 }
 
+function truncateNickname(name: string): string {
+  const chars = Array.from(name);
+  return chars.length > 6 ? `${chars.slice(0, 6).join("")}...` : name;
+}
+
 function SortableCharTab({
   char,
   active,
@@ -78,7 +83,7 @@ function SortableCharTab({
         }`}
       >
         <div className="text-[11px] opacity-70">{char.subClass}</div>
-        <div className="font-bold">{char.name}</div>
+        <div className="font-bold">{truncateNickname(char.name)}</div>
         {active && (
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}

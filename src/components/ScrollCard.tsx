@@ -290,29 +290,31 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
 
           {/* 내용 */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1">
               {(item.period ?? "weekly") === "weekly" ? (
                 <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-green-600/20 text-green-400">주간</span>
               ) : (
                 <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-orange-600/20 text-orange-400">일간</span>
               )}
-              {item.scope === "server" && (
-                <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-teal-600/20 text-teal-400">서버</span>
-              )}
-              <span className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${typeColor.bg} ${typeColor.text}`}>
-                {item.scrollType}
+              <span className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                item.scope === "server" ? "bg-teal-600/20 text-teal-400" : "bg-blue-600/20 text-blue-400"
+              }`}>
+                {item.scope === "server" ? "서버" : "캐릭터"}
               </span>
-              <p className={`text-[15px] font-medium leading-snug ${fullyDone ? "line-through text-slate-500" : "text-white"}`}>
-                {item.title}
-              </p>
-            </div>
-            {/* 지역 + 재료 + 보상 */}
-            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
               {item.region && (
                 <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${regionColor.bg} ${regionColor.text}`}>
                   {item.region}
                 </span>
               )}
+              <span className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${typeColor.bg} ${typeColor.text}`}>
+                {item.scrollType}
+              </span>
+            </div>
+            <p className={`mt-1.5 whitespace-normal break-keep text-[15px] font-medium leading-snug ${fullyDone ? "line-through text-slate-500" : "text-white"}`}>
+              {item.title}
+            </p>
+            {/* 지역 + 재료 + 보상 */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
               {hasMaterials && item.materials.map((mat, idx) => (
                 <span key={idx} className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-700 text-slate-400">
                   {mat}

@@ -249,17 +249,24 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1">
                 {(item.period ?? "daily") === "weekly" ? (
                   <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-green-600/20 text-green-400">주간</span>
                 ) : (
                   <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-orange-600/20 text-orange-400">일간</span>
                 )}
-                {scope === "server" && (
-                  <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-teal-600/20 text-teal-400">서버</span>
-                )}
+                <span className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                  scope === "server" ? "bg-teal-600/20 text-teal-400" : "bg-blue-600/20 text-blue-400"
+                }`}>
+                  {scope === "server" ? "서버" : "캐릭터"}
+                </span>
+                <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${REGION_COLORS[item.region]?.bg ?? "bg-blue-600/20"} ${REGION_COLORS[item.region]?.text ?? "text-blue-400"}`}>
+                  {item.region}
+                </span>
+              </div>
+              <div className="mt-1.5">
                 {item.fromItem && item.toItem ? (
-                  <p className={`text-[15px] font-medium leading-snug ${item.completed ? "line-through text-slate-500" : "text-white"}`}>
+                  <p className={`whitespace-normal break-keep text-[15px] font-medium leading-snug ${item.completed ? "line-through text-slate-500" : "text-white"}`}>
                     <span>{item.fromItem}</span>
                     <span className="text-slate-500 text-[12px]">({item.fromCount})</span>
                     <span className="text-slate-500 mx-1">→</span>
@@ -267,15 +274,12 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
                     <span className="text-slate-500 text-[12px]">({item.toCount})</span>
                   </p>
                 ) : (
-                  <p className={`text-[15px] font-medium leading-snug ${item.completed ? "line-through text-slate-500" : "text-white"}`}>
+                  <p className={`whitespace-normal break-keep text-[15px] font-medium leading-snug ${item.completed ? "line-through text-slate-500" : "text-white"}`}>
                     {item.itemName}
                   </p>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${REGION_COLORS[item.region]?.bg ?? "bg-blue-600/20"} ${REGION_COLORS[item.region]?.text ?? "text-blue-400"}`}>
-                  {item.region}
-                </span>
                 {npcTags.map((tag, idx) => (
                   <span key={idx} className={`text-[11px] ${item.completed ? "text-slate-600 line-through" : "text-slate-400"}`}>
                     {tag}

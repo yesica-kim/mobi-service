@@ -227,9 +227,9 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
             {item.isFavorite ? "★" : "☆"}
           </button>
 
-          {/* 타이틀 + 보상 태그 */}
+          {/* 태그 + 타이틀 + 보상 태그 */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1">
               {showPeriodLabel && (
                 <span className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${
                   item.period === "daily"
@@ -239,15 +239,15 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
                   {item.period === "daily" ? "일일" : "주간"}
                 </span>
               )}
-              {scope === "server" && (
-                <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-teal-600/20 text-teal-400">
-                  서버
-                </span>
-              )}
-              <p className={`text-[15px] font-medium leading-snug ${fullyDone ? "line-through text-slate-500" : "text-white"}`}>
-                {item.title}
-              </p>
+              <span className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                scope === "server" ? "bg-teal-600/20 text-teal-400" : "bg-blue-600/20 text-blue-400"
+              }`}>
+                {scope === "server" ? "서버" : "캐릭터"}
+              </span>
             </div>
+            <p className={`mt-1.5 whitespace-normal break-keep text-[15px] font-medium leading-snug ${fullyDone ? "line-through text-slate-500" : "text-white"}`}>
+              {item.title}
+            </p>
             {rewardTags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1.5">
                 {rewardTags.map((tag, idx) => (

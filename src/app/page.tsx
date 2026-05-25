@@ -37,6 +37,7 @@ const PERIOD_BADGES: Record<"daily" | "weekly", Badge> = {
 };
 
 const SERVER_BADGE: Badge = { label: "서버", className: "bg-teal-600/20 text-teal-400" };
+const CHARACTER_BADGE: Badge = { label: "캐릭터", className: "bg-blue-600/20 text-blue-400" };
 
 const REGION_BADGES: Record<string, Badge> = {
   "콜헨": { label: "콜헨", className: "bg-red-600/20 text-red-400" },
@@ -48,10 +49,6 @@ const REGION_BADGES: Record<string, Badge> = {
   "이멘마하": { label: "이멘마하", className: "bg-cyan-600/20 text-cyan-400" },
   "캐시샵": { label: "캐시샵", className: "bg-fuchsia-600/20 text-fuchsia-400" },
 };
-
-const REGION_DETAIL_BADGES: Record<string, string> = Object.fromEntries(
-  Object.entries(REGION_BADGES).map(([region, badge]) => [region, `font-semibold ${badge.className}`])
-);
 
 const SCROLL_TYPE_BADGES: Record<string, Badge> = {
   "제작": { label: "제작", className: "bg-indigo-600/20 text-indigo-400" },
@@ -110,6 +107,11 @@ function splitTags(value: string | string[] | undefined): string[] {
   if (!value) return [];
   const list = Array.isArray(value) ? value : value.split(",");
   return list.map((item) => item.trim()).filter((item) => item && item !== "-");
+}
+
+function truncateNickname(name: string): string {
+  const chars = Array.from(name);
+  return chars.length > 6 ? `${chars.slice(0, 6).join("")}...` : name;
 }
 
 function sortAllTabCards(cards: AllTabCard[], order: string[]) {
@@ -231,7 +233,7 @@ export default function Home() {
         id: `homework-${item.id}`,
         type: "homework",
         label: item.title,
-        badges: [PERIOD_BADGES[item.period], ...(item.scope === "server" ? [SERVER_BADGE] : [])],
+        badges: [PERIOD_BADGES[item.period], item.scope === "server" ? SERVER_BADGE : CHARACTER_BADGE],
         details: splitTags(item.reward).map((label) => ({ label, className: "border border-slate-600/50 text-slate-400" })),
         sourceItem: item,
         cells: state.serverChars.map((char) => ({ char, item: state.homeworkByChar[char.id]?.[index] })),
@@ -249,12 +251,10 @@ export default function Home() {
         sourceItem: item,
         badges: [
           PERIOD_BADGES[item.period ?? "daily"],
-          ...(item.scope === "server" ? [SERVER_BADGE] : []),
+          item.scope === "server" ? SERVER_BADGE : CHARACTER_BADGE,
+          REGION_BADGES[item.region] ?? { label: item.region, className: "bg-blue-600/20 text-blue-400" },
         ],
-        details: [
-          { label: item.region, className: REGION_DETAIL_BADGES[item.region] ?? "font-semibold bg-blue-600/20 text-blue-400" },
-          ...splitTags(item.npcName).map((label) => ({ label, className: "text-slate-400" })),
-        ],
+        details: splitTags(item.npcName).map((label) => ({ label, className: "text-slate-400" })),
         cells: state.serverChars.map((char) => ({ char, item: byChar[char.id]?.[index] })),
       };
     };
@@ -268,11 +268,11 @@ export default function Home() {
         sourceItem: item,
         badges: [
           PERIOD_BADGES[item.period ?? "weekly"],
-          ...(item.scope === "server" ? [SERVER_BADGE] : []),
+          item.scope === "server" ? SERVER_BADGE : CHARACTER_BADGE,
+          REGION_BADGES[item.region] ?? { label: item.region, className: "bg-blue-600/20 text-blue-400" },
           SCROLL_TYPE_BADGES[item.scrollType] ?? { label: item.scrollType, className: "bg-blue-600/20 text-blue-400" },
         ],
         details: [
-          { label: item.region, className: REGION_DETAIL_BADGES[item.region] ?? "font-semibold bg-blue-600/20 text-blue-400" },
           ...splitTags(item.scrollType !== "토벌" ? item.materials : []).map((label) => ({ label, className: "bg-slate-700 text-slate-400" })),
           ...splitTags(item.reward).map((label) => ({ label, className: "text-slate-500" })),
         ],
@@ -830,7 +830,7 @@ function ListMatrixView({
               {characters.map((char) => (
                 <div key={char.id} className="px-1 py-3 text-center font-bold">
                   <span className="block truncate text-xs text-slate-400/80">{char.subClass}</span>
-                  <span className="block truncate text-sm text-slate-300">{char.name}</span>
+                  <span className="block truncate text-sm text-slate-300">{truncateNickname(char.name)}</span>
                 </div>
               ))}
             </div>
@@ -927,16 +927,18 @@ function ListMatrixRow({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-start gap-2">
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                {row.badges.map((badge) => (
-                  <span
-                    key={`${row.id}-${badge.label}`}
-                    className={`flex-shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${badge.className}`}
-                  >
-                    {badge.label}
-                  </span>
-                ))}
-                <div className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100">{row.label}</div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1">
+                  {row.badges.map((badge) => (
+                    <span
+                      key={`${row.id}-${badge.label}`}
+                      className={`flex-shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${badge.className}`}
+                    >
+                      {badge.label}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-1.5 whitespace-normal break-keep text-sm font-semibold leading-snug text-slate-100">{row.label}</div>
               </div>
               {!row.sourceItem.isDefault && (
                 <div className="flex flex-shrink-0 items-center gap-1">
