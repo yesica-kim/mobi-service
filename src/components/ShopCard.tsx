@@ -121,10 +121,10 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
           <button
             {...attributes}
             {...listeners}
-            className="flex-shrink-0 text-slate-600 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
+            className="-ml-2 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
             title="드래그하여 순서 변경"
           >
-            <svg className="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
               <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
               <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
@@ -305,17 +305,13 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete 
             )}
             <button
               onClick={() => onToggle(item.id)}
-              className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
+              className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm font-bold transition-all ${
                 item.completed
-                  ? scope === "server" ? "bg-teal-600 border-teal-600" : "bg-blue-600 border-blue-600"
-                  : "border-slate-600 hover:border-blue-500"
+                  ? scope === "server" ? "border-teal-500 bg-teal-600 text-white" : "border-blue-500 bg-blue-600 text-white"
+                  : "border-slate-600 text-slate-600 hover:border-blue-500 hover:text-blue-300"
               }`}
             >
-              {item.completed && (
-                <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
+              {item.completed ? "✓" : ""}
             </button>
           </div>
         )}

@@ -95,6 +95,10 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
   };
 
   const rewardTags = rewardToTags(item.reward);
+  const handleProgressToggle = () => {
+    const nextIndex = completedCount >= totalCount ? 0 : completedCount;
+    onToggle(item.id, nextIndex);
+  };
 
   return (
     <div
@@ -203,10 +207,10 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
           <button
             {...attributes}
             {...listeners}
-            className="flex-shrink-0 text-slate-600 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
+            className="-ml-2 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
             title="드래그하여 순서 변경"
           >
-            <svg className="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
               <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
               <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
@@ -255,30 +259,8 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
             )}
           </div>
 
-          {/* 체크박스 + 수정/삭제 아이콘 */}
+          {/* 수정/삭제 아이콘 + 체크 */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="flex flex-wrap justify-end gap-1.5" style={{ maxWidth: `${4 * 24 + 3 * 6}px` }}>
-              {Array.from({ length: totalCount }, (_, i) => {
-                const checked = i < completedCount;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => onToggle(item.id, i)}
-                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
-                      checked
-                        ? scope === "server" ? "bg-teal-600 border-teal-600" : "bg-blue-600 border-blue-600"
-                        : "border-slate-600 hover:border-blue-500"
-                    }`}
-                  >
-                    {checked && (
-                      <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
             {onUpdate && !item.isDefault && (
               <button onClick={() => setEditing(true)} className="text-slate-600 hover:text-slate-400 transition-colors" title="수정">
                 <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -293,6 +275,18 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
                 </svg>
               </button>
             )}
+            <button
+              onClick={handleProgressToggle}
+              className={`h-9 min-w-9 rounded-lg border px-2 text-xs font-bold transition-colors ${
+                fullyDone
+                  ? scope === "server" ? "border-teal-500 bg-teal-600 text-white" : "border-blue-500 bg-blue-600 text-white"
+                  : completedCount > 0
+                  ? "border-amber-400 bg-amber-500/20 text-amber-200"
+                  : "border-slate-600 text-slate-600 hover:border-blue-500 hover:text-blue-300"
+              }`}
+            >
+              {totalCount > 1 ? `${completedCount}/${totalCount}` : fullyDone ? "✓" : ""}
+            </button>
           </div>
         </div>
       )}

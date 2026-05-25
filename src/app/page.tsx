@@ -96,9 +96,9 @@ type AllTabCard =
   | { id: string; type: "scroll"; item: ScrollItem };
 
 type MatrixRow =
-  | { id: string; type: "homework"; label: string; badges: Badge[]; totalCount: number; cells: { char: Character; item?: HomeworkItem }[] }
-  | { id: string; type: "purchase" | "trade"; label: string; badges: Badge[]; cells: { char: Character; item?: ShopItem }[] }
-  | { id: string; type: "scroll"; label: string; badges: Badge[]; totalCount: number; cells: { char: Character; item?: ScrollItem }[] };
+  | { id: string; type: "homework"; label: string; badges: Badge[]; sourceItem: HomeworkItem; cells: { char: Character; item?: HomeworkItem }[] }
+  | { id: string; type: "purchase" | "trade"; label: string; badges: Badge[]; sourceItem: ShopItem; cells: { char: Character; item?: ShopItem }[] }
+  | { id: string; type: "scroll"; label: string; badges: Badge[]; sourceItem: ScrollItem; cells: { char: Character; item?: ScrollItem }[] };
 
 function sortAllTabCards(cards: AllTabCard[], order: string[]) {
   if (order.length === 0) return cards;
@@ -220,7 +220,7 @@ export default function Home() {
         type: "homework",
         label: item.title,
         badges: [PERIOD_BADGES[item.period], ...(item.scope === "server" ? [SERVER_BADGE] : [])],
-        totalCount: item.totalCount,
+        sourceItem: item,
         cells: state.serverChars.map((char) => ({ char, item: state.homeworkByChar[char.id]?.[index] })),
       };
     };
@@ -233,6 +233,7 @@ export default function Home() {
         id: `${type}-${item.id}`,
         type,
         label: item.itemName,
+        sourceItem: item,
         badges: [
           PERIOD_BADGES[item.period ?? "daily"],
           ...(item.scope === "server" ? [SERVER_BADGE] : []),
@@ -248,13 +249,13 @@ export default function Home() {
         id: `scroll-${item.id}`,
         type: "scroll",
         label: item.title,
+        sourceItem: item,
         badges: [
           PERIOD_BADGES[item.period ?? "weekly"],
           ...(item.scope === "server" ? [SERVER_BADGE] : []),
           SCROLL_TYPE_BADGES[item.scrollType] ?? { label: item.scrollType, className: "bg-blue-600/20 text-blue-400" },
           REGION_BADGES[item.region] ?? { label: item.region, className: "bg-blue-600/20 text-blue-400" },
         ],
-        totalCount: item.totalCount,
         cells: state.serverChars.map((char) => ({ char, item: state.scrollItemsByChar[char.id]?.[index] })),
       };
     };
@@ -510,6 +511,20 @@ export default function Home() {
                   const nextIndex = item.completedCount >= item.totalCount ? 0 : item.completedCount;
                   state.toggleScrollItemForChar(charId, item.id, nextIndex);
                 }}
+                onQuickEdit={(row) => {
+                  const current = row.type === "homework" ? row.sourceItem.title : row.type === "scroll" ? row.sourceItem.title : row.sourceItem.itemName;
+                  const next = window.prompt("카드 이름 수정", current)?.trim();
+                  if (!next || next === current) return;
+                  if (row.type === "homework") state.updateHomework(row.sourceItem.id, { title: next });
+                  if (row.type === "scroll") state.updateScrollItem(row.sourceItem.id, { title: next });
+                  if (row.type === "purchase" || row.type === "trade") state.updateShopItem(row.sourceItem.id, row.type, { itemName: next });
+                }}
+                onDeleteRow={(row) => {
+                  if (!window.confirm(`'${row.label}'을 삭제하시겠습니까?`)) return;
+                  if (row.type === "homework") state.deleteHomework(row.sourceItem.id);
+                  if (row.type === "scroll") state.deleteScrollItem(row.sourceItem.id);
+                  if (row.type === "purchase" || row.type === "trade") state.deleteShopItem(row.sourceItem.id, row.type);
+                }}
               />
             )}
 
@@ -731,12 +746,16 @@ function ListMatrixView({
   onToggleHomework,
   onToggleShop,
   onToggleScroll,
+  onQuickEdit,
+  onDeleteRow,
 }: {
   rows: MatrixRow[];
   characters: Character[];
   onToggleHomework: (charId: string, item: HomeworkItem) => void;
   onToggleShop: (charId: string, item: ShopItem, type: "purchase" | "trade") => void;
   onToggleScroll: (charId: string, item: ScrollItem) => void;
+  onQuickEdit: (row: MatrixRow) => void;
+  onDeleteRow: (row: MatrixRow) => void;
 }) {
   if (rows.length === 0) {
     return (
@@ -769,7 +788,33 @@ function ListMatrixView({
           {rows.map((row) => (
             <div key={row.id} className="grid grid-cols-[minmax(156px,42vw)_1fr] md:grid-cols-[260px_1fr]">
               <div className="min-w-0 bg-slate-900 px-3 py-3">
-                <div className="truncate text-sm font-semibold text-slate-100">{row.label}</div>
+                <div className="flex min-w-0 items-start gap-2">
+                  <div className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100">{row.label}</div>
+                  {!row.sourceItem.isDefault && (
+                    <div className="flex flex-shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onQuickEdit(row)}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                        title="수정"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteRow(row)}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
+                        title="삭제"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <div className="mt-1.5 flex flex-wrap gap-1">
                   {row.badges.map((badge) => (
                     <span

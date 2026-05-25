@@ -488,6 +488,7 @@ export function useAppState(uid?: string | null) {
       if (!selectedCharId) return;
       persist((prev) => {
         const newHomework = { ...prev.homework };
+        const allTabOrder = { ...(prev.allTabOrder ?? {}) };
         const ts = Date.now();
         for (const charId of Object.keys(newHomework)) {
           const list = [...(newHomework[charId] ?? [])];
@@ -501,11 +502,10 @@ export function useAppState(uid?: string | null) {
             isFavorite: false,
             scope: hw.scope,
           };
-          const lastIndex = list.reduce((acc, item, i) => (item.period === hw.period ? i : acc), -1);
-          list.splice(lastIndex + 1, 0, newItem);
-          newHomework[charId] = list;
+          newHomework[charId] = [newItem, ...list];
+          allTabOrder[charId] = [newItem.id, ...(allTabOrder[charId] ?? []).filter((id) => id !== newItem.id)];
         }
-        return { ...prev, homework: newHomework };
+        return { ...prev, homework: newHomework, allTabOrder };
       });
     },
     [persist, selectedCharId]
@@ -551,6 +551,7 @@ export function useAppState(uid?: string | null) {
       const prefix = type === "purchase" ? "pur" : "trd";
       persist((prev) => {
         const newItems = { ...prev[key] };
+        const allTabOrder = { ...(prev.allTabOrder ?? {}) };
         const ts = Date.now();
         for (const charId of Object.keys(newItems)) {
           const list = newItems[charId] ?? [];
@@ -564,9 +565,10 @@ export function useAppState(uid?: string | null) {
             isFavorite: false,
             scope: item.scope,
           };
-          newItems[charId] = [...list, newItem];
+          newItems[charId] = [newItem, ...list];
+          allTabOrder[charId] = [newItem.id, ...(allTabOrder[charId] ?? []).filter((id) => id !== newItem.id)];
         }
-        return { ...prev, [key]: newItems };
+        return { ...prev, [key]: newItems, allTabOrder };
       });
     },
     [persist, selectedCharId]
@@ -651,6 +653,7 @@ export function useAppState(uid?: string | null) {
       if (!selectedCharId) return;
       persist((prev) => {
         const scrollItems = { ...(prev.scrollItems ?? {}) };
+        const allTabOrder = { ...(prev.allTabOrder ?? {}) };
         const ts = Date.now();
         for (const charId of Object.keys(scrollItems)) {
           const list = scrollItems[charId] ?? [];
@@ -667,9 +670,10 @@ export function useAppState(uid?: string | null) {
             materials: item.materials,
             reward: item.reward,
           };
-          scrollItems[charId] = [...list, newItem];
+          scrollItems[charId] = [newItem, ...list];
+          allTabOrder[charId] = [newItem.id, ...(allTabOrder[charId] ?? []).filter((id) => id !== newItem.id)];
         }
-        return { ...prev, scrollItems };
+        return { ...prev, scrollItems, allTabOrder };
       });
     },
     [persist, selectedCharId]

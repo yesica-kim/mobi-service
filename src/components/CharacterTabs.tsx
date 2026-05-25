@@ -58,9 +58,9 @@ function SortableCharTab({
       <div
         {...attributes}
         {...listeners}
-        className="flex justify-center mb-0.5 cursor-grab active:cursor-grabbing touch-none"
+        className="mx-auto mb-0.5 flex h-7 w-12 items-center justify-center rounded-lg cursor-grab active:cursor-grabbing touch-none hover:bg-slate-800"
       >
-        <svg className="w-4 h-3 text-slate-600" fill="currentColor" viewBox="0 0 24 12">
+        <svg className="w-5 h-4 text-slate-600" fill="currentColor" viewBox="0 0 24 12">
           <circle cx="6" cy="3" r="1.5" />
           <circle cx="12" cy="3" r="1.5" />
           <circle cx="18" cy="3" r="1.5" />
