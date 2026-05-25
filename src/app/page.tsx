@@ -806,15 +806,15 @@ function ListMatrixView({
   return (
     <div className="px-4 py-4">
       <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/70">
-        <div className="grid grid-cols-[minmax(156px,42vw)_1fr] md:grid-cols-[260px_1fr] border-b border-slate-800 bg-slate-950/80">
+        <div className="grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[340px_1fr] border-b border-slate-800 bg-slate-950/80">
           <div className="px-3 py-3 text-xs font-bold text-slate-300">항목</div>
           <div className="overflow-x-auto">
             <div
               className="grid min-w-max"
-              style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(72px, 88px))` }}
+              style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(54px, 64px))` }}
             >
               {characters.map((char) => (
-                <div key={char.id} className="px-2 py-3 text-center text-xs font-bold text-slate-300">
+                <div key={char.id} className="px-1 py-3 text-center text-[11px] font-bold text-slate-300">
                   <span className="block truncate">{char.name}</span>
                 </div>
               ))}
@@ -879,7 +879,7 @@ function ListMatrixRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="grid grid-cols-[minmax(156px,42vw)_1fr] bg-slate-900 md:grid-cols-[260px_1fr]"
+      className="grid grid-cols-[minmax(188px,52vw)_1fr] bg-slate-900 md:grid-cols-[340px_1fr]"
     >
       <div className="min-w-0 px-3 py-3">
         <div className="flex min-w-0 items-start gap-2">
@@ -951,12 +951,12 @@ function ListMatrixRow({
       <div className="overflow-x-auto">
         <div
           className="grid min-w-max"
-          style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(72px, 88px))` }}
+          style={{ gridTemplateColumns: `repeat(${characters.length}, minmax(54px, 64px))` }}
         >
           {row.cells.map((cell) => {
             if (!cell.item) {
               return (
-                <div key={cell.char.id} className="flex items-center justify-center px-2 py-3">
+                <div key={cell.char.id} className="flex items-center justify-center px-1 py-3">
                   <span className="text-xs text-slate-700">-</span>
                 </div>
               );
@@ -965,7 +965,7 @@ function ListMatrixRow({
             if (row.type === "purchase" || row.type === "trade") {
               const item = cell.item as ShopItem;
               return (
-                <div key={cell.char.id} className="flex items-center justify-center px-2 py-3">
+                <div key={cell.char.id} className="flex items-center justify-center px-1 py-3">
                   <button
                     type="button"
                     onClick={() => onToggleShop(cell.char.id, item, row.type)}
@@ -985,7 +985,7 @@ function ListMatrixRow({
             const item = cell.item as HomeworkItem | ScrollItem;
             const done = item.completedCount >= item.totalCount;
             return (
-              <div key={cell.char.id} className="flex items-center justify-center px-2 py-3">
+              <div key={cell.char.id} className="flex items-center justify-center px-1 py-3">
                 <button
                   type="button"
                   onClick={() => row.type === "homework"
