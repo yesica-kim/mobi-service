@@ -415,7 +415,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[840px] flex-1 pb-8">
+      <main className="mx-auto w-full max-w-[800px] flex-1 pb-8">
         <ServerTabs
           servers={state.activeServers}
           selected={state.selectedServer}
@@ -432,7 +432,7 @@ export default function Home() {
                   viewMode === "list" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                숙제별
+                캐릭터 전체 보기
               </button>
               <button
                 type="button"
@@ -441,7 +441,7 @@ export default function Home() {
                   viewMode === "character" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                캐릭터별
+                캐릭터별로 보기
               </button>
             </div>
           </div>
@@ -815,7 +815,7 @@ function ListMatrixView({
   return (
     <div className="px-4 py-4">
       <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/70">
-        <div className="grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[340px_1fr] border-b border-slate-800 bg-slate-950/80">
+        <div className="grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[320px_1fr] border-b border-slate-800 bg-slate-950/80">
           <div className="px-3 py-3 text-xs font-bold text-slate-300">항목</div>
           <div className="overflow-x-auto">
             <div
@@ -891,7 +891,7 @@ function ListMatrixRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="grid grid-cols-[minmax(188px,52vw)_1fr] bg-slate-900 md:grid-cols-[340px_1fr]"
+      className="grid grid-cols-[minmax(188px,52vw)_1fr] bg-slate-900 md:grid-cols-[320px_1fr]"
     >
       <div className="min-w-0 px-3 py-3">
         <div className="flex min-w-0 items-start gap-2">
