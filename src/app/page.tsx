@@ -1080,7 +1080,7 @@ function ListMatrixMobileCard({
               >
                 <span className="min-w-0">
                   <span className={`block truncate text-[11px] font-semibold ${item.completed ? "text-blue-100" : "text-slate-500"}`}>{cell.char.subClass}</span>
-                  <span className="block truncate text-xs font-bold">{truncateNickname(cell.char.name)}</span>
+                  <span className="block truncate text-xs font-bold text-white">{truncateNickname(cell.char.name)}</span>
                 </span>
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-current/40 text-sm font-bold">
                   {item.completed ? "✓" : ""}
@@ -1110,7 +1110,7 @@ function ListMatrixMobileCard({
             >
               <span className="min-w-0">
                 <span className={`block truncate text-[11px] font-semibold ${done ? "text-blue-100" : "text-slate-500"}`}>{cell.char.subClass}</span>
-                <span className="block truncate text-xs font-bold">{truncateNickname(cell.char.name)}</span>
+                <span className="block truncate text-xs font-bold text-white">{truncateNickname(cell.char.name)}</span>
               </span>
               <span className="flex h-8 min-w-8 flex-shrink-0 items-center justify-center rounded-lg border border-current/40 px-1 text-xs font-bold">
                 {item.totalCount > 1 ? `${item.completedCount}/${item.totalCount}` : done ? "✓" : ""}

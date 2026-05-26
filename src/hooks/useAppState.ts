@@ -1432,12 +1432,9 @@ export function useAppState(uid?: string | null) {
 
     const dailyHw = hwSource.filter((hw) => hw.period === "daily");
     const weeklyHw = hwSource.filter((hw) => hw.period === "weekly");
-    const countTotal = <T extends { totalCount: number }>(items: T[]) =>
-      favoriteOnly ? items.length : items.reduce((sum, item) => sum + item.totalCount, 0);
+    const countTotal = <T extends { totalCount: number }>(items: T[]) => items.length;
     const countDone = <T extends { completedCount: number; totalCount: number }>(items: T[]) =>
-      favoriteOnly
-        ? items.filter((item) => item.completedCount >= item.totalCount).length
-        : items.reduce((sum, item) => sum + item.completedCount, 0);
+      items.filter((item) => item.completedCount >= item.totalCount).length;
 
     const dailyTotal = countTotal(dailyHw);
     const dailyDone = countDone(dailyHw);

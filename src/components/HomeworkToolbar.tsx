@@ -15,6 +15,9 @@ interface Props {
   hasAnyCard: boolean;
 }
 
+const toolbarButtonClass =
+  "flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-200";
+
 export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, onDeletePreset, onExportPreset, onImportPreset, onCreateEmptyList, hasAnyCard }: Props) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -136,19 +139,18 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
               <p className="text-slate-200 font-semibold">숙제 설정은 전체 서버와 캐릭터 모두 동일하게 적용됩니다.</p>
               <p><span className="text-slate-200 font-medium">설정 저장</span> : 현재 숙제 리스트 설정을 저장합니다.</p>
               <p><span className="text-slate-200 font-medium">설정 리스트</span> : 저장된 숙제 리스트 설정을 선택하여 불러올 수 있습니다.</p>
-              <p><span className="text-slate-200 font-medium">체크박스 전체 해제</span> : 체크 항목을 전체 선택 해제합니다.</p>
+              <p><span className="text-slate-200 font-medium">체크박스 초기화</span> : 체크 항목을 전체 선택 해제합니다.</p>
               <p><span className="text-slate-200 font-medium">숙제 리스트 내보내기</span> : 현재 설정한 숙제 리스트를 로컬에 파일로 저장할 수 있습니다.</p>
               <p><span className="text-slate-200 font-medium">숙제 리스트 가져오기</span> : 로컬에 저장된 파일을 불러와 설정할 수 있습니다.</p>
-              <p><span className="text-slate-200 font-medium">새 숙제 리스트 만들기</span> : 빈 리스트에서 원하는 카드만 직접 추가합니다.</p>
+              <p><span className="text-slate-200 font-medium">빈 숙제 리스트 만들기</span> : 빈 리스트에서 원하는 카드만 직접 추가합니다.</p>
             </div>
           )}
         </div>
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {/* 설정 저장 */}
             <button
               onClick={() => { setPresetName(""); setShowSaveModal(true); }}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+              className={`${toolbarButtonClass} order-1`}
             >
               <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4z" />
@@ -161,7 +163,7 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
             {/* 설정 리스트 */}
             <button
               onClick={() => setShowLoadModal(true)}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+              className={`${toolbarButtonClass} order-2`}
             >
               <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -172,20 +174,18 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
             {/* 체크박스 전체 해제 */}
             <button
               onClick={() => setShowResetConfirm(true)}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+              className={`${toolbarButtonClass} order-5 sm:order-3`}
             >
               <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              체크박스 전체 해제
+              체크박스 초기화
             </button>
-          </div>
 
-          <div className="flex items-center gap-2">
             {/* 숙제 리스트 내보내기 */}
             <button
               onClick={handleExport}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+              className={`${toolbarButtonClass} order-3 sm:order-4`}
             >
               <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -196,7 +196,7 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
             {/* 숙제 리스트 가져오기 */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+              className={`${toolbarButtonClass} order-4 sm:order-5`}
             >
               <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -212,12 +212,12 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
                   onCreateEmptyList();
                 }
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+              className={`${toolbarButtonClass} order-6`}
             >
               <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
-              새 숙제 리스트 만들기
+              빈 숙제 리스트 만들기
             </button>
             <input
               ref={fileInputRef}
@@ -226,7 +226,6 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
               onChange={handleImportFile}
               className="hidden"
             />
-          </div>
         </div>
       </div>
 
@@ -235,7 +234,7 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
         <ModalOverlay onClose={() => setShowResetConfirm(false)}>
           <div className="bg-slate-800 rounded-2xl p-6 w-80 mx-auto">
             <p className="text-white text-sm text-center mb-6">
-              숙제 리스트를 초기화 하시겠습니까?
+              숙제 리스트 체크박스를 초기화 하시겠습니까?
             </p>
             <div className="flex gap-3">
               <button
