@@ -466,7 +466,17 @@ function CardRow({
   onDelete: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 bg-slate-900/50 rounded-xl px-4 py-3 border border-slate-800/50 group">
+    <div className="flex items-center gap-2 bg-slate-900/50 rounded-xl px-4 py-3 border border-slate-800/50">
+      <span
+        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-slate-600"
+        title="드래그 핸들"
+      >
+        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+          <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+          <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+          <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+        </svg>
+      </span>
       <span
         className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${
           period === "daily"
@@ -481,7 +491,7 @@ function CardRow({
         <p className="text-[11px] text-slate-500 truncate">{subtitle}</p>
         {detail && <p className="text-[11px] text-slate-600 truncate mt-0.5">{detail}</p>}
       </div>
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex gap-1">
         <button
           onClick={onEdit}
           className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"

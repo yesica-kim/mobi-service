@@ -24,7 +24,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Download, GripVertical, Pencil, Settings, Trash2, Upload } from "lucide-react";
+import { Download, GripVertical, Settings, Trash2, Upload } from "lucide-react";
 import { isAdminFirebaseUser } from "@/lib/adminFirestore";
 import type { Character, HomeworkItem, RegionName, ScrollItem, ShopItem } from "@/types";
 
@@ -1013,7 +1013,9 @@ function ListMatrixMobileCard({
               className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-slate-300"
               title="수정"
             >
-              <Pencil className="h-5 w-5" />
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
             </button>
             <button
               type="button"
@@ -1213,7 +1215,9 @@ function ListMatrixRow({
                   className="flex h-9 w-9 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
                   title="수정"
                 >
-                  <Pencil className="h-[18px] w-[18px]" />
+                  <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
                 </button>
                 <button
                   type="button"
