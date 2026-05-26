@@ -25,8 +25,7 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
   const [showLoadConfirm, setShowLoadConfirm] = useState<HomeworkPreset | null>(null);
   const [showImportConfirm, setShowImportConfirm] = useState<HomeworkPreset | null>(null);
   const [showCreateEmptyConfirm, setShowCreateEmptyConfirm] = useState(false);
-  const [showBackupTools, setShowBackupTools] = useState(false);
-  const [showStartTools, setShowStartTools] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [emptyListPresetName, setEmptyListPresetName] = useState("내 숙제 리스트");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,7 +139,7 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
               <p><span className="text-slate-200 font-medium">현재 리스트 저장</span> : 지금 쓰는 카드 구성을 저장합니다.</p>
               <p><span className="text-slate-200 font-medium">저장한 리스트</span> : 저장해 둔 카드 구성을 불러옵니다.</p>
               <p><span className="text-slate-200 font-medium">백업/복원</span> : 숙제 리스트 파일을 내보내거나 가져옵니다.</p>
-              <p><span className="text-slate-200 font-medium">새로 시작</span> : 빈 리스트에서 다시 구성합니다.</p>
+              <p><span className="text-slate-200 font-medium">빈 리스트로 시작</span> : 빈 리스트에서 다시 구성합니다.</p>
             </div>
           )}
         </div>
@@ -172,69 +171,82 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => setShowBackupTools((v) => !v)}
+            onClick={() => setShowBackupModal(true)}
             className="flex min-h-[40px] items-center justify-center rounded-lg bg-slate-800 px-3 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
           >
             백업/복원
           </button>
           <button
             type="button"
-            onClick={() => setShowStartTools((v) => !v)}
-            className="flex min-h-[40px] items-center justify-center rounded-lg bg-slate-800 px-3 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
+            onClick={() => {
+              if (hasAnyCard) {
+                setEmptyListPresetName("내 숙제 리스트");
+                setShowCreateEmptyConfirm(true);
+              } else {
+                onCreateEmptyList();
+              }
+            }}
+            className="flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-3 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
           >
-            새로 시작
+            <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14 3v6h6" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 12v5m2.5-2.5h-5" />
+            </svg>
+            빈 리스트로 시작
           </button>
         </div>
-        {showBackupTools && (
-          <div className="mt-2 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-900/60 p-2">
-            <button
-              onClick={handleExport}
-              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
-            >
-              <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              백업 파일 저장
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
-            >
-              <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              백업 불러오기
-            </button>
-          </div>
-        )}
-        {showStartTools && (
-          <div className="mt-2 rounded-xl border border-slate-800 bg-slate-900/60 p-2">
-            <button
-              onClick={() => {
-                if (hasAnyCard) {
-                  setEmptyListPresetName("내 숙제 리스트");
-                  setShowCreateEmptyConfirm(true);
-                } else {
-                  onCreateEmptyList();
-                }
-              }}
-              className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
-            >
-              <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              빈 리스트로 시작
-            </button>
-          </div>
-        )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              onChange={handleImportFile}
-              className="hidden"
-            />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleImportFile}
+          className="hidden"
+        />
       </div>
+
+      {showBackupModal && (
+        <ModalOverlay onClose={() => setShowBackupModal(false)}>
+          <div className="mx-auto w-80 rounded-2xl bg-slate-800 p-6">
+            <h3 className="mb-4 text-center text-sm font-semibold text-white">백업/복원</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  handleExport();
+                  setShowBackupModal(false);
+                }}
+                className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl bg-slate-700 px-3 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-600"
+              >
+                <svg className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                백업 파일 저장
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBackupModal(false);
+                  fileInputRef.current?.click();
+                }}
+                className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl bg-slate-700 px-3 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-600"
+              >
+                <svg className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                백업 파일 가져오기
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowBackupModal(false)}
+              className="mt-3 h-11 w-full rounded-xl bg-slate-700 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-600"
+            >
+              닫기
+            </button>
+          </div>
+        </ModalOverlay>
+      )}
 
       {showCreateEmptyConfirm && (
         <ModalOverlay onClose={() => setShowCreateEmptyConfirm(false)}>
