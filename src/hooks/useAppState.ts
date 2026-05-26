@@ -130,6 +130,12 @@ function normalizeCharacterCardLists(data: AppData): { data: AppData; changed: b
   };
 }
 
+function hasStoredCards(data: AppData): boolean {
+  const hasItems = (records: Record<string, unknown[]> | undefined) =>
+    Object.values(records ?? {}).some((items) => items.length > 0);
+  return hasItems(data.homework) || hasItems(data.purchaseItems) || hasItems(data.tradeItems) || hasItems(data.scrollItems);
+}
+
 export function useAppState(uid?: string | null) {
   const [data, setData] = useState<AppData | null>(null);
   const [runtimeDefaults, setRuntimeDefaults] = useState<DefaultCardsData | null>(null);
@@ -148,17 +154,26 @@ export function useAppState(uid?: string | null) {
   useEffect(() => {
     let cancelled = false;
     async function init() {
+      setData(null);
       let loaded: AppData;
       const defaults = await loadRuntimeDefaultCards();
 
       if (uid) {
         // Firestore에서 로드 시도
         const cloudData = await loadUserData(uid);
+        const localData = loadData(defaults);
         if (cloudData) {
-          loaded = applyResets(cloudData, defaults);
+          const resetCloudData = applyResets(cloudData, defaults);
+          const resetLocalData = applyResets(localData, defaults);
+          if (!hasStoredCards(resetCloudData) && hasStoredCards(resetLocalData)) {
+            loaded = resetLocalData;
+            await saveUserData(uid, loaded);
+          } else {
+            loaded = resetCloudData;
+          }
         } else {
-          // Firestore에 없으면 localStorage 데이터를 마이그레이션
-          const localData = loadData(defaults);
+          // Firestore에 없으면 새 계정은 빈 리스트에서 시작한다.
+          // 단, 같은 브라우저에 게스트/로컬 카드가 1개라도 있으면 그 데이터를 초기 클라우드 데이터로 승격한다.
           loaded = applyResets(localData, defaults);
           // 클라우드에 초기 저장
           await saveUserData(uid, loaded);

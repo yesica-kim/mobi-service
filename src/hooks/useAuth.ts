@@ -16,6 +16,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
 
   useEffect(() => {
     // 게스트 모드 체크
@@ -32,6 +33,7 @@ export function useAuth() {
         localStorage.removeItem("mobimobi_guest");
         setIsGuest(false);
       }
+      setSigningIn(false);
       setLoading(false);
     });
     // Firebase 연결 타임아웃 안전장치 (5초)
@@ -42,6 +44,8 @@ export function useAuth() {
   const signInWithGoogle = useCallback(async () => {
     try {
       setAuthError(null);
+      setSigningIn(true);
+      setLoading(true);
       // 게스트 모드 해제
       localStorage.removeItem("mobimobi_guest");
       setIsGuest(false);
@@ -58,6 +62,8 @@ export function useAuth() {
       } else {
         setAuthError("Google 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.");
       }
+      setSigningIn(false);
+      setLoading(false);
     }
   }, []);
 
@@ -77,6 +83,7 @@ export function useAuth() {
         await firebaseSignOut(auth);
       }
       setUser(null);
+      setSigningIn(false);
     } catch (err) {
       console.error("로그아웃 실패:", err);
     }
@@ -95,6 +102,7 @@ export function useAuth() {
       localStorage.removeItem("mobimobi_guest");
       setUser(null);
       setIsGuest(false);
+      setSigningIn(false);
     } catch (err: any) {
       // 재인증이 필요한 경우
       if (err?.code === "auth/requires-recent-login") {
@@ -108,6 +116,7 @@ export function useAuth() {
   return {
     user,
     loading,
+    signingIn,
     isGuest,
     authError,
     signInWithGoogle,

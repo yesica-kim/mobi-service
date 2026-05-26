@@ -157,7 +157,7 @@ function sortAllTabCards(cards: AllTabCard[], order: string[]) {
 }
 
 export default function Home() {
-  const { user, loading: authLoading, isGuest, authError, signInWithGoogle, continueAsGuest, signOut, deleteAccount } = useAuth();
+  const { user, loading: authLoading, signingIn, isGuest, authError, signInWithGoogle, continueAsGuest, signOut, deleteAccount } = useAuth();
   const [isDevHost, setIsDevHost] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -177,7 +177,7 @@ export default function Home() {
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950">
-        <div className="text-slate-400 text-sm">로딩 중...</div>
+        <div className="text-slate-400 text-sm">{signingIn ? "로그인 중..." : "로딩 중..."}</div>
       </div>
     );
   }
