@@ -295,7 +295,7 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
             </div>
           </div>
 
-          <div className="hidden lg:flex lg:items-start lg:gap-3">
+          <div className="hidden lg:flex lg:items-center lg:gap-3">
             <div className="flex flex-shrink-0 items-center gap-0.5">
               <button
                 {...attributes}
