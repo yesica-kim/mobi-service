@@ -86,6 +86,15 @@ function migrateRenames(data: AppData, defaultCards?: DefaultCardsData) {
 function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
   const defaults = getDefaultCards(defaultCards);
   const savedStates = { ...(data.savedItemStates ?? {}) };
+  const deletedDefaults = data.deletedDefaultItems ?? {};
+  const deletedHomework = new Set(deletedDefaults.homework ?? []);
+  const deletedPurchase = new Set(deletedDefaults.purchase ?? []);
+  const deletedTrade = new Set(deletedDefaults.trade ?? []);
+  const deletedScroll = new Set(deletedDefaults.scroll ?? []);
+  const homeworkDefaults = defaults.homework.filter((item) => !deletedHomework.has(item.title));
+  const purchaseDefaults = defaults.purchaseItems.filter((item) => !deletedPurchase.has(item.itemName));
+  const tradeDefaults = defaults.tradeItems.filter((item) => !deletedTrade.has(item.itemName));
+  const scrollDefaults = defaults.scrollItems.filter((item) => !deletedScroll.has(item.title));
 
   for (const charId of Object.keys(data.homework ?? {})) {
     const current = data.homework[charId] ?? [];
@@ -105,7 +114,7 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     }
 
     data.homework[charId] = [
-      ...defaults.homework.map((hw, i) => {
+      ...homeworkDefaults.map((hw, i) => {
         const id = `${charId}_hw_${i}`;
         const existing = defaultItems.find((item) => item.title === hw.title) ?? defaultItems.find((item) => item.id === id);
         const saved = charStates.homework[hw.title];
@@ -145,7 +154,7 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     }
 
     data.purchaseItems[charId] = [
-      ...defaults.purchaseItems.map((item, i) => {
+      ...purchaseDefaults.map((item, i) => {
         const id = `${charId}_pur_${i}`;
         const existing = defaultItems.find((currentItem) => currentItem.itemName === item.itemName) ?? defaultItems.find((currentItem) => currentItem.id === id);
         const saved = charStates.purchase[item.itemName];
@@ -184,7 +193,7 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     }
 
     data.tradeItems[charId] = [
-      ...defaults.tradeItems.map((item, i) => {
+      ...tradeDefaults.map((item, i) => {
         const id = `${charId}_trd_${i}`;
         const existing = defaultItems.find((currentItem) => currentItem.itemName === item.itemName) ?? defaultItems.find((currentItem) => currentItem.id === id);
         const saved = charStates.trade[item.itemName];
@@ -214,7 +223,7 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     const customItems = current.filter((item) => !item.isDefault);
 
     data.scrollItems![charId] = [
-      ...defaults.scrollItems.map((item, i) => {
+      ...scrollDefaults.map((item, i) => {
         const id = `${charId}_scroll_${i}`;
         const existing = defaultItems.find((currentItem) => currentItem.title === item.title) ?? defaultItems.find((currentItem) => currentItem.id === id);
         return {

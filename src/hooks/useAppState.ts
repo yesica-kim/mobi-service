@@ -42,6 +42,15 @@ function pickTemplateList<T>(records: Record<string, T[]>, charIds: string[]): T
   }, []);
 }
 
+function markDeletedDefault(prev: AppData, type: "homework" | "purchase" | "trade" | "scroll", key?: string): AppData["deletedDefaultItems"] {
+  if (!key) return prev.deletedDefaultItems;
+  const deletedDefaultItems = { ...(prev.deletedDefaultItems ?? {}) };
+  const existing = new Set(deletedDefaultItems[type] ?? []);
+  existing.add(key);
+  deletedDefaultItems[type] = Array.from(existing);
+  return deletedDefaultItems;
+}
+
 function normalizeRecordByTemplate<T>(
   records: Record<string, T[]>,
   charIds: string[],
@@ -472,19 +481,21 @@ export function useAppState(uid?: string | null) {
         const currentList = prev.homework[selectedCharId] ?? [];
         const idx = currentList.findIndex((hw) => hw.id === hwId);
         if (idx === -1) return prev;
+        const target = currentList[idx];
+        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, "homework", target.title) : prev.deletedDefaultItems;
 
         const newHomework = { ...prev.homework };
         for (const charId of Object.keys(newHomework)) {
           newHomework[charId] = (newHomework[charId] ?? []).map((hw, i) => {
             if (i !== idx) return hw;
-            const updated = { ...hw, ...updates };
+            const updated = { ...hw, ...updates, ...(target.isDefault ? { isDefault: false } : {}) };
             if (updates.totalCount !== undefined && updated.completedCount > updates.totalCount) {
               updated.completedCount = updates.totalCount;
             }
             return updated;
           });
         }
-        return { ...prev, homework: newHomework };
+        return { ...prev, homework: newHomework, deletedDefaultItems };
       });
     },
     [persist, selectedCharId]
@@ -592,14 +603,17 @@ export function useAppState(uid?: string | null) {
         const currentList = prev[key][selectedCharId] ?? [];
         const idx = currentList.findIndex((item) => item.id === itemId);
         if (idx === -1) return prev;
+        const target = currentList[idx];
+        const stateKey = type === "purchase" ? "purchase" : "trade";
+        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, stateKey, target.itemName) : prev.deletedDefaultItems;
 
         const newItems = { ...prev[key] };
         for (const charId of Object.keys(newItems)) {
           newItems[charId] = (newItems[charId] ?? []).map((item, i) =>
-            i === idx ? { ...item, ...updates } : item
+            i === idx ? { ...item, ...updates, ...(target.isDefault ? { isDefault: false } : {}) } : item
           );
         }
-        return { ...prev, [key]: newItems };
+        return { ...prev, [key]: newItems, deletedDefaultItems };
       });
     },
     [persist, selectedCharId]
@@ -613,6 +627,8 @@ export function useAppState(uid?: string | null) {
         const currentList = prev.homework[selectedCharId] ?? [];
         const idx = currentList.findIndex((hw) => hw.id === hwId);
         if (idx === -1) return prev;
+        const target = currentList[idx];
+        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, "homework", target.title) : prev.deletedDefaultItems;
 
         // 삭제 전 모든 캐릭터의 상태 저장
         const savedStates = { ...(prev.savedItemStates ?? {}) };
@@ -629,7 +645,7 @@ export function useAppState(uid?: string | null) {
           const list = newHomework[charId] ?? [];
           newHomework[charId] = list.filter((_, i) => i !== idx);
         }
-        return { ...prev, homework: newHomework, savedItemStates: savedStates };
+        return { ...prev, homework: newHomework, savedItemStates: savedStates, deletedDefaultItems };
       });
     },
     [persist, selectedCharId]
@@ -674,6 +690,8 @@ export function useAppState(uid?: string | null) {
         const currentList = prev[key][selectedCharId] ?? [];
         const idx = currentList.findIndex((item) => item.id === itemId);
         if (idx === -1) return prev;
+        const target = currentList[idx];
+        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, stateKey, target.itemName) : prev.deletedDefaultItems;
 
         // 삭제 전 모든 캐릭터의 상태 저장
         const savedStates = { ...(prev.savedItemStates ?? {}) };
@@ -690,7 +708,7 @@ export function useAppState(uid?: string | null) {
           const list = newItems[charId] ?? [];
           newItems[charId] = list.filter((_, i) => i !== idx);
         }
-        return { ...prev, [key]: newItems, savedItemStates: savedStates };
+        return { ...prev, [key]: newItems, savedItemStates: savedStates, deletedDefaultItems };
       });
     },
     [persist, selectedCharId]
@@ -899,18 +917,20 @@ export function useAppState(uid?: string | null) {
         const currentList = scrollItems[selectedCharId] ?? [];
         const idx = currentList.findIndex((s) => s.id === itemId);
         if (idx === -1) return prev;
+        const target = currentList[idx];
+        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, "scroll", target.title) : prev.deletedDefaultItems;
 
         for (const charId of Object.keys(scrollItems)) {
           scrollItems[charId] = (scrollItems[charId] ?? []).map((s, i) => {
             if (i !== idx) return s;
-            const updated = { ...s, ...updates };
+            const updated = { ...s, ...updates, ...(target.isDefault ? { isDefault: false } : {}) };
             if (updates.totalCount !== undefined && updated.completedCount > updates.totalCount) {
               updated.completedCount = updates.totalCount;
             }
             return updated;
           });
         }
-        return { ...prev, scrollItems };
+        return { ...prev, scrollItems, deletedDefaultItems };
       });
     },
     [persist, selectedCharId]
@@ -924,12 +944,14 @@ export function useAppState(uid?: string | null) {
         const currentList = scrollItems[selectedCharId] ?? [];
         const idx = currentList.findIndex((s) => s.id === itemId);
         if (idx === -1) return prev;
+        const target = currentList[idx];
+        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, "scroll", target.title) : prev.deletedDefaultItems;
 
         for (const charId of Object.keys(scrollItems)) {
           const list = scrollItems[charId] ?? [];
           scrollItems[charId] = list.filter((_, i) => i !== idx);
         }
-        return { ...prev, scrollItems };
+        return { ...prev, scrollItems, deletedDefaultItems };
       });
     },
     [persist, selectedCharId]

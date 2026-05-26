@@ -314,6 +314,13 @@ export interface AppData {
     purchase: Record<string, { completed: boolean; isFavorite: boolean }>;
     trade: Record<string, { completed: boolean; isFavorite: boolean }>;
   }>;
+  /** 사용자가 삭제하거나 커스텀 수정한 관리자 기본 카드 */
+  deletedDefaultItems?: {
+    homework?: string[];
+    purchase?: string[];
+    trade?: string[];
+    scroll?: string[];
+  };
   /** 전체 탭에서 서로 다른 카드 타입 간 공통 정렬 순서 */
   allTabOrder?: Record<string, string[]>;
 }
