@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { ArchiveRestore, FileClock } from "lucide-react";
 import type { HomeworkPreset } from "@/types";
 
 interface Props {
@@ -162,9 +163,7 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
               onClick={() => setShowLoadModal(true)}
               className={toolbarButtonClass}
             >
-              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <FileClock className="h-[18px] w-[18px]" />
               저장한 리스트
             </button>
         </div>
@@ -172,8 +171,9 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
           <button
             type="button"
             onClick={() => setShowBackupModal(true)}
-            className="flex min-h-[40px] items-center justify-center rounded-lg bg-slate-800 px-3 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
+            className={toolbarButtonClass}
           >
+            <ArchiveRestore className="h-[18px] w-[18px]" />
             백업/복원
           </button>
           <button
@@ -186,7 +186,7 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
                 onCreateEmptyList();
               }
             }}
-            className="flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-3 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
+            className={toolbarButtonClass}
           >
             <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z" />

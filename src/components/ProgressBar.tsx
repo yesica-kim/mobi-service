@@ -46,13 +46,6 @@ export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, 
           <span className="text-sm font-bold text-blue-400">
             {done} / {total} ({pct}%)
           </span>
-          <button
-            type="button"
-            onClick={() => setShowResetConfirm(true)}
-            className="flex h-10 items-center rounded-lg border border-slate-700 px-2.5 text-xs font-medium text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-200"
-          >
-            체크 초기화
-          </button>
           {/* 즐겨찾기 스위치 토글 */}
           <button
             onClick={() => onFavoriteToggle(!favoriteOnly)}
@@ -73,6 +66,13 @@ export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, 
                 }`}
               />
             </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowResetConfirm(true)}
+            className="flex h-10 items-center rounded-lg border border-slate-700 px-2.5 text-xs font-medium text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-200"
+          >
+            체크 초기화
           </button>
         </div>
       </div>
