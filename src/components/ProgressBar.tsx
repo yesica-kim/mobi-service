@@ -16,18 +16,20 @@ interface Props {
   pct: number;
   favoriteOnly: boolean;
   onFavoriteToggle: (v: boolean) => void;
+  onReset: () => void;
   categories?: CategoryProgress[];
 }
 
-export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, categories }: Props) {
+export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, onReset, categories }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   return (
     <div className="px-4 py-3">
-      <div className="flex items-center justify-between mb-2">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1.5 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
+          className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-white"
         >
           <svg
             className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
@@ -40,10 +42,17 @@ export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, 
           </svg>
           전체 진행도
         </button>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-shrink-0 items-center gap-2">
           <span className="text-sm font-bold text-blue-400">
             {done} / {total} ({pct}%)
           </span>
+          <button
+            type="button"
+            onClick={() => setShowResetConfirm(true)}
+            className="flex h-10 items-center rounded-lg border border-slate-700 px-2.5 text-xs font-medium text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-200"
+          >
+            체크 초기화
+          </button>
           {/* 즐겨찾기 스위치 토글 */}
           <button
             onClick={() => onFavoriteToggle(!favoriteOnly)}
@@ -93,6 +102,36 @@ export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, 
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowResetConfirm(false)} />
+          <div className="relative z-10 w-full">
+            <div className="mx-auto w-80 rounded-2xl bg-slate-800 p-6">
+              <p className="mb-6 text-center text-sm text-white">
+                숙제 리스트 체크박스를 초기화 하시겠습니까?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="h-11 flex-1 rounded-xl bg-slate-700 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-600"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={() => {
+                    onReset();
+                    setShowResetConfirm(false);
+                  }}
+                  className="h-11 flex-1 rounded-xl bg-red-600 text-sm font-medium text-white transition-colors hover:bg-red-500"
+                >
+                  초기화
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -160,14 +160,23 @@ export function useAppState(uid?: string | null) {
 
       if (uid) {
         // Firestore에서 로드 시도
-        const cloudData = await loadUserData(uid);
+        let cloudData: AppData | null = null;
+        try {
+          cloudData = await loadUserData(uid);
+        } catch (error) {
+          console.error("사용자 데이터 로드 실패:", error);
+        }
         const localData = loadData(defaults);
         if (cloudData) {
           const resetCloudData = applyResets(cloudData, defaults);
           const resetLocalData = applyResets(localData, defaults);
           if (!hasStoredCards(resetCloudData) && hasStoredCards(resetLocalData)) {
             loaded = resetLocalData;
-            await saveUserData(uid, loaded);
+            try {
+              await saveUserData(uid, loaded);
+            } catch (error) {
+              console.error("사용자 데이터 초기 저장 실패:", error);
+            }
           } else {
             loaded = resetCloudData;
           }
@@ -176,7 +185,11 @@ export function useAppState(uid?: string | null) {
           // 단, 같은 브라우저에 게스트/로컬 카드가 1개라도 있으면 그 데이터를 초기 클라우드 데이터로 승격한다.
           loaded = applyResets(localData, defaults);
           // 클라우드에 초기 저장
-          await saveUserData(uid, loaded);
+          try {
+            await saveUserData(uid, loaded);
+          } catch (error) {
+            console.error("사용자 데이터 초기 저장 실패:", error);
+          }
         }
       } else {
         loaded = applyResets(loadData(defaults), defaults);
@@ -201,7 +214,13 @@ export function useAppState(uid?: string | null) {
       if (normalized.changed) {
         loaded = normalized.data;
         saveData(loaded);
-        if (uid) await saveUserData(uid, loaded);
+        if (uid) {
+          try {
+            await saveUserData(uid, loaded);
+          } catch (error) {
+            console.error("사용자 데이터 정규화 저장 실패:", error);
+          }
+        }
       }
 
       if (cancelled) return;

@@ -156,6 +156,15 @@ function sortAllTabCards(cards: AllTabCard[], order: string[]) {
   });
 }
 
+function LoadingScreen({ message }: { message: string }) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-950 px-6">
+      <div className="h-9 w-9 animate-spin rounded-full border-2 border-slate-700 border-t-blue-500" />
+      <p className="text-sm font-medium text-slate-300">{message}</p>
+    </div>
+  );
+}
+
 export default function Home() {
   const { user, loading: authLoading, signingIn, isGuest, authError, signInWithGoogle, continueAsGuest, signOut, deleteAccount } = useAuth();
   const [isDevHost, setIsDevHost] = useState(false);
@@ -175,11 +184,7 @@ export default function Home() {
 
   // 인증 로딩
   if (authLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950">
-        <div className="text-slate-400 text-sm">{signingIn ? "로그인 중..." : "로딩 중..."}</div>
-      </div>
-    );
+    return <LoadingScreen message={signingIn ? "로그인 중입니다." : "데이터를 불러오는 중입니다."} />;
   }
 
   // 로그인 화면
@@ -234,11 +239,7 @@ export default function Home() {
 
   // 데이터 로딩
   if (!state.isLoaded) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950">
-        <div className="text-slate-400 text-sm">데이터 불러오는 중...</div>
-      </div>
-    );
+    return <LoadingScreen message="데이터를 불러오는 중입니다." />;
   }
 
   const isShopTab = state.activeTab === "purchase" || state.activeTab === "trade";
@@ -502,7 +503,6 @@ export default function Home() {
           <>
             <HomeworkToolbar
               presets={state.presets}
-              onReset={state.resetHomework}
               onSavePreset={state.savePreset}
               onLoadPreset={state.loadPreset}
               onDeletePreset={state.deletePreset}
@@ -519,6 +519,7 @@ export default function Home() {
               categories={state.progress.categories}
               favoriteOnly={state.favoriteOnly}
               onFavoriteToggle={state.setFavoriteOnly}
+              onReset={state.resetHomework}
             />
 
             <PeriodToggle active={state.activeTab} onChange={state.setActiveTab} />

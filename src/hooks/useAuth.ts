@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -17,6 +17,7 @@ export function useAuth() {
   const [isGuest, setIsGuest] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
+  const signingInRef = useRef(false);
 
   useEffect(() => {
     // 게스트 모드 체크
@@ -27,29 +28,38 @@ export function useAuth() {
     }
     // 항상 auth 리스너 등록 (게스트→로그인 전환 감지)
     const unsub = onAuthStateChanged(auth, (u) => {
+      if (!u && signingInRef.current) return;
       setUser(u);
       if (u) {
         // 로그인 성공 시 게스트 모드 해제
         localStorage.removeItem("mobimobi_guest");
         setIsGuest(false);
       }
+      signingInRef.current = false;
       setSigningIn(false);
       setLoading(false);
     });
     // Firebase 연결 타임아웃 안전장치 (5초)
-    const timeout = setTimeout(() => setLoading(false), 5000);
+    const timeout = setTimeout(() => {
+      if (!signingInRef.current) setLoading(false);
+    }, 5000);
     return () => { unsub(); clearTimeout(timeout); };
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
     try {
       setAuthError(null);
+      signingInRef.current = true;
       setSigningIn(true);
       setLoading(true);
       // 게스트 모드 해제
       localStorage.removeItem("mobimobi_guest");
       setIsGuest(false);
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      setUser(result.user);
+      signingInRef.current = false;
+      setSigningIn(false);
+      setLoading(false);
     } catch (err) {
       console.error("Google 로그인 실패:", err);
       const code = typeof err === "object" && err && "code" in err ? String(err.code) : "";
@@ -62,6 +72,7 @@ export function useAuth() {
       } else {
         setAuthError("Google 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.");
       }
+      signingInRef.current = false;
       setSigningIn(false);
       setLoading(false);
     }
@@ -83,6 +94,7 @@ export function useAuth() {
         await firebaseSignOut(auth);
       }
       setUser(null);
+      signingInRef.current = false;
       setSigningIn(false);
     } catch (err) {
       console.error("로그아웃 실패:", err);
@@ -102,6 +114,7 @@ export function useAuth() {
       localStorage.removeItem("mobimobi_guest");
       setUser(null);
       setIsGuest(false);
+      signingInRef.current = false;
       setSigningIn(false);
     } catch (err: any) {
       // 재인증이 필요한 경우

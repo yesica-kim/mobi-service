@@ -5,7 +5,6 @@ import type { HomeworkPreset } from "@/types";
 
 interface Props {
   presets: HomeworkPreset[];
-  onReset: () => void;
   onSavePreset: (name: string) => void;
   onLoadPreset: (presetId: string) => void;
   onDeletePreset: (presetId: string) => void;
@@ -18,8 +17,7 @@ interface Props {
 const toolbarButtonClass =
   "flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-200";
 
-export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, onDeletePreset, onExportPreset, onImportPreset, onCreateEmptyList, hasAnyCard }: Props) {
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
+export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeletePreset, onExportPreset, onImportPreset, onCreateEmptyList, hasAnyCard }: Props) {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -27,6 +25,8 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
   const [showLoadConfirm, setShowLoadConfirm] = useState<HomeworkPreset | null>(null);
   const [showImportConfirm, setShowImportConfirm] = useState<HomeworkPreset | null>(null);
   const [showCreateEmptyConfirm, setShowCreateEmptyConfirm] = useState(false);
+  const [showBackupTools, setShowBackupTools] = useState(false);
+  const [showStartTools, setShowStartTools] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [emptyListPresetName, setEmptyListPresetName] = useState("내 숙제 리스트");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -137,72 +137,78 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
               className="absolute left-0 top-full mt-1 z-50 w-72 bg-slate-700 rounded-xl p-3 shadow-xl text-[11px] text-slate-300 leading-relaxed space-y-1.5"
             >
               <p className="text-slate-200 font-semibold">숙제 설정은 전체 서버와 캐릭터 모두 동일하게 적용됩니다.</p>
-              <p><span className="text-slate-200 font-medium">설정 저장</span> : 현재 숙제 리스트 설정을 저장합니다.</p>
-              <p><span className="text-slate-200 font-medium">설정 리스트</span> : 저장된 숙제 리스트 설정을 선택하여 불러올 수 있습니다.</p>
-              <p><span className="text-slate-200 font-medium">체크박스 초기화</span> : 체크 항목을 전체 선택 해제합니다.</p>
-              <p><span className="text-slate-200 font-medium">숙제 리스트 내보내기</span> : 현재 설정한 숙제 리스트를 로컬에 파일로 저장할 수 있습니다.</p>
-              <p><span className="text-slate-200 font-medium">숙제 리스트 가져오기</span> : 로컬에 저장된 파일을 불러와 설정할 수 있습니다.</p>
-              <p><span className="text-slate-200 font-medium">빈 숙제 리스트 만들기</span> : 빈 리스트에서 원하는 카드만 직접 추가합니다.</p>
+              <p><span className="text-slate-200 font-medium">현재 리스트 저장</span> : 지금 쓰는 카드 구성을 저장합니다.</p>
+              <p><span className="text-slate-200 font-medium">저장한 리스트</span> : 저장해 둔 카드 구성을 불러옵니다.</p>
+              <p><span className="text-slate-200 font-medium">백업/복원</span> : 숙제 리스트 파일을 내보내거나 가져옵니다.</p>
+              <p><span className="text-slate-200 font-medium">새로 시작</span> : 빈 리스트에서 다시 구성합니다.</p>
             </div>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2">
             {/* 설정 저장 */}
             <button
               onClick={() => { setPresetName(""); setShowSaveModal(true); }}
-              className={`${toolbarButtonClass} order-1`}
+              className={toolbarButtonClass}
             >
               <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 3v5h8V3" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 14h10v7H7z" />
               </svg>
-              설정 저장
+              현재 리스트 저장
             </button>
 
             {/* 설정 리스트 */}
             <button
               onClick={() => setShowLoadModal(true)}
-              className={`${toolbarButtonClass} order-2`}
+              className={toolbarButtonClass}
             >
               <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-              설정 리스트
+              저장한 리스트
             </button>
-
-            {/* 체크박스 전체 해제 */}
-            <button
-              onClick={() => setShowResetConfirm(true)}
-              className={`${toolbarButtonClass} order-5 sm:order-3`}
-            >
-              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              체크박스 초기화
-            </button>
-
-            {/* 숙제 리스트 내보내기 */}
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setShowBackupTools((v) => !v)}
+            className="flex min-h-[40px] items-center justify-center rounded-lg bg-slate-800 px-3 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
+          >
+            백업/복원
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowStartTools((v) => !v)}
+            className="flex min-h-[40px] items-center justify-center rounded-lg bg-slate-800 px-3 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
+          >
+            새로 시작
+          </button>
+        </div>
+        {showBackupTools && (
+          <div className="mt-2 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-900/60 p-2">
             <button
               onClick={handleExport}
-              className={`${toolbarButtonClass} order-3 sm:order-4`}
+              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
             >
-              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              숙제 리스트 내보내기
+              백업 파일 저장
             </button>
-
-            {/* 숙제 리스트 가져오기 */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className={`${toolbarButtonClass} order-4 sm:order-5`}
+              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
             >
-              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              숙제 리스트 가져오기
+              백업 불러오기
             </button>
+          </div>
+        )}
+        {showStartTools && (
+          <div className="mt-2 rounded-xl border border-slate-800 bg-slate-900/60 p-2">
             <button
               onClick={() => {
                 if (hasAnyCard) {
@@ -212,13 +218,15 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
                   onCreateEmptyList();
                 }
               }}
-              className={`${toolbarButtonClass} order-6`}
+              className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
             >
-              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
-              빈 숙제 리스트 만들기
+              빈 리스트로 시작
             </button>
+          </div>
+        )}
             <input
               ref={fileInputRef}
               type="file"
@@ -226,33 +234,7 @@ export function HomeworkToolbar({ presets, onReset, onSavePreset, onLoadPreset, 
               onChange={handleImportFile}
               className="hidden"
             />
-        </div>
       </div>
-
-      {/* 초기화 확인 모달 */}
-      {showResetConfirm && (
-        <ModalOverlay onClose={() => setShowResetConfirm(false)}>
-          <div className="bg-slate-800 rounded-2xl p-6 w-80 mx-auto">
-            <p className="text-white text-sm text-center mb-6">
-              숙제 리스트 체크박스를 초기화 하시겠습니까?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowResetConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={() => { onReset(); setShowResetConfirm(false); }}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors"
-              >
-                초기화
-              </button>
-            </div>
-          </div>
-        </ModalOverlay>
-      )}
 
       {showCreateEmptyConfirm && (
         <ModalOverlay onClose={() => setShowCreateEmptyConfirm(false)}>
