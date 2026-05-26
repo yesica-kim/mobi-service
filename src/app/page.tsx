@@ -981,28 +981,50 @@ function ListMatrixMobileCard({
       style={style}
       className={`rounded-2xl border border-slate-800 px-3 py-3 ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}
     >
-      <div className="flex items-start gap-2">
-        <button
-          {...attributes}
-          {...listeners}
-          type="button"
-          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
-          title="드래그하여 순서 변경"
-        >
-          <GripVertical className="h-5 w-5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onToggleFavorite(row)}
-          className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-xl leading-none transition-colors ${
-            row.sourceItem.isFavorite ? "text-yellow-400 hover:bg-slate-700/70" : "text-slate-600 hover:bg-slate-700/70 hover:text-slate-400"
-          }`}
-          title={row.sourceItem.isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
-        >
-          {row.sourceItem.isFavorite ? "★" : "☆"}
-        </button>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1">
+            <button
+              {...attributes}
+              {...listeners}
+              type="button"
+              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
+              title="드래그하여 순서 변경"
+            >
+              <GripVertical className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleFavorite(row)}
+              className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-xl leading-none transition-colors ${
+                row.sourceItem.isFavorite ? "text-yellow-400 hover:bg-slate-700/70" : "text-slate-600 hover:bg-slate-700/70 hover:text-slate-400"
+              }`}
+              title={row.sourceItem.isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
+            >
+              {row.sourceItem.isFavorite ? "★" : "☆"}
+            </button>
+          </div>
+          <div className="flex flex-shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onQuickEdit(row)}
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-slate-300"
+              title="수정"
+            >
+              <Pencil className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onDeleteRow(row)}
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-red-400"
+              title="삭제"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1">
             {row.badges.map((badge) => (
               <span
@@ -1028,25 +1050,6 @@ function ListMatrixMobileCard({
               ))}
             </div>
           )}
-        </div>
-
-        <div className="flex flex-shrink-0 items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onQuickEdit(row)}
-            className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-slate-300"
-            title="수정"
-          >
-            <Pencil className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onDeleteRow(row)}
-            className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-red-400"
-            title="삭제"
-          >
-            <Trash2 className="h-5 w-5" />
-          </button>
         </div>
       </div>
 
@@ -1318,7 +1321,7 @@ function MatrixDeleteConfirmModal({
             <Trash2 className="h-6 w-6" />
           </div>
         </div>
-        <p className="mb-2 text-center text-sm font-semibold text-white">카드 삭제</p>
+        <p className="mb-2 text-center text-base font-semibold text-white">카드 삭제</p>
         <p className="mb-5 break-keep text-center text-sm leading-relaxed text-slate-400">
           &apos;{row.label}&apos;을 삭제하시겠습니까?
         </p>
@@ -1326,14 +1329,14 @@ function MatrixDeleteConfirmModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-xl bg-slate-800 py-3 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
+            className="h-11 flex-1 rounded-xl bg-slate-800 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
           >
             취소
           </button>
           <button
             type="button"
             onClick={() => onConfirm(row)}
-            className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-medium text-white transition-colors hover:bg-red-500"
+            className="h-11 flex-1 rounded-xl bg-red-600 text-sm font-medium text-white transition-colors hover:bg-red-500"
           >
             삭제
           </button>

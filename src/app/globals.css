@@ -20,3 +20,32 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* 모달 기본 타이포/버튼 크기 */
+.fixed.inset-0.z-50 h3,
+.fixed.inset-0.z-50 [role="heading"] {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.fixed.inset-0.z-50 p {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.fixed.inset-0.z-50 p.font-semibold {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.fixed.inset-0.z-50 .text-xs,
+.fixed.inset-0.z-50 .text-\[11px\],
+.fixed.inset-0.z-50 .text-\[10px\],
+.fixed.inset-0.z-50 .text-\[9px\] {
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.fixed.inset-0.z-50 button {
+  min-height: 44px;
+}

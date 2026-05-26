@@ -116,34 +116,61 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete,
         item.completed ? "bg-slate-800/40 opacity-50" : "bg-slate-800"
       }`}
     >
-      <div className="flex items-center gap-1">
-        {/* 드래그 핸들 */}
+      <div className={editing ? "flex items-start gap-3" : "space-y-3"}>
         {!editing && (
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
+              <button
+                {...attributes}
+                {...listeners}
+                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
+                title="드래그하여 순서 변경"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+                  <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+                  <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+                </svg>
+              </button>
+              <button
+                onClick={() => onToggleFavorite(item.id)}
+                className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-xl leading-none transition-all ${
+                  item.isFavorite ? "text-yellow-400 hover:bg-slate-700/70" : "text-slate-600 hover:bg-slate-700/70 hover:text-slate-400"
+                }`}
+              >
+                {item.isFavorite ? "★" : "☆"}
+              </button>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {onUpdate && (
+                <button onClick={() => onEditRequest ? onEditRequest(item) : setEditing(true)} className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-slate-400 transition-colors" title="수정">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              )}
+              {onDelete && (
+                <button onClick={() => setShowDeleteConfirm(true)} className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-red-400 transition-colors" title="삭제">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {editing && (
           <button
-            {...attributes}
-            {...listeners}
-            className="flex h-10 w-9 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
-            title="드래그하여 순서 변경"
+            onClick={() => onToggleFavorite(item.id)}
+            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-[18px] leading-none transition-all ${
+              item.isFavorite ? "text-yellow-400 hover:bg-slate-700/70" : "text-slate-600 hover:bg-slate-700/70 hover:text-slate-400"
+            }`}
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
-              <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
-              <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
-            </svg>
+            {item.isFavorite ? "★" : "☆"}
           </button>
         )}
 
-        {/* 즐겨찾기 */}
-        <button
-          onClick={() => onToggleFavorite(item.id)}
-          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-[18px] leading-none transition-all ${
-            item.isFavorite ? "text-yellow-400 hover:bg-slate-700/70" : "text-slate-600 hover:bg-slate-700/70 hover:text-slate-400"
-          }`}
-        >
-          {item.isFavorite ? "★" : "☆"}
-        </button>
-
-        {/* 내용 */}
         <div className="flex-1 min-w-0">
           {editing ? (
             <div className="space-y-2">
@@ -291,26 +318,11 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete,
           )}
         </div>
 
-        {/* 수정/삭제 버튼 + 체크박스 */}
         {!editing && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {onUpdate && (
-              <button onClick={() => onEditRequest ? onEditRequest(item) : setEditing(true)} className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-slate-400 transition-colors" title="수정">
-                <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-              </button>
-            )}
-            {onDelete && (
-              <button onClick={() => setShowDeleteConfirm(true)} className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-red-400 transition-colors" title="삭제">
-                <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            )}
+          <div className="flex justify-end">
             <button
               onClick={() => onToggle(item.id)}
-              className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm font-bold transition-all ${
+              className={`h-10 min-w-10 rounded-lg border px-3 flex items-center justify-center text-sm font-bold transition-all ${
                 item.completed
                   ? scope === "server" ? "border-teal-500 bg-teal-600 text-white" : "border-blue-500 bg-blue-600 text-white"
                   : "border-slate-600 bg-slate-900/70 text-slate-500 hover:border-blue-500 hover:text-blue-300"
@@ -332,8 +344,8 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete,
                 &apos;{item.itemName}&apos;을 삭제하시겠습니까?
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors">취소</button>
-                <button onClick={() => { onDelete?.(item.id); setShowDeleteConfirm(false); }} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors">삭제</button>
+                <button onClick={() => setShowDeleteConfirm(false)} className="h-11 flex-1 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors">취소</button>
+                <button onClick={() => { onDelete?.(item.id); setShowDeleteConfirm(false); }} className="h-11 flex-1 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors">삭제</button>
               </div>
             </div>
           </div>
