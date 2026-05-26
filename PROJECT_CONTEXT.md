@@ -9,12 +9,12 @@
 - **Production**: https://mobi-service.vercel.app
 - **Dev Preview**: https://mobi-service-git-dev-yesica-kim-s-projects.vercel.app
 - **현재 버전**: v1.2.1
-- **현재 로컬 경로**: `/Users/yesica-mini/Documents/mobi-service`
-- **이동 예정 로컬 경로**: `/Users/yesica-mini/Documents/Codex/mobimobi`
+- **현재 로컬 경로**: `/Users/yesica-mini/Documents/Codex/mobimobi`
+- **이전 폴더 백업 위치**: `/Users/yesica-mini/Documents/Codex/backup/mobi-service-backup-2026-05-26`
 
 ## 핵심 규칙
-- **"실섭 배포 해달라"고 하기 전까지 로컬호스트에만 작업할 것**
-- 배포 시 package.json 버전 범프 필요
+- **"실섭 배포해줘"라고 명시하기 전까지 production 배포 금지**
+- 로컬 작업과 dev 브랜치/dev preview 확인을 우선
 - 작은 수정은 이 프로젝트 채팅에서 바로 진행하고, 변경로그(`docs/변경로그.md`)에 필요한 항목을 기록
 - 큰 작업/배포 전 점검/데이터 구조 변경은 작업지시서 또는 별도 체크리스트 기준으로 진행
 - 예시카를 부를 때는 `예시카`라고 부르고, assistant 이름은 `요비`
@@ -70,16 +70,20 @@
 - 캐릭터 전체 보기 PC 표형 + 모바일 카드형 UI 추가
 - 카드 완료/미완료 컬러, 체크박스 컬러, 즐겨찾기 진행도 계산 개선
 - 카드 수정은 브라우저 prompt가 아니라 공통 카드 수정 레이어 사용
+- 기본 카드와 개인 카드 모두 수정/삭제 가능
 - 신규 비로그인/최초 로그인 사용자는 빈 숙제 리스트로 시작
 - 빈 상태에서 `기본 숙제 설정 불러오기` 버튼 제공
-- `새 숙제 리스트 만들기` 버튼과 저장 안내 모달 추가
-- `숙제 초기화` 문구를 `체크박스 전체 해제`로 변경
+- 숙제 설정을 `현재 리스트 저장`, `저장한 리스트`, `백업/복원`, `빈 리스트로 시작`으로 정리
+- 체크박스 초기화는 전체 진행도 영역으로 이동
+- 구글 로그인/데이터 로딩 화면 개선
+- Vercel Toolbar 프로젝트 설정 Off 처리
 
 ### 문서/배포
 - `docs/현재_기획서.md`, `docs/현재_기능정의서.md`, `docs/작업현황.md`, `docs/변경로그.md` 업데이트 완료
 - `docs/versions/v1.2.1/` 스냅샷 업데이트 완료
 - dev와 production 업데이트 노트 레이어에 v1.2.1 내용 추가 완료
-- 최신 dev/main 커밋: `85081bd docs: update v1.2.1 notes and project docs`
+- 최신 dev 커밋: `0e46f12 chore: refresh dev deployment`
+- 이 이후 작업은 다음 버전(v1.3.0 예정)으로 진행
 
 ## savedItemStates 시스템
 캐릭터별 즐겨찾기/체크 상태를 영구 저장. 프리셋 전환/카드 삭제 시에도 보존.
@@ -123,6 +127,6 @@ savedItemStates?: Record<string, {
 12. 성수 5개(서버) → 성수 5개
 
 ## 향후 계획
-- **관리자 페이지 완성**: 앱 쪽 Firestore 소비 로직
+- **v1.3.0 후보**: 관리자 등록 기본/추천 리스트를 사용자가 선택해서 현재 리스트로 불러오는 기능
 - **v1.3.0+**: NPC 드롭다운 데이터, 아이템 계층/깊이, 검색-선택 UI
 - **v1.4.0+**: 재료 자동 계산 (레시피 기반)
