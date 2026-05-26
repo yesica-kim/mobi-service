@@ -21,6 +21,7 @@ import { ProfileModal } from "@/components/ProfileModal";
 import { SortableList } from "@/components/SortableList";
 import { useAppState } from "@/hooks/useAppState";
 import { useAuth } from "@/hooks/useAuth";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Download, GripVertical, Pencil, Settings, Trash2, Upload } from "lucide-react";
@@ -1312,6 +1313,8 @@ function MatrixDeleteConfirmModal({
   onClose: () => void;
   onConfirm: (row: MatrixRow) => void;
 }) {
+  useEscapeClose(!!row, onClose);
+
   if (!row) return null;
 
   return (

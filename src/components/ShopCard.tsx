@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import type { ShopItem, RegionName, ScopeType, PeriodType } from "@/types";
 import { REGIONS } from "@/types";
 
@@ -69,6 +70,7 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete,
       nameRef.current.focus();
     }
   }, [editing]);
+  useEscapeClose(showDeleteConfirm, () => setShowDeleteConfirm(false));
 
   const handleSave = () => {
     if (onUpdate) {

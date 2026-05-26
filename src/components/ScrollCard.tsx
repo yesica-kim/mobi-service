@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import type { ScrollItem, ScrollType, RegionName, PeriodType } from "@/types";
 import { SCROLL_TYPES, REGIONS } from "@/types";
 
@@ -69,6 +70,7 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
       titleRef.current.focus();
     }
   }, [editing]);
+  useEscapeClose(showDeleteConfirm, () => setShowDeleteConfirm(false));
 
   const handleSave = () => {
     if (onUpdate) {

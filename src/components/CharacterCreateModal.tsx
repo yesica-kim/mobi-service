@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import type { ServerName } from "@/types";
 import { CLASS_TREE, MAIN_CLASSES, SERVERS } from "@/types";
 
@@ -19,8 +20,6 @@ export function CharacterCreateModal({ open, onClose, onSubmit, canAddToServer, 
   const [subClass, setSubClass] = useState("");
   const [error, setError] = useState("");
 
-  if (!open) return null;
-
   const reset = () => {
     setServer("");
     setCharName("");
@@ -33,6 +32,10 @@ export function CharacterCreateModal({ open, onClose, onSubmit, canAddToServer, 
     reset();
     onClose();
   };
+
+  useEscapeClose(open, handleClose);
+
+  if (!open) return null;
 
   const handleSubmit = () => {
     // 유효성 검증

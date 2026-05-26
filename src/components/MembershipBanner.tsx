@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import type { MembershipInfo, ServerName } from "@/types";
 
 interface Props {
@@ -63,6 +64,7 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
     const timer = window.setInterval(() => setNow(new Date()), 60 * 1000);
     return () => window.clearInterval(timer);
   }, []);
+  useEscapeClose(showDeleteConfirm, () => setShowDeleteConfirm(false));
 
   if (!server) return null;
 

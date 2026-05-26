@@ -1,6 +1,7 @@
 "use client";
 
 import { UPDATE_NOTES } from "@/types";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 
 interface Props {
   open: boolean;
@@ -8,6 +9,8 @@ interface Props {
 }
 
 export function UpdateNotesModal({ open, onClose }: Props) {
+  useEscapeClose(open, onClose);
+
   if (!open) return null;
 
   return (

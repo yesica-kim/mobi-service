@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import type { HomeworkItem, PeriodType, ScopeType, RegionName, ScrollItem, ScrollType, ShopItem } from "@/types";
 import { REGIONS, SCROLL_TYPES } from "@/types";
 
@@ -92,11 +93,36 @@ export function AddCardModal({
     }
   }, [editCard, open]);
 
-  if (!open) return null;
-
   const isHomework = cardType === "daily" || cardType === "weekly";
   const isShop = cardType === "purchase" || cardType === "trade";
   const isScroll = cardType === "scroll";
+
+  const resetFields = () => {
+    setTitle("");
+    setReward("");
+    setTotalCount(1);
+    setItemName("");
+    setRegion("던바튼");
+    setNpcName("");
+    setScope("character");
+    setShopPeriod("daily");
+    setScrollType("제작");
+    setScrollPeriod("weekly");
+    setScrollTotalCount(3);
+    setScrollRegion("던바튼");
+    setScrollReward("");
+    setMaterials([]);
+    setMaterialInput("");
+  };
+
+  const handleClose = () => {
+    resetFields();
+    onClose();
+  };
+
+  useEscapeClose(open, handleClose);
+
+  if (!open) return null;
 
   const handleSubmit = () => {
     if (isEditing && editCard) {
@@ -164,29 +190,6 @@ export function AddCardModal({
         reward: scrollReward.trim() || "-",
       });
     }
-    resetFields();
-    onClose();
-  };
-
-  const resetFields = () => {
-    setTitle("");
-    setReward("");
-    setTotalCount(1);
-    setItemName("");
-    setRegion("던바튼");
-    setNpcName("");
-    setScope("character");
-    setShopPeriod("daily");
-    setScrollType("제작");
-    setScrollPeriod("weekly");
-    setScrollTotalCount(3);
-    setScrollRegion("던바튼");
-    setScrollReward("");
-    setMaterials([]);
-    setMaterialInput("");
-  };
-
-  const handleClose = () => {
     resetFields();
     onClose();
   };

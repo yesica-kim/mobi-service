@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 
 interface Props {
   open: boolean;
@@ -33,15 +34,17 @@ export function ProfileModal({ open, onClose, userName, userEmail, providerEmail
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!open) return null;
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setPage("menu");
     setShowDeleteConfirm(false);
     setShowLogoutWarning(false);
     setDeleteError(null);
     onClose();
-  };
+  }, [onClose]);
+
+  useEscapeClose(open, handleClose);
+
+  if (!open) return null;
 
   const handleExport = () => {
     try {
@@ -219,7 +222,7 @@ export function ProfileModal({ open, onClose, userName, userEmail, providerEmail
                 </a>
                 {isAdmin && (
                   <button
-                    onClick={() => { window.location.href = "/ctrl-a7x9k2m"; }}
+                    onClick={() => { window.open("/ctrl-a7x9k2m", "_blank", "noopener,noreferrer"); }}
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm text-slate-300 hover:bg-slate-700 transition-colors"
                   >
                     <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

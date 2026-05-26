@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { ArchiveRestore, FileClock } from "lucide-react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import type { HomeworkPreset } from "@/types";
 
 interface Props {
@@ -216,7 +217,7 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
                   handleExport();
                   setShowBackupModal(false);
                 }}
-                className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl bg-slate-700 px-3 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-600"
+                className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl border border-slate-600 bg-transparent px-3 text-sm font-medium text-slate-300 transition-colors hover:border-blue-500/70 hover:bg-slate-700/30 hover:text-white"
               >
                 <svg className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -229,10 +230,10 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
                   setShowBackupModal(false);
                   fileInputRef.current?.click();
                 }}
-                className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl bg-slate-700 px-3 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-600"
+                className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl border border-slate-600 bg-transparent px-3 text-sm font-medium text-slate-300 transition-colors hover:border-blue-500/70 hover:bg-slate-700/30 hover:text-white"
               >
                 <svg className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-6m0 0l-3 3m3-3l3 3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 백업 파일 가져오기
               </button>
@@ -492,6 +493,8 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
 }
 
 function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  useEscapeClose(true, onClose);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />

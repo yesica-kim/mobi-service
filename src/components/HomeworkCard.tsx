@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import type { HomeworkItem, ScopeType } from "@/types";
 
 /** reward 문자열을 태그 배열로 파싱 (콤마 구분) */
@@ -60,6 +61,7 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
       titleRef.current.focus();
     }
   }, [editing]);
+  useEscapeClose(showDeleteConfirm, () => setShowDeleteConfirm(false));
 
   const handleSave = () => {
     if (onUpdate) {

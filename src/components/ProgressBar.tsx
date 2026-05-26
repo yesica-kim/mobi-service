@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 
 interface CategoryProgress {
   label: string;
@@ -23,6 +24,7 @@ interface Props {
 export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, onReset, categories }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  useEscapeClose(showResetConfirm, () => setShowResetConfirm(false));
 
   return (
     <div className="px-4 py-3">

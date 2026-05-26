@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import type { Character, ServerName } from "@/types";
 import { CLASS_TREE, MAIN_CLASSES, SERVERS } from "@/types";
 
@@ -39,8 +40,6 @@ export function CharacterEditModal({ open, character, onClose, onSave, onDelete,
     initForm();
   }
 
-  if (!open || !character) return null;
-
   const handleClose = () => {
     setCharName("");
     setServer("");
@@ -50,6 +49,10 @@ export function CharacterEditModal({ open, character, onClose, onSave, onDelete,
     setShowDeleteConfirm(false);
     onClose();
   };
+
+  useEscapeClose(open && !!character, handleClose);
+
+  if (!open || !character) return null;
 
   const handleSave = () => {
     if (!server) { setError("서버를 선택해주세요."); return; }

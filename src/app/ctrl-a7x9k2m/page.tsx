@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import {
   isAdminFirebaseUser,
   getPublishedCards,
@@ -254,6 +255,14 @@ export default function AdminPage() {
     { id: "trade", label: "물물교환", count: editData.tradeItems.length },
     { id: "scroll", label: "임무게시판", count: editData.scrollItems.length },
   ];
+  const createEmptyData = (tab: AdminTab) =>
+    tab === "homework"
+      ? { title: "", reward: "-", period: "daily" as PeriodType, scope: "off" }
+      : tab === "purchase"
+      ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "daily" as PeriodType, scope: "off" }
+      : tab === "trade"
+      ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "weekly" as PeriodType, scope: "off" }
+      : { title: "", scrollType: "제작" as ScrollType, period: "weekly" as PeriodType, region: "던바튼" as RegionName, materials: "-", reward: "-" };
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
@@ -293,6 +302,12 @@ export default function AdminPage() {
             </button>
           ))}
         </div>
+        <button
+          onClick={() => setEditModal({ type: activeTab, index: null, data: createEmptyData(activeTab) })}
+          className="mt-3 w-full rounded-xl border-2 border-dashed border-slate-700 py-3 text-sm font-medium text-slate-500 transition-colors hover:border-blue-500 hover:text-blue-400"
+        >
+          + 카드 추가
+        </button>
       </div>
 
       {/* 카드 목록 */}
@@ -352,24 +367,6 @@ export default function AdminPage() {
               />
             ))}
         </div>
-
-        {/* 추가 버튼 */}
-        <button
-          onClick={() => {
-            const emptyData =
-              activeTab === "homework"
-                ? { title: "", reward: "-", period: "daily" as PeriodType, scope: "off" }
-                : activeTab === "purchase"
-                ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "daily" as PeriodType, scope: "off" }
-                : activeTab === "trade"
-                ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "weekly" as PeriodType, scope: "off" }
-                : { title: "", scrollType: "제작" as ScrollType, period: "weekly" as PeriodType, region: "던바튼" as RegionName, materials: "-", reward: "-" };
-            setEditModal({ type: activeTab, index: null, data: emptyData });
-          }}
-          className="w-full mt-3 py-3 rounded-xl border-2 border-dashed border-slate-700 text-slate-500 hover:border-blue-500 hover:text-blue-400 transition-colors text-sm font-medium"
-        >
-          + 카드 추가
-        </button>
       </div>
 
       {/* 하단 액션 바 */}
@@ -523,6 +520,7 @@ function EditModal({
   onClose: () => void;
 }) {
   const update = (key: string, value: any) => onChange({ ...data, [key]: value });
+  useEscapeClose(true, onClose);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
@@ -555,7 +553,7 @@ function EditModal({
           )}
           {type === "trade" && (
             <>
-              <Field label="아이템명" value={data.itemName} onChange={(v) => update("itemName", v)} placeholder="우유(10) -> 케이틴 특제 통밀빵(3)" />
+              <Field label="아이템명" value={data.itemName} onChange={(v) => update("itemName", v)} />
               <SelectField label="지역" value={data.region} options={REGIONS.map((r) => [r, r])} onChange={(v) => update("region", v)} />
               <Field label="NPC" value={data.npcName} onChange={(v) => update("npcName", v)} />
               <SelectField label="주기" value={data.period} options={[["daily", "일일"], ["weekly", "주간"]]} onChange={(v) => update("period", v)} />
@@ -608,6 +606,8 @@ function HistoryModal({
   onConfirmRollback: (entry: HistoryEntry) => void;
   onClose: () => void;
 }) {
+  useEscapeClose(true, onClose);
+
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return `${d.getFullYear()}년 ${String(d.getMonth() + 1).padStart(2, "0")}월 ${String(d.getDate()).padStart(2, "0")}일 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
