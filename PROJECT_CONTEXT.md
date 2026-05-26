@@ -7,12 +7,17 @@
 - **배포**: Vercel (GitHub main 브랜치 자동배포)
 - **GitHub**: https://github.com/yesica-kim/mobi-service.git
 - **Production**: https://mobi-service.vercel.app
-- **현재 버전**: v1.2.0
+- **Dev Preview**: https://mobi-service-git-dev-yesica-kim-s-projects.vercel.app
+- **현재 버전**: v1.2.1
+- **현재 로컬 경로**: `/Users/yesica-mini/Documents/mobi-service`
+- **이동 예정 로컬 경로**: `/Users/yesica-mini/Documents/Codex/mobimobi`
 
 ## 핵심 규칙
 - **"실섭 배포 해달라"고 하기 전까지 로컬호스트에만 작업할 것**
 - 배포 시 package.json 버전 범프 필요
-- Vercel 환경변수에 `NEXT_PUBLIC_ADMIN_EMAIL=inchu594@gmail.com` 추가 필요 (아직 안 함)
+- 작은 수정은 이 프로젝트 채팅에서 바로 진행하고, 변경로그(`docs/변경로그.md`)에 필요한 항목을 기록
+- 큰 작업/배포 전 점검/데이터 구조 변경은 작업지시서 또는 별도 체크리스트 기준으로 진행
+- 예시카를 부를 때는 `예시카`라고 부르고, assistant 이름은 `요비`
 
 ## 주요 파일 구조
 
@@ -45,49 +50,36 @@
 - `public/robots.txt` — ✅ 새로 생성. /ctrl-a7x9k2m 크롤러 차단
 - `.env.local` — Firebase 설정 + NEXT_PUBLIC_ADMIN_EMAIL
 
-## 최근 완료한 작업들 (이번 세션)
+## 최근 완료한 작업들
 
-### 1. export/import 즐겨찾기/체크 보존
-- **계정 데이터 내보내기/가져오기**: savedItemStates 포함 ✅ (이미 정상이었음)
-- **숙제 리스트 내보내기**: isFavorite, completedCount/completed 제거 ✅ (이미 정상)
-- **숙제 리스트 가져오기(importPreset)**: loadPreset과 동일하게 savedItemStates 보존/복원 로직 추가 ✅ 수정됨
-
-### 2. "필드 보스 3회" 주간 숙제 추가
-- `types/index.ts` DEFAULT_HOMEWORK에 추가
-- 보상: 골드 5만, 미스틱 다이스 열쇠 상자 2개, 마물 퇴치 증표 790개
-- `storage.ts`에 `migrateNewDefaults()` 함수 추가 — 기존 캐릭터에 새 기본 숙제 자동 삽입
-
-### 3. 일간/주간 배지 표시
-- 모든 HomeworkCard에 `showPeriodLabel` prop 추가
-- 일일=주황, 주간=초록 배지
-
-### 4. 구매 텍스트 수정
-- "성수 5개(서버)" → "성수 5개"로 변경
-- `migrateRenames`에 purchaseRenames 추가
-
-### 5. 관리자 페이지 구현 (진행 중)
+### v1.2.1 관리자/기본 카드 운영
 - **경로**: `/ctrl-a7x9k2m` (랜덤 해시, 크롤러 차단)
-- **접근 제어**: Google 계정 화이트리스트 (inchu594@gmail.com만)
-- **헤더 아이콘**: UserCog (사람+톱니바퀴) — 관리자 로그인 시만 표시, 업데이트 노트 우측
+- **접근 제어**: Google 계정 화이트리스트 (`NEXT_PUBLIC_ADMIN_EMAIL`, 쉼표 구분)
+- **관리자 진입**: 설정/Profile 레이어의 문의하기 아래 관리자 메뉴
 - **Firestore 구조**:
   - `defaultCards/published` — 실섭 유저가 읽는 데이터
-  - `defaultCards/draft` — 로컬 업로드 시 저장
+  - `defaultCards/draft` — dev 저장 시 저장
   - `defaultCardsHistory/{timestamp}` — 히스토리 (14일 후 자동 삭제)
-- **버튼 로직**:
-  - 수정사항 없음 → 초기화/로컬업로드/실섭업로드 모두 비활성
-  - 카드 수정 → 초기화+로컬업로드 활성
-  - 로컬 업로드 완료 후 → 실섭 업로드 활성
 - **카드 CRUD**: 4개 탭(숙제/구매/물물교환/임무게시판), 추가/수정/삭제
-- **히스토리**: 날짜+변경사항 요약 자동생성, 클릭 시 롤백 확인 모달
+- **앱 소비 로직**:
+  - localhost/dev: Firestore `draft -> published -> 코드 기본값`
+  - production: Firestore `published -> 코드 기본값`
 
-#### ⚠️ 관리자 페이지 남은 작업
-1. **앱 쪽 Firestore 소비 로직** — 아직 미구현. 현재 앱은 여전히 types/index.ts의 하드코딩 데이터만 사용. 다음 단계:
-   - localhost → Firestore `draft` 우선, 없으면 `published`, 없으면 코드 폴백
-   - production → Firestore `published` 우선, 없으면 코드 폴백
-   - `createHomeworkForChar`, `createPurchaseForChar` 등이 Firestore defaults를 사용하도록 수정
-   - `migrateNewDefaults`도 Firestore defaults 기준으로 동작하도록 수정
-2. **Vercel 환경변수**: `NEXT_PUBLIC_ADMIN_EMAIL=inchu594@gmail.com` 추가 필요
-3. **실섭 배포**: 아직 안 함. 사용자 확인 후 배포
+### v1.2.1 사용자 화면/UX
+- 캐릭터 전체 보기 / 캐릭터별로 보기 전환 추가
+- 캐릭터 전체 보기 PC 표형 + 모바일 카드형 UI 추가
+- 카드 완료/미완료 컬러, 체크박스 컬러, 즐겨찾기 진행도 계산 개선
+- 카드 수정은 브라우저 prompt가 아니라 공통 카드 수정 레이어 사용
+- 신규 비로그인/최초 로그인 사용자는 빈 숙제 리스트로 시작
+- 빈 상태에서 `기본 숙제 설정 불러오기` 버튼 제공
+- `새 숙제 리스트 만들기` 버튼과 저장 안내 모달 추가
+- `숙제 초기화` 문구를 `체크박스 전체 해제`로 변경
+
+### 문서/배포
+- `docs/현재_기획서.md`, `docs/현재_기능정의서.md`, `docs/작업현황.md`, `docs/변경로그.md` 업데이트 완료
+- `docs/versions/v1.2.1/` 스냅샷 업데이트 완료
+- dev와 production 업데이트 노트 레이어에 v1.2.1 내용 추가 완료
+- 최신 dev/main 커밋: `85081bd docs: update v1.2.1 notes and project docs`
 
 ## savedItemStates 시스템
 캐릭터별 즐겨찾기/체크 상태를 영구 저장. 프리셋 전환/카드 삭제 시에도 보존.
