@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEscapeClose } from "@/hooks/useEscapeClose";
+import { SortableList } from "@/components/SortableList";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   isAdminFirebaseUser,
   getPublishedCards,
@@ -34,6 +37,49 @@ import {
 } from "@/types";
 
 type AdminTab = "homework" | "purchase" | "trade" | "scroll";
+type AdminBadge = { label: string; className: string; plain?: boolean };
+
+const ADMIN_PERIOD_BADGES: Record<PeriodType, AdminBadge> = {
+  daily: { label: "일간", className: "bg-orange-600/20 text-orange-400" },
+  weekly: { label: "주간", className: "bg-green-600/20 text-green-400" },
+};
+
+const ADMIN_SCOPE_BADGES: Record<"character" | "server", AdminBadge> = {
+  character: { label: "캐릭터", className: "bg-blue-600/20 text-blue-400" },
+  server: { label: "서버", className: "bg-teal-600/20 text-teal-400" },
+};
+
+const ADMIN_REGION_BADGES: Record<string, AdminBadge> = {
+  "콜헨": { label: "콜헨", className: "bg-red-600/20 text-red-400" },
+  "티르코네일": { label: "티르코네일", className: "bg-sky-600/20 text-sky-400" },
+  "두갈드아일": { label: "두갈드아일", className: "bg-amber-600/20 text-amber-400" },
+  "던바튼": { label: "던바튼", className: "bg-violet-600/20 text-violet-400" },
+  "가이레흐 언덕": { label: "가이레흐 언덕", className: "bg-pink-600/20 text-pink-400" },
+  "반호르": { label: "반호르", className: "bg-orange-600/20 text-orange-400" },
+  "이멘마하": { label: "이멘마하", className: "bg-cyan-600/20 text-cyan-400" },
+  "캐시샵": { label: "캐시샵", className: "bg-fuchsia-600/20 text-fuchsia-400" },
+};
+
+const ADMIN_SCROLL_TYPE_BADGES: Record<ScrollType, AdminBadge> = {
+  "제작": { label: "제작", className: "bg-indigo-600/20 text-indigo-400" },
+  "채집": { label: "채집", className: "bg-emerald-600/20 text-emerald-400" },
+  "요리": { label: "요리", className: "bg-amber-600/20 text-amber-400" },
+  "토벌": { label: "토벌", className: "bg-red-600/20 text-red-400" },
+};
+
+function normalizeAdminScope(scope?: string): "character" | "server" {
+  return scope === "on" || scope === "server" ? "server" : "character";
+}
+
+function splitAdminTags(value: string | string[] | undefined): string[] {
+  if (!value) return [];
+  const list = Array.isArray(value) ? value : value.split(",");
+  return list.map((item) => item.trim()).filter((item) => item && item !== "-");
+}
+
+function adminKey(tab: AdminTab): keyof DefaultCardsData {
+  return tab === "homework" ? "homework" : tab === "purchase" ? "purchaseItems" : tab === "trade" ? "tradeItems" : "scrollItems";
+}
 
 // ── 코드 하드코딩 → DefaultCardsData 변환 ──
 function codeDefaultsToData(): DefaultCardsData {
@@ -186,8 +232,7 @@ export default function AdminPage() {
     (tab: AdminTab, index: number) => {
       if (!confirm("삭제하시겠습니까?")) return;
       setEditData((prev) => {
-        const key =
-          tab === "homework" ? "homework" : tab === "purchase" ? "purchaseItems" : tab === "trade" ? "tradeItems" : "scrollItems";
+        const key = adminKey(tab);
         const arr = [...(prev[key] as any[])];
         arr.splice(index, 1);
         return { ...prev, [key]: arr };
@@ -200,8 +245,7 @@ export default function AdminPage() {
     if (!editModal) return;
     const { type, index, data } = editModal;
     setEditData((prev) => {
-      const key =
-        type === "homework" ? "homework" : type === "purchase" ? "purchaseItems" : type === "trade" ? "tradeItems" : "scrollItems";
+      const key = adminKey(type);
       const arr = [...(prev[key] as any[])];
       if (index === null) {
         arr.push(data);
@@ -212,6 +256,17 @@ export default function AdminPage() {
     });
     setEditModal(null);
   }, [editModal]);
+
+  const reorderItems = useCallback((tab: AdminTab, oldIndex: number, newIndex: number) => {
+    setEditData((prev) => {
+      const key = adminKey(tab);
+      const arr = [...(prev[key] as any[])];
+      const [moved] = arr.splice(oldIndex, 1);
+      if (!moved) return prev;
+      arr.splice(newIndex, 0, moved);
+      return { ...prev, [key]: arr };
+    });
+  }, []);
 
   // ── 로딩/비인가 ──
   if (authLoading || !authChecked || (authorized && loading)) {
@@ -263,6 +318,7 @@ export default function AdminPage() {
       : tab === "trade"
       ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "weekly" as PeriodType, scope: "off" }
       : { title: "", scrollType: "제작" as ScrollType, period: "weekly" as PeriodType, region: "던바튼" as RegionName, materials: "-", reward: "-" };
+  const activeItems = (editData[adminKey(activeTab)] as any[]).map((_, index) => ({ id: `${activeTab}-${index}` }));
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
@@ -312,61 +368,84 @@ export default function AdminPage() {
 
       {/* 카드 목록 */}
       <div className="max-w-3xl mx-auto w-full px-4 py-4 flex-1 overflow-y-auto">
-        <div className="space-y-2">
-          {activeTab === "homework" &&
-            editData.homework.map((item, i) => (
-              <CardRow
-                key={i}
-                title={item.title}
-                subtitle={`${item.period === "daily" ? "일일" : "주간"} · ${item.scope === "on" ? "서버" : "캐릭터"}`}
-                detail={item.reward !== "-" ? item.reward : undefined}
-                period={item.period}
-                onEdit={() =>
-                  setEditModal({ type: "homework", index: i, data: { ...item } })
-                }
-                onDelete={() => deleteItem("homework", i)}
-              />
-            ))}
-          {activeTab === "purchase" &&
-            editData.purchaseItems.map((item, i) => (
-              <CardRow
-                key={i}
-                title={item.itemName}
-                subtitle={`${item.period === "daily" ? "일일" : "주간"} · ${item.region} · ${item.npcName}`}
-                period={item.period}
-                onEdit={() =>
-                  setEditModal({ type: "purchase", index: i, data: { ...item } })
-                }
-                onDelete={() => deleteItem("purchase", i)}
-              />
-            ))}
-          {activeTab === "trade" &&
-            editData.tradeItems.map((item, i) => (
-              <CardRow
-                key={i}
-                title={item.itemName}
-                subtitle={`${item.period === "daily" ? "일일" : "주간"} · ${item.region} · ${item.npcName}`}
-                period={item.period}
-                onEdit={() =>
-                  setEditModal({ type: "trade", index: i, data: { ...item } })
-                }
-                onDelete={() => deleteItem("trade", i)}
-              />
-            ))}
-          {activeTab === "scroll" &&
-            editData.scrollItems.map((item, i) => (
-              <CardRow
-                key={i}
-                title={item.title}
-                subtitle={`${item.scrollType} · ${item.period === "daily" ? "일일" : "주간"} · ${item.region}`}
-                period={item.period}
-                onEdit={() =>
-                  setEditModal({ type: "scroll", index: i, data: { ...item } })
-                }
-                onDelete={() => deleteItem("scroll", i)}
-              />
-            ))}
-        </div>
+        <SortableList items={activeItems} onReorder={(oldIndex, newIndex) => reorderItems(activeTab, oldIndex, newIndex)}>
+          <div className="space-y-2">
+            {activeTab === "homework" &&
+              editData.homework.map((item, i) => (
+                <CardRow
+                  key={`${activeTab}-${i}`}
+                  id={`${activeTab}-${i}`}
+                  title={item.title}
+                  badges={[
+                    ADMIN_PERIOD_BADGES[item.period],
+                    ADMIN_SCOPE_BADGES[normalizeAdminScope(item.scope)],
+                  ]}
+                  details={splitAdminTags(item.reward).map((label) => ({ label, className: "border border-slate-600/50 text-slate-400" }))}
+                  onEdit={() =>
+                    setEditModal({ type: "homework", index: i, data: { ...item } })
+                  }
+                  onDelete={() => deleteItem("homework", i)}
+                />
+              ))}
+            {activeTab === "purchase" &&
+              editData.purchaseItems.map((item, i) => (
+                <CardRow
+                  key={`${activeTab}-${i}`}
+                  id={`${activeTab}-${i}`}
+                  title={item.itemName}
+                  badges={[
+                    ADMIN_PERIOD_BADGES[item.period],
+                    ADMIN_SCOPE_BADGES[normalizeAdminScope(item.scope)],
+                    ADMIN_REGION_BADGES[item.region],
+                  ]}
+                  details={splitAdminTags(item.npcName).map((label) => ({ label, className: "text-slate-400", plain: true }))}
+                  onEdit={() =>
+                    setEditModal({ type: "purchase", index: i, data: { ...item } })
+                  }
+                  onDelete={() => deleteItem("purchase", i)}
+                />
+              ))}
+            {activeTab === "trade" &&
+              editData.tradeItems.map((item, i) => (
+                <CardRow
+                  key={`${activeTab}-${i}`}
+                  id={`${activeTab}-${i}`}
+                  title={item.itemName}
+                  badges={[
+                    ADMIN_PERIOD_BADGES[item.period],
+                    ADMIN_SCOPE_BADGES[normalizeAdminScope(item.scope)],
+                    ADMIN_REGION_BADGES[item.region],
+                  ]}
+                  details={splitAdminTags(item.npcName).map((label) => ({ label, className: "text-slate-400", plain: true }))}
+                  onEdit={() =>
+                    setEditModal({ type: "trade", index: i, data: { ...item } })
+                  }
+                  onDelete={() => deleteItem("trade", i)}
+                />
+              ))}
+            {activeTab === "scroll" &&
+              editData.scrollItems.map((item, i) => (
+                <CardRow
+                  key={`${activeTab}-${i}`}
+                  id={`${activeTab}-${i}`}
+                  title={item.title}
+                  badges={[
+                    ADMIN_PERIOD_BADGES[item.period],
+                    ADMIN_REGION_BADGES[item.region],
+                    ADMIN_SCROLL_TYPE_BADGES[item.scrollType],
+                  ]}
+                  details={[
+                    ...splitAdminTags(item.materials).map((label) => ({ label, className: "bg-slate-700 text-slate-400" })),
+                    ...splitAdminTags(item.reward).map((label) => ({ label, className: "text-slate-500", plain: true })),
+                  ]}
+                  onEdit={() =>
+                    setEditModal({ type: "scroll", index: i, data: { ...item } })
+                  }
+                  onDelete={() => deleteItem("scroll", i)}
+                />
+              ))}
+          </div>
+        </SortableList>
       </div>
 
       {/* 하단 액션 바 */}
@@ -451,50 +530,84 @@ export default function AdminPage() {
 
 // ── 카드 행 컴포넌트 ──
 function CardRow({
+  id,
   title,
-  subtitle,
-  detail,
-  period,
+  badges,
+  details,
   onEdit,
   onDelete,
 }: {
+  id: string;
   title: string;
-  subtitle: string;
-  detail?: string;
-  period: PeriodType;
+  badges: AdminBadge[];
+  details?: AdminBadge[];
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   return (
-    <div className="flex items-center gap-2 bg-slate-900/50 rounded-xl px-4 py-3 border border-slate-800/50">
-      <span
-        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-slate-600"
-        title="드래그 핸들"
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-2 bg-slate-900/50 rounded-xl px-4 py-3 border border-slate-800/50"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        type="button"
+        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
+        title="드래그하여 순서 변경"
       >
         <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
           <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
           <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
           <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
         </svg>
-      </span>
-      <span
-        className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${
-          period === "daily"
-            ? "bg-orange-600/20 text-orange-400"
-            : "bg-green-600/20 text-green-400"
-        }`}
-      >
-        {period === "daily" ? "일일" : "주간"}
-      </span>
+      </button>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-white font-medium truncate">{title || "(제목 없음)"}</p>
-        <p className="text-[11px] text-slate-500 truncate">{subtitle}</p>
-        {detail && <p className="text-[11px] text-slate-600 truncate mt-0.5">{detail}</p>}
+        <div className="flex flex-wrap items-center gap-1">
+          {badges.filter(Boolean).map((badge) => (
+            <span
+              key={`${id}-${badge.label}`}
+              className={`flex-shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${badge.className}`}
+            >
+              {badge.label}
+            </span>
+          ))}
+        </div>
+        <p className="mt-1.5 whitespace-normal break-keep text-sm font-medium leading-snug text-white">{title || "(제목 없음)"}</p>
+        {details && details.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {details.map((detail, idx) => (
+              <span
+                key={`${id}-detail-${idx}-${detail.label}`}
+                className={detail.plain ? `text-[11px] ${detail.className}` : `rounded-md px-1.5 py-0.5 text-[11px] ${detail.className}`}
+              >
+                {detail.label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       <div className="flex gap-1">
         <button
           onClick={onEdit}
           className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
+          title="수정"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -503,6 +616,7 @@ function CardRow({
         <button
           onClick={onDelete}
           className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
+          title="삭제"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
