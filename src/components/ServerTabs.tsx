@@ -24,17 +24,17 @@ export function ServerTabs({ servers, selected, onChange }: Props) {
   if (servers.length === 0) return null;
 
   return (
-    <div className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1 scrollbar-hide">
+    <div className="mx-4 flex gap-1 overflow-x-auto rounded-xl bg-slate-800/80 p-1 scrollbar-hide">
       {servers.map((s) => {
         const active = s === selected;
         return (
           <button
             key={s}
             onClick={() => onChange(s)}
-            className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+            className={`min-w-fit flex-1 flex-shrink-0 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${
               active
-                ? "bg-slate-800 text-white"
-                : "text-slate-500 hover:text-slate-300"
+                ? "bg-blue-600 text-white shadow-md"
+                : "text-slate-400 hover:text-slate-300"
             }`}
           >
             {s}

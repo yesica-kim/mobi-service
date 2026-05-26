@@ -119,9 +119,9 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
         {!showRegister ? (
           <button
             onClick={() => setShowRegister(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-slate-700 text-slate-500 text-xs hover:border-slate-600 hover:text-slate-400 transition-colors"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-700 text-sm text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-400"
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
             판타지 라이프 토탈 멤버십 등록
@@ -195,7 +195,7 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
 
   return (
     <div className="px-4 pt-2">
-      <div className={`py-2 px-3 rounded-xl text-xs ${
+      <div className={`min-h-12 rounded-xl px-3 py-3 text-sm ${
         isExpired
           ? "bg-red-600/10 border border-red-500/30"
           : isUrgent
@@ -204,7 +204,7 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
       }`}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <svg className={`w-3.5 h-3.5 ${isExpired ? "text-red-400" : isUrgent ? "text-amber-400" : "text-blue-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className={`h-4 w-4 ${isExpired ? "text-red-400" : isUrgent ? "text-amber-400" : "text-blue-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
             <span className={isExpired ? "text-red-400" : isUrgent ? "text-amber-400" : "text-slate-300"}>
@@ -213,7 +213,7 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
             <span className={`font-bold ${isExpired ? "text-red-400" : isUrgent ? "text-amber-400" : "text-blue-400"}`}>
               {isExpired || !remaining ? "만료됨" : formatRemainingTime(remaining)}
             </span>
-            <span className="text-slate-500 text-[10px]">({info.expiresAt} 06:00까지)</span>
+            <span className="text-xs text-slate-500">({info.expiresAt} 06:00까지)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <button
@@ -221,7 +221,7 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
               className="text-slate-500 hover:text-blue-400 transition-colors"
               title="기간 추가"
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
             </button>
@@ -230,7 +230,7 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
               className="text-slate-500 hover:text-blue-400 transition-colors"
               title="기간 변경"
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
             </button>
@@ -239,7 +239,7 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
               className="text-slate-600 hover:text-red-400 transition-colors"
               title="멤버십 삭제"
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </button>

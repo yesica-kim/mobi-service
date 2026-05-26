@@ -338,7 +338,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
       <header className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/50">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="mx-auto flex w-full max-w-[780px] items-center justify-between px-4 py-3">
           <button
             type="button"
             className="flex items-center gap-2 cursor-pointer"
@@ -457,12 +457,12 @@ export default function Home() {
 
         {state.serverChars.length > 0 && (
           <div className="px-4 pt-3">
-            <div className="grid grid-cols-2 rounded-xl bg-slate-900 p-1">
+            <div className="grid grid-cols-2 rounded-xl bg-slate-800/80 p-1">
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
-                className={`rounded-lg py-2 text-sm font-semibold transition-colors ${
-                  viewMode === "list" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
+                className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${
+                  viewMode === "list" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-300"
                 }`}
               >
                 캐릭터 전체 보기
@@ -470,8 +470,8 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setViewMode("character")}
-                className={`rounded-lg py-2 text-sm font-semibold transition-colors ${
-                  viewMode === "character" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
+                className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${
+                  viewMode === "character" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-300"
                 }`}
               >
                 캐릭터별로 보기
@@ -1202,7 +1202,7 @@ function ListMatrixRow({
                     </span>
                   ))}
                 </div>
-                <div className="mt-1.5 whitespace-normal break-keep text-sm font-semibold leading-snug text-slate-100">{row.label}</div>
+                <div className="mt-1.5 whitespace-normal break-keep text-[15px] font-semibold leading-snug text-slate-100">{row.label}</div>
               </div>
               <div className="flex flex-shrink-0 items-center gap-1">
                 <button
