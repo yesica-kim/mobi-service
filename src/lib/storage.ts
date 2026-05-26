@@ -119,6 +119,18 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
         const existing = defaultItems.find((item) => item.title === hw.title) ?? defaultItems.find((item) => item.id === id);
         const saved = charStates.homework[hw.title];
         const totalCount = parseTotalCount(hw.title);
+        if (existing?.isModifiedDefault) {
+          const existingTotalCount = existing.totalCount || totalCount;
+          return {
+            ...existing,
+            id,
+            totalCount: existingTotalCount,
+            completedCount: Math.min(existing.completedCount ?? saved?.completedCount ?? 0, existingTotalCount),
+            isFavorite: existing.isFavorite ?? saved?.isFavorite ?? false,
+            isDefault: true,
+            isModifiedDefault: true,
+          };
+        }
         return {
           id,
           title: hw.title,
@@ -158,6 +170,16 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
         const id = `${charId}_pur_${i}`;
         const existing = defaultItems.find((currentItem) => currentItem.itemName === item.itemName) ?? defaultItems.find((currentItem) => currentItem.id === id);
         const saved = charStates.purchase[item.itemName];
+        if (existing?.isModifiedDefault) {
+          return {
+            ...existing,
+            id,
+            completed: existing.completed ?? saved?.completed ?? false,
+            isFavorite: existing.isFavorite ?? saved?.isFavorite ?? false,
+            isDefault: true,
+            isModifiedDefault: true,
+          };
+        }
         return {
           id,
           itemName: item.itemName,
@@ -198,6 +220,16 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
         const existing = defaultItems.find((currentItem) => currentItem.itemName === item.itemName) ?? defaultItems.find((currentItem) => currentItem.id === id);
         const saved = charStates.trade[item.itemName];
         const parsed = parseTradeItemName(item.itemName);
+        if (existing?.isModifiedDefault) {
+          return {
+            ...existing,
+            id,
+            completed: existing.completed ?? saved?.completed ?? false,
+            isFavorite: existing.isFavorite ?? saved?.isFavorite ?? false,
+            isDefault: true,
+            isModifiedDefault: true,
+          };
+        }
         return {
           id,
           itemName: item.itemName,
@@ -226,6 +258,18 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
       ...scrollDefaults.map((item, i) => {
         const id = `${charId}_scroll_${i}`;
         const existing = defaultItems.find((currentItem) => currentItem.title === item.title) ?? defaultItems.find((currentItem) => currentItem.id === id);
+        if (existing?.isModifiedDefault) {
+          const existingTotalCount = existing.totalCount || 3;
+          return {
+            ...existing,
+            id,
+            totalCount: existingTotalCount,
+            completedCount: Math.min(existing.completedCount ?? 0, existingTotalCount),
+            isFavorite: existing.isFavorite ?? false,
+            isDefault: true,
+            isModifiedDefault: true,
+          };
+        }
         return {
           id,
           title: item.title,

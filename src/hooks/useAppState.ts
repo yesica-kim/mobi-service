@@ -253,18 +253,22 @@ export function useAppState(uid?: string | null) {
   }, [data !== null, uid, runtimeDefaults]); // data가 로드된 후 한 번만 설정
 
   // 데이터 변경 시 저장 (debounce)
-  const persist = useCallback((updater: (prev: AppData) => AppData) => {
+  const persist = useCallback((updater: (prev: AppData) => AppData, options?: { immediate?: boolean }) => {
     setData((prev) => {
       if (!prev) return prev;
       const next = updater(prev);
       // localStorage에 즉시 저장
       saveData(next);
-      // Firestore에 debounce 저장 (1초)
+      // 카드 구조 변경은 기기 간 차이를 줄이기 위해 즉시 저장하고, 체크 같은 잦은 변경은 debounce 저장
       if (uid) {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = setTimeout(() => {
+        if (options?.immediate) {
           saveUserData(uid, next);
-        }, 1000);
+        } else {
+          saveTimerRef.current = setTimeout(() => {
+            saveUserData(uid, next);
+          }, 1000);
+        }
       }
       return next;
     });
@@ -482,21 +486,20 @@ export function useAppState(uid?: string | null) {
         const idx = currentList.findIndex((hw) => hw.id === hwId);
         if (idx === -1) return prev;
         const target = currentList[idx];
-        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, "homework", target.title) : prev.deletedDefaultItems;
 
         const newHomework = { ...prev.homework };
         for (const charId of Object.keys(newHomework)) {
           newHomework[charId] = (newHomework[charId] ?? []).map((hw, i) => {
             if (i !== idx) return hw;
-            const updated = { ...hw, ...updates, ...(target.isDefault ? { isDefault: false } : {}) };
+            const updated = { ...hw, ...updates, ...(target.isDefault ? { isModifiedDefault: true, defaultKey: target.defaultKey ?? target.title } : {}) };
             if (updates.totalCount !== undefined && updated.completedCount > updates.totalCount) {
               updated.completedCount = updates.totalCount;
             }
             return updated;
           });
         }
-        return { ...prev, homework: newHomework, deletedDefaultItems };
-      });
+        return { ...prev, homework: newHomework };
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -604,17 +607,15 @@ export function useAppState(uid?: string | null) {
         const idx = currentList.findIndex((item) => item.id === itemId);
         if (idx === -1) return prev;
         const target = currentList[idx];
-        const stateKey = type === "purchase" ? "purchase" : "trade";
-        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, stateKey, target.itemName) : prev.deletedDefaultItems;
 
         const newItems = { ...prev[key] };
         for (const charId of Object.keys(newItems)) {
           newItems[charId] = (newItems[charId] ?? []).map((item, i) =>
-            i === idx ? { ...item, ...updates, ...(target.isDefault ? { isDefault: false } : {}) } : item
+            i === idx ? { ...item, ...updates, ...(target.isDefault ? { isModifiedDefault: true, defaultKey: target.defaultKey ?? target.itemName } : {}) } : item
           );
         }
-        return { ...prev, [key]: newItems, deletedDefaultItems };
-      });
+        return { ...prev, [key]: newItems };
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -628,7 +629,7 @@ export function useAppState(uid?: string | null) {
         const idx = currentList.findIndex((hw) => hw.id === hwId);
         if (idx === -1) return prev;
         const target = currentList[idx];
-        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, "homework", target.title) : prev.deletedDefaultItems;
+        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, "homework", target.defaultKey ?? target.title) : prev.deletedDefaultItems;
 
         // 삭제 전 모든 캐릭터의 상태 저장
         const savedStates = { ...(prev.savedItemStates ?? {}) };
@@ -641,12 +642,15 @@ export function useAppState(uid?: string | null) {
         }
 
         const newHomework = { ...prev.homework };
+        const allTabOrder = { ...(prev.allTabOrder ?? {}) };
         for (const charId of Object.keys(newHomework)) {
           const list = newHomework[charId] ?? [];
+          const deletedId = list[idx]?.id;
           newHomework[charId] = list.filter((_, i) => i !== idx);
+          if (deletedId) allTabOrder[charId] = (allTabOrder[charId] ?? []).filter((id) => id !== deletedId);
         }
-        return { ...prev, homework: newHomework, savedItemStates: savedStates, deletedDefaultItems };
-      });
+        return { ...prev, homework: newHomework, savedItemStates: savedStates, deletedDefaultItems, allTabOrder };
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -675,7 +679,7 @@ export function useAppState(uid?: string | null) {
           allTabOrder[charId] = [newItem.id, ...(allTabOrder[charId] ?? []).filter((id) => id !== newItem.id)];
         }
         return { ...prev, homework: newHomework, allTabOrder };
-      });
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -691,7 +695,7 @@ export function useAppState(uid?: string | null) {
         const idx = currentList.findIndex((item) => item.id === itemId);
         if (idx === -1) return prev;
         const target = currentList[idx];
-        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, stateKey, target.itemName) : prev.deletedDefaultItems;
+        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, stateKey, target.defaultKey ?? target.itemName) : prev.deletedDefaultItems;
 
         // 삭제 전 모든 캐릭터의 상태 저장
         const savedStates = { ...(prev.savedItemStates ?? {}) };
@@ -704,12 +708,15 @@ export function useAppState(uid?: string | null) {
         }
 
         const newItems = { ...prev[key] };
+        const allTabOrder = { ...(prev.allTabOrder ?? {}) };
         for (const charId of Object.keys(newItems)) {
           const list = newItems[charId] ?? [];
+          const deletedId = list[idx]?.id;
           newItems[charId] = list.filter((_, i) => i !== idx);
+          if (deletedId) allTabOrder[charId] = (allTabOrder[charId] ?? []).filter((id) => id !== deletedId);
         }
-        return { ...prev, [key]: newItems, savedItemStates: savedStates, deletedDefaultItems };
-      });
+        return { ...prev, [key]: newItems, savedItemStates: savedStates, deletedDefaultItems, allTabOrder };
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -740,7 +747,7 @@ export function useAppState(uid?: string | null) {
           allTabOrder[charId] = [newItem.id, ...(allTabOrder[charId] ?? []).filter((id) => id !== newItem.id)];
         }
         return { ...prev, [key]: newItems, allTabOrder };
-      });
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -760,7 +767,7 @@ export function useAppState(uid?: string | null) {
           }
         }
         return { ...prev, homework: newHomework };
-      });
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -781,7 +788,7 @@ export function useAppState(uid?: string | null) {
           }
         }
         return { ...prev, [key]: newItems };
-      });
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -794,7 +801,7 @@ export function useAppState(uid?: string | null) {
         const [moved] = list.splice(oldIndex, 1);
         list.splice(newIndex, 0, moved);
         return { ...prev, characters: list };
-      });
+      }, { immediate: true });
     },
     [persist]
   );
@@ -845,7 +852,7 @@ export function useAppState(uid?: string | null) {
           allTabOrder[charId] = [newItem.id, ...(allTabOrder[charId] ?? []).filter((id) => id !== newItem.id)];
         }
         return { ...prev, scrollItems, allTabOrder };
-      });
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -866,7 +873,7 @@ export function useAppState(uid?: string | null) {
             [selectedCharId]: list.map((s) => s.id === itemId ? { ...s, completedCount: newCount } : s),
           },
         };
-      });
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -886,7 +893,7 @@ export function useAppState(uid?: string | null) {
             [charId]: list.map((s) => s.id === itemId ? { ...s, completedCount: newCount } : s),
           },
         };
-      });
+      }, { immediate: true });
     },
     [persist]
   );
@@ -918,20 +925,19 @@ export function useAppState(uid?: string | null) {
         const idx = currentList.findIndex((s) => s.id === itemId);
         if (idx === -1) return prev;
         const target = currentList[idx];
-        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, "scroll", target.title) : prev.deletedDefaultItems;
 
         for (const charId of Object.keys(scrollItems)) {
           scrollItems[charId] = (scrollItems[charId] ?? []).map((s, i) => {
             if (i !== idx) return s;
-            const updated = { ...s, ...updates, ...(target.isDefault ? { isDefault: false } : {}) };
+            const updated = { ...s, ...updates, ...(target.isDefault ? { isModifiedDefault: true, defaultKey: target.defaultKey ?? target.title } : {}) };
             if (updates.totalCount !== undefined && updated.completedCount > updates.totalCount) {
               updated.completedCount = updates.totalCount;
             }
             return updated;
           });
         }
-        return { ...prev, scrollItems, deletedDefaultItems };
-      });
+        return { ...prev, scrollItems };
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -945,14 +951,17 @@ export function useAppState(uid?: string | null) {
         const idx = currentList.findIndex((s) => s.id === itemId);
         if (idx === -1) return prev;
         const target = currentList[idx];
-        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, "scroll", target.title) : prev.deletedDefaultItems;
+        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, "scroll", target.defaultKey ?? target.title) : prev.deletedDefaultItems;
 
+        const allTabOrder = { ...(prev.allTabOrder ?? {}) };
         for (const charId of Object.keys(scrollItems)) {
           const list = scrollItems[charId] ?? [];
+          const deletedId = list[idx]?.id;
           scrollItems[charId] = list.filter((_, i) => i !== idx);
+          if (deletedId) allTabOrder[charId] = (allTabOrder[charId] ?? []).filter((id) => id !== deletedId);
         }
-        return { ...prev, scrollItems, deletedDefaultItems };
-      });
+        return { ...prev, scrollItems, deletedDefaultItems, allTabOrder };
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -1077,6 +1086,7 @@ export function useAppState(uid?: string | null) {
       period: hw.period,
       totalCount: parseTotalCount(hw.title),
       scope: toScope(hw.scope),
+      isDefault: true,
     })),
     purchaseItems: (runtimeDefaults?.purchaseItems ?? DEFAULT_PURCHASE_ITEMS).map((item) => ({
       itemName: item.itemName,
@@ -1084,6 +1094,7 @@ export function useAppState(uid?: string | null) {
       npcName: item.npcName,
       period: item.period,
       scope: toScope(item.scope),
+      isDefault: true,
     })),
     tradeItems: (runtimeDefaults?.tradeItems ?? DEFAULT_TRADE_ITEMS).map((item) => ({
       itemName: item.itemName,
@@ -1091,6 +1102,7 @@ export function useAppState(uid?: string | null) {
       npcName: item.npcName,
       period: item.period,
       scope: toScope(item.scope),
+      isDefault: true,
     })),
     scrollItems: (runtimeDefaults?.scrollItems ?? DEFAULT_SCROLL_ITEMS).map((item) => ({
       title: item.title,
@@ -1101,6 +1113,7 @@ export function useAppState(uid?: string | null) {
       region: item.region,
       materials: item.materials === "-" ? ["-"] : item.materials.split(",").map((s) => s.trim()),
       reward: item.reward,
+      isDefault: true,
     })),
   }), [runtimeDefaults]);
 

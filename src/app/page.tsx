@@ -23,7 +23,7 @@ import { useAppState } from "@/hooks/useAppState";
 import { useAuth } from "@/hooks/useAuth";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Download, Upload, Settings } from "lucide-react";
+import { Download, GripVertical, Pencil, Settings, Trash2, Upload } from "lucide-react";
 import { isAdminFirebaseUser } from "@/lib/adminFirestore";
 import type { Character, HomeworkItem, RegionName, ScrollItem, ShopItem } from "@/types";
 
@@ -164,6 +164,7 @@ export default function Home() {
   const [editingChar, setEditingChar] = useState<Character | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
   const [editingCard, setEditingCard] = useState<EditCard | null>(null);
+  const [deleteRow, setDeleteRow] = useState<MatrixRow | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [showUpdateNotes, setShowUpdateNotes] = useState(false);
   const state = useAppState(user?.uid);
@@ -567,12 +568,7 @@ export default function Home() {
                   if (row.type === "purchase" || row.type === "trade") state.toggleShopFavorite(row.sourceItem.id, row.type);
                 }}
                 onQuickEdit={(row) => setEditingCard({ type: row.type, item: row.sourceItem } as EditCard)}
-                onDeleteRow={(row) => {
-                  if (!window.confirm(`'${row.label}'을 삭제하시겠습니까?`)) return;
-                  if (row.type === "homework") state.deleteHomework(row.sourceItem.id);
-                  if (row.type === "scroll") state.deleteScrollItem(row.sourceItem.id);
-                  if (row.type === "purchase" || row.type === "trade") state.deleteShopItem(row.sourceItem.id, row.type);
-                }}
+                onDeleteRow={setDeleteRow}
                 onLoadDefault={() => state.loadPreset("__default__")}
                 onReorder={(oldIdx, newIdx) => {
                   if (state.activeTab === "all") {
@@ -800,6 +796,16 @@ export default function Home() {
         onUpdateShopItem={state.updateShopItem}
         onUpdateScrollItem={state.updateScrollItem}
       />
+      <MatrixDeleteConfirmModal
+        row={deleteRow}
+        onClose={() => setDeleteRow(null)}
+        onConfirm={(row) => {
+          if (row.type === "homework") state.deleteHomework(row.sourceItem.id);
+          if (row.type === "scroll") state.deleteScrollItem(row.sourceItem.id);
+          if (row.type === "purchase" || row.type === "trade") state.deleteShopItem(row.sourceItem.id, row.type);
+          setDeleteRow(null);
+        }}
+      />
       <ProfileModal
         open={showProfile}
         onClose={() => setShowProfile(false)}
@@ -874,20 +880,22 @@ function ListMatrixView({
 
   return (
     <div className="px-4 py-4">
-      <div className="space-y-3 md:hidden">
-        {rows.map((row) => (
-          <ListMatrixMobileCard
-            key={row.id}
-            row={row}
-            onToggleHomework={onToggleHomework}
-            onToggleShop={onToggleShop}
-            onToggleScroll={onToggleScroll}
-            onToggleFavorite={onToggleFavorite}
-            onQuickEdit={onQuickEdit}
-            onDeleteRow={onDeleteRow}
-          />
-        ))}
-      </div>
+      <SortableList items={rows} onReorder={onReorder}>
+        <div className="space-y-3 md:hidden">
+          {rows.map((row) => (
+            <ListMatrixMobileCard
+              key={row.id}
+              row={row}
+              onToggleHomework={onToggleHomework}
+              onToggleShop={onToggleShop}
+              onToggleScroll={onToggleScroll}
+              onToggleFavorite={onToggleFavorite}
+              onQuickEdit={onQuickEdit}
+              onDeleteRow={onDeleteRow}
+            />
+          ))}
+        </div>
+      </SortableList>
 
       <div className="hidden overflow-hidden rounded-xl border border-slate-800 bg-slate-900/70 md:block">
         <div className="grid grid-cols-[minmax(188px,52vw)_1fr] border-b border-slate-800 bg-slate-950/80 md:grid-cols-[340px_1fr]">
@@ -951,15 +959,42 @@ function ListMatrixMobileCard({
   onQuickEdit: (row: MatrixRow) => void;
   onDeleteRow: (row: MatrixRow) => void;
 }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: row.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
   const rowDone = isMatrixRowDone(row);
 
   return (
-    <div className={`rounded-2xl border border-slate-800 px-3 py-3 ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-2xl border border-slate-800 px-3 py-3 ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}
+    >
       <div className="flex items-start gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          type="button"
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
+          title="드래그하여 순서 변경"
+        >
+          <GripVertical className="h-5 w-5" />
+        </button>
         <button
           type="button"
           onClick={() => onToggleFavorite(row)}
-          className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-base transition-colors ${
+          className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-xl leading-none transition-colors ${
             row.sourceItem.isFavorite ? "text-yellow-400 hover:bg-slate-700/70" : "text-slate-600 hover:bg-slate-700/70 hover:text-slate-400"
           }`}
           title={row.sourceItem.isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
@@ -999,22 +1034,18 @@ function ListMatrixMobileCard({
           <button
             type="button"
             onClick={() => onQuickEdit(row)}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-slate-300"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-slate-300"
             title="수정"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
+            <Pencil className="h-5 w-5" />
           </button>
           <button
             type="button"
             onClick={() => onDeleteRow(row)}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-red-400"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-700/70 hover:text-red-400"
             title="삭제"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
+            <Trash2 className="h-5 w-5" />
           </button>
         </div>
       </div>
@@ -1139,19 +1170,15 @@ function ListMatrixRow({
             <button
               {...attributes}
               {...listeners}
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-800 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-800 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
               title="드래그하여 순서 변경"
             >
-              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
-                <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
-                <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
-              </svg>
+              <GripVertical className="h-5 w-5" />
             </button>
             <button
               type="button"
               onClick={() => onToggleFavorite(row)}
-              className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-base transition-colors ${
+              className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-lg transition-colors ${
                 row.sourceItem.isFavorite ? "text-yellow-400 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-800 hover:text-slate-400"
               }`}
               title={row.sourceItem.isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
@@ -1178,22 +1205,18 @@ function ListMatrixRow({
                 <button
                   type="button"
                   onClick={() => onQuickEdit(row)}
-                  className="flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                  className="flex h-9 w-9 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
                   title="수정"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
+                  <Pencil className="h-[18px] w-[18px]" />
                 </button>
                 <button
                   type="button"
                   onClick={() => onDeleteRow(row)}
-                  className="flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
+                  className="flex h-9 w-9 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
                   title="삭제"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                  <Trash2 className="h-[18px] w-[18px]" />
                 </button>
               </div>
             </div>
@@ -1270,6 +1293,50 @@ function ListMatrixRow({
               </div>
             );
           })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MatrixDeleteConfirmModal({
+  row,
+  onClose,
+  onConfirm,
+}: {
+  row: MatrixRow | null;
+  onClose: () => void;
+  onConfirm: (row: MatrixRow) => void;
+}) {
+  if (!row) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+        <div className="mb-4 flex justify-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-red-400">
+            <Trash2 className="h-6 w-6" />
+          </div>
+        </div>
+        <p className="mb-2 text-center text-sm font-semibold text-white">카드 삭제</p>
+        <p className="mb-5 break-keep text-center text-sm leading-relaxed text-slate-400">
+          &apos;{row.label}&apos;을 삭제하시겠습니까?
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl bg-slate-800 py-3 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(row)}
+            className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-medium text-white transition-colors hover:bg-red-500"
+          >
+            삭제
+          </button>
         </div>
       </div>
     </div>

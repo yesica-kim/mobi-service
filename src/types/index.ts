@@ -40,6 +40,8 @@ export interface HomeworkItem {
   completedCount: number;
   isFavorite: boolean;
   isDefault?: boolean;
+  isModifiedDefault?: boolean;
+  defaultKey?: string;
   scope?: ScopeType;
 }
 
@@ -63,6 +65,8 @@ export interface ShopItem {
   completed: boolean;
   isFavorite: boolean;
   isDefault?: boolean;
+  isModifiedDefault?: boolean;
+  defaultKey?: string;
   scope?: ScopeType;
   // 물물교환 전용 스키마
   fromItem?: string;
@@ -84,6 +88,8 @@ export interface ScrollItem {
   completedCount: number;
   isFavorite: boolean;
   isDefault?: boolean;
+  isModifiedDefault?: boolean;
+  defaultKey?: string;
   scope?: ScopeType;
   region: RegionName;
   materials: string[];
