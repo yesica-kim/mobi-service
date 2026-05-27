@@ -260,26 +260,20 @@ function reconcileAllTabOrder(data: AppData) {
   if (!data.allTabOrder) return;
 
   for (const charId of data.characters.map((char) => char.id)) {
-    const allIds = [
-      ...(data.homework[charId] ?? []).map((item) => item.id),
-      ...(data.purchaseItems[charId] ?? []).map((item) => item.id),
-      ...(data.tradeItems[charId] ?? []).map((item) => item.id),
-      ...((data.scrollItems ?? {})[charId] ?? []).map((item) => item.id),
+    const allItems = [
+      ...(data.homework[charId] ?? []),
+      ...(data.purchaseItems[charId] ?? []),
+      ...(data.tradeItems[charId] ?? []),
+      ...((data.scrollItems ?? {})[charId] ?? []),
     ];
+    const allIds = allItems.map((item) => item.id);
+    const defaultIds = allItems.filter((item) => item.isDefault).map((item) => item.id);
     const allIdSet = new Set(allIds);
-    const nextOrder = (data.allTabOrder[charId] ?? []).filter((id) => allIdSet.has(id));
+    const defaultIdSet = new Set(defaultIds);
+    const orderedCustomIds = (data.allTabOrder[charId] ?? []).filter((id) => allIdSet.has(id) && !defaultIdSet.has(id));
+    const missingCustomIds = allIds.filter((id) => !defaultIdSet.has(id) && !orderedCustomIds.includes(id));
 
-    for (const id of allIds) {
-      if (nextOrder.includes(id)) continue;
-      const followingExistingId = allIds.slice(allIds.indexOf(id) + 1).find((nextId) => nextOrder.includes(nextId));
-      if (followingExistingId) {
-        nextOrder.splice(nextOrder.indexOf(followingExistingId), 0, id);
-      } else {
-        nextOrder.push(id);
-      }
-    }
-
-    data.allTabOrder[charId] = nextOrder;
+    data.allTabOrder[charId] = [...defaultIds, ...orderedCustomIds, ...missingCustomIds];
   }
 }
 
