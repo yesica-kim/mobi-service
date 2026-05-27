@@ -111,6 +111,7 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [rollbackTarget, setRollbackTarget] = useState<HistoryEntry | null>(null);
@@ -167,10 +168,10 @@ export default function AdminPage() {
 
   const handleReset = useCallback(async () => {
     if (!publishedData) return;
-    if (!confirm("수정사항을 초기화하시겠습니까?\n현재 실섭 데이터로 되돌립니다.")) return;
     setEditData(structuredClone(publishedData));
     setDraftSaved(false);
     await deleteDraft();
+    setShowResetConfirm(false);
     showStatus("초기화 완료");
   }, [publishedData]);
 
@@ -456,7 +457,7 @@ export default function AdminPage() {
           )}
           <div className="flex gap-2">
             <button
-              onClick={handleReset}
+              onClick={() => setShowResetConfirm(true)}
               disabled={!hasChanges && !draftSaved}
               className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                 hasChanges || draftSaved
@@ -524,6 +525,62 @@ export default function AdminPage() {
           }}
         />
       )}
+
+      {showResetConfirm && (
+        <ConfirmModal
+          title="수정사항을 초기화할까요?"
+          description="현재 편집 중인 내용과 Dev 저장본을 버리고 현재 실섭 데이터로 되돌립니다."
+          confirmLabel="초기화"
+          confirmClassName="bg-red-600 text-white hover:bg-red-500"
+          onCancel={() => setShowResetConfirm(false)}
+          onConfirm={handleReset}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── 확인 모달 ──
+function ConfirmModal({
+  title,
+  description,
+  confirmLabel,
+  confirmClassName,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  confirmClassName: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEscapeClose(true, onCancel);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onCancel}>
+      <div
+        className="w-full max-w-sm rounded-2xl border border-slate-700/50 bg-slate-900 p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-base font-bold text-white">{title}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-400">{description}</p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="h-11 rounded-xl px-4 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+          >
+            취소
+          </button>
+          <button
+            onClick={onConfirm}
+            className={`h-11 rounded-xl px-4 text-sm font-medium transition-colors ${confirmClassName}`}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
