@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useEscapeClose } from "@/hooks/useEscapeClose";
+import { AppConfirmModal } from "@/components/AppConfirmModal";
 
 interface CategoryProgress {
   label: string;
@@ -24,7 +24,6 @@ interface Props {
 export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, onReset, categories }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  useEscapeClose(showResetConfirm, () => setShowResetConfirm(false));
 
   return (
     <div className="px-4 py-3">
@@ -108,33 +107,17 @@ export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, 
       )}
 
       {showResetConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowResetConfirm(false)} />
-          <div className="relative z-10 w-full">
-            <div className="mx-auto w-80 rounded-2xl bg-slate-800 p-6">
-              <p className="mb-6 text-center text-sm text-white">
-                숙제 리스트 체크박스를 초기화 하시겠습니까?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowResetConfirm(false)}
-                  className="h-11 flex-1 rounded-xl bg-slate-700 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-600"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={() => {
-                    onReset();
-                    setShowResetConfirm(false);
-                  }}
-                  className="h-11 flex-1 rounded-xl bg-red-600 text-sm font-medium text-white transition-colors hover:bg-red-500"
-                >
-                  초기화
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AppConfirmModal
+          open={showResetConfirm}
+          title="숙제 리스트 체크박스를 초기화 하시겠습니까?"
+          confirmLabel="초기화"
+          variant="danger"
+          onCancel={() => setShowResetConfirm(false)}
+          onConfirm={() => {
+            onReset();
+            setShowResetConfirm(false);
+          }}
+        />
       )}
     </div>
   );

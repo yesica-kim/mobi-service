@@ -5,9 +5,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { SortableList } from "@/components/SortableList";
 import { AddCardModal, type EditCard } from "@/components/AddCardModal";
+import { AppConfirmModal } from "@/components/AppConfirmModal";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { AlertTriangle, RotateCcw, Trash2, Upload } from "lucide-react";
 import {
   isAdminFirebaseUser,
   getPublishedCards,
@@ -42,7 +42,6 @@ type AdminCategory = "homework" | "purchase" | "trade" | "scroll";
 type AdminTab = "all" | AdminCategory;
 type AdminBadge = { label: string; className: string; plain?: boolean };
 type AdminRow = { id: string; tab: AdminCategory; index: number; item: any };
-type ConfirmIconType = "reset" | "publish" | "delete" | "rollback" | "warning";
 
 const ADMIN_PERIOD_BADGES: Record<PeriodType, AdminBadge> = {
   daily: { label: "일간", className: "bg-orange-600/20 text-orange-400" },
@@ -690,24 +689,24 @@ export default function AdminPage() {
       )}
 
       {showResetConfirm && (
-        <ConfirmModal
+        <AppConfirmModal
+          open={showResetConfirm}
           title="수정사항을 초기화할까요?"
           description="현재 편집 중인 내용과 Dev 저장본을 버리고 현재 실섭 데이터로 되돌립니다."
           confirmLabel="초기화"
-          icon="reset"
-          confirmClassName="bg-red-600 text-white hover:bg-red-500"
+          variant="danger"
           onCancel={() => setShowResetConfirm(false)}
           onConfirm={handleReset}
         />
       )}
 
       {showPublishConfirm && (
-        <ConfirmModal
+        <AppConfirmModal
+          open={showPublishConfirm}
           title="실섭에 업로드할까요?"
           description="현재 Dev 저장본을 실섭 기본 카드로 반영합니다. 모든 사용자에게 적용될 수 있습니다."
           confirmLabel={saving ? "업로드 중..." : "업로드"}
-          icon="publish"
-          confirmClassName="bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40"
+          variant="primary"
           onCancel={() => setShowPublishConfirm(false)}
           onConfirm={handlePublish}
           disabled={saving}
@@ -715,93 +714,28 @@ export default function AdminPage() {
       )}
 
       {deleteTarget && (
-        <ConfirmModal
+        <AppConfirmModal
+          open={!!deleteTarget}
           title="카드를 삭제할까요?"
           description="삭제한 카드는 Dev 저장 후 실섭 업로드 전까지 편집 데이터에만 반영됩니다."
           confirmLabel="삭제"
-          icon="delete"
-          confirmClassName="bg-red-600 text-white hover:bg-red-500"
+          variant="danger"
           onCancel={() => setDeleteTarget(null)}
           onConfirm={() => deleteItem(deleteTarget.tab, deleteTarget.index)}
         />
       )}
 
       {rollbackTarget && (
-        <ConfirmModal
+        <AppConfirmModal
+          open={!!rollbackTarget}
           title="롤백하시겠습니까?"
           description={`${formatAdminDate(rollbackTarget.createdAt)} 시점으로 되돌립니다.`}
           confirmLabel="롤백"
-          icon="rollback"
-          confirmClassName="bg-red-600 text-white hover:bg-red-500"
+          variant="danger"
           onCancel={() => setRollbackTarget(null)}
           onConfirm={() => handleRollback(rollbackTarget)}
         />
       )}
-    </div>
-  );
-}
-
-// ── 확인 모달 ──
-function ConfirmModal({
-  title,
-  description,
-  confirmLabel,
-  icon = "warning",
-  confirmClassName,
-  onCancel,
-  onConfirm,
-  disabled = false,
-}: {
-  title: string;
-  description: string;
-  confirmLabel: string;
-  icon?: ConfirmIconType;
-  confirmClassName: string;
-  onCancel: () => void;
-  onConfirm: () => void;
-  disabled?: boolean;
-}) {
-  useEscapeClose(true, onCancel);
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm" onClick={onCancel}>
-      <div
-        className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex justify-center">
-          <ConfirmModalIcon icon={icon} />
-        </div>
-        <p className="mb-2 text-center text-base font-semibold text-white">{title}</p>
-        <p className="mb-5 break-keep text-center text-sm leading-relaxed text-slate-400">{description}</p>
-        <div className="flex gap-2">
-            <button
-              onClick={onCancel}
-              className="h-11 flex-1 rounded-xl bg-slate-800 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
-            >
-              취소
-            </button>
-            <button
-              onClick={onConfirm}
-              disabled={disabled}
-              className={`h-11 flex-1 rounded-xl text-sm font-medium transition-colors disabled:cursor-not-allowed ${confirmClassName}`}
-            >
-              {confirmLabel}
-            </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ConfirmModalIcon({ icon }: { icon: ConfirmIconType }) {
-  const iconClassName = "h-6 w-6";
-  const Icon = icon === "delete" ? Trash2 : icon === "publish" ? Upload : icon === "reset" || icon === "rollback" ? RotateCcw : AlertTriangle;
-  const tone = icon === "publish" ? "bg-blue-500/10 text-blue-400" : icon === "warning" ? "bg-amber-500/10 text-amber-400" : "bg-red-500/10 text-red-400";
-
-  return (
-    <div className={`flex h-12 w-12 items-center justify-center rounded-full ${tone}`}>
-      <Icon className={iconClassName} />
     </div>
   );
 }

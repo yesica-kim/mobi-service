@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useEscapeClose } from "@/hooks/useEscapeClose";
+import { AppConfirmModal } from "@/components/AppConfirmModal";
 import type { HomeworkItem, ScopeType } from "@/types";
 
 /** reward 문자열을 태그 배열로 파싱 (콤마 구분) */
@@ -61,7 +61,6 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
       titleRef.current.focus();
     }
   }, [editing]);
-  useEscapeClose(showDeleteConfirm, () => setShowDeleteConfirm(false));
 
   const handleSave = () => {
     if (onUpdate) {
@@ -382,20 +381,17 @@ export function HomeworkCard({ item, onToggle, onToggleFavorite, onUpdate, onDel
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
-          <div className="relative z-10 w-full">
-            <div className="bg-slate-800 rounded-2xl p-6 w-80 mx-auto">
-              <p className="text-white text-sm text-center mb-6">
-                &apos;{item.title}&apos;을 삭제하시겠습니까?
-              </p>
-              <div className="flex gap-3">
-                <button onClick={() => setShowDeleteConfirm(false)} className="h-11 flex-1 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors">취소</button>
-                <button onClick={() => { onDelete?.(item.id); setShowDeleteConfirm(false); }} className="h-11 flex-1 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors">삭제</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AppConfirmModal
+          open={showDeleteConfirm}
+          title={`'${item.title}'을 삭제하시겠습니까?`}
+          confirmLabel="삭제"
+          variant="danger"
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={() => {
+            onDelete?.(item.id);
+            setShowDeleteConfirm(false);
+          }}
+        />
       )}
     </div>
   );

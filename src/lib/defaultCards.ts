@@ -19,15 +19,16 @@ export function getCodeDefaultCards(): DefaultCardsData {
   };
 }
 
-function isLocalHost(): boolean {
+function isDraftDefaultHost(): boolean {
   if (typeof window === "undefined") return false;
-  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+  const hostname = window.location.hostname;
+  return ["localhost", "127.0.0.1", "::1"].includes(hostname) || hostname.includes("-git-dev-");
 }
 
 export async function loadRuntimeDefaultCards(): Promise<DefaultCardsData> {
   const codeDefaults = getCodeDefaultCards();
 
-  if (isLocalHost()) {
+  if (isDraftDefaultHost()) {
     const draft = await getDraftCards();
     if (draft) return draft;
     const published = await getPublishedCards();

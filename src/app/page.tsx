@@ -13,6 +13,7 @@ import { WeeklyCountdown } from "@/components/WeeklyCountdown";
 import { ShopCard } from "@/components/ShopCard";
 import { ScrollCard } from "@/components/ScrollCard";
 import { AddCardModal, type EditCard } from "@/components/AddCardModal";
+import { AppConfirmModal } from "@/components/AppConfirmModal";
 import { SearchFilterBar } from "@/components/SearchFilterBar";
 import { MembershipBanner } from "@/components/MembershipBanner";
 import { MemoSection } from "@/components/MemoSection";
@@ -21,7 +22,6 @@ import { ProfileModal } from "@/components/ProfileModal";
 import { SortableList } from "@/components/SortableList";
 import { useAppState } from "@/hooks/useAppState";
 import { useAuth } from "@/hooks/useAuth";
-import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Download, GripVertical, Settings, Trash2, Upload } from "lucide-react";
@@ -1318,39 +1318,16 @@ function MatrixDeleteConfirmModal({
   onClose: () => void;
   onConfirm: (row: MatrixRow) => void;
 }) {
-  useEscapeClose(!!row, onClose);
-
-  if (!row) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
-        <div className="mb-4 flex justify-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-red-400">
-            <Trash2 className="h-6 w-6" />
-          </div>
-        </div>
-        <p className="mb-2 text-center text-base font-semibold text-white">카드 삭제</p>
-        <p className="mb-5 break-keep text-center text-sm leading-relaxed text-slate-400">
-          &apos;{row.label}&apos;을 삭제하시겠습니까?
-        </p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-11 flex-1 rounded-xl bg-slate-800 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
-          >
-            취소
-          </button>
-          <button
-            type="button"
-            onClick={() => onConfirm(row)}
-            className="h-11 flex-1 rounded-xl bg-red-600 text-sm font-medium text-white transition-colors hover:bg-red-500"
-          >
-            삭제
-          </button>
-        </div>
-      </div>
-    </div>
+    <AppConfirmModal
+      open={!!row}
+      title={row ? `'${row.label}'을 삭제하시겠습니까?` : ""}
+      confirmLabel="삭제"
+      variant="danger"
+      onCancel={onClose}
+      onConfirm={() => {
+        if (row) onConfirm(row);
+      }}
+    />
   );
 }

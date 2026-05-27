@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useEscapeClose } from "@/hooks/useEscapeClose";
+import { AppConfirmModal } from "@/components/AppConfirmModal";
 import type { MembershipInfo, ServerName } from "@/types";
 
 interface Props {
@@ -64,7 +64,6 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
     const timer = window.setInterval(() => setNow(new Date()), 60 * 1000);
     return () => window.clearInterval(timer);
   }, []);
-  useEscapeClose(showDeleteConfirm, () => setShowDeleteConfirm(false));
 
   if (!server) return null;
 
@@ -333,31 +332,15 @@ export function MembershipBanner({ server, membership, onUpdate }: Props) {
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-slate-800 rounded-2xl p-6 w-72">
-              <p className="text-white text-sm text-center mb-2 font-semibold">멤버십 삭제</p>
-              <p className="text-slate-400 text-xs text-center mb-5 leading-relaxed">
-                등록된 멤버십 정보를 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors"
-                >
-                  삭제
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AppConfirmModal
+          open={showDeleteConfirm}
+          title="등록된 멤버십 정보를 삭제하시겠습니까?"
+          description="이 작업은 되돌릴 수 없습니다."
+          confirmLabel="삭제"
+          variant="danger"
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={handleDelete}
+        />
       )}
     </div>
   );

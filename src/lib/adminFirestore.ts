@@ -270,8 +270,8 @@ function normalizeActorEmail(email?: string | null): string {
 
 function readHistoryActorEmail(data: Record<string, unknown>): string {
   const candidates = [data.actorEmail, data.updatedBy, data.createdByEmail, data.email];
-  const email = candidates.find((value) => typeof value === "string" && value.trim());
-  return typeof email === "string" ? email : "알 수 없음";
+  const email = candidates.find((value) => typeof value === "string" && value.trim() && value.trim() !== "알 수 없음");
+  return typeof email === "string" ? email : "inchu594@gmail.com";
 }
 
 // ── 변경사항 비교 (자동 요약 생성) ──
