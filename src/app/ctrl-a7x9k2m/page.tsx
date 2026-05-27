@@ -6,6 +6,7 @@ import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { SortableList } from "@/components/SortableList";
 import { AddCardModal, type EditCard } from "@/components/AddCardModal";
 import { AppConfirmModal } from "@/components/AppConfirmModal";
+import { shouldUseDraftCards } from "@/lib/defaultCards";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -174,7 +175,7 @@ export default function AdminPage() {
       const draft = await getDraftCards();
       const base = published ?? codeDefaultsToData();
       setPublishedData(base);
-      if (draft) {
+      if (shouldUseDraftCards(draft, published)) {
         setEditData(draft);
         setDraftSaved(true);
       } else {

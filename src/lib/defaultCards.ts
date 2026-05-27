@@ -25,13 +25,23 @@ function isDraftDefaultHost(): boolean {
   return ["localhost", "127.0.0.1", "::1"].includes(hostname) || hostname.includes("-git-dev-");
 }
 
+export function shouldUseDraftCards(
+  draft: DefaultCardsData | null,
+  published: DefaultCardsData | null
+): draft is DefaultCardsData {
+  if (!draft) return false;
+  if (!published) return true;
+  if (!draft.updatedAt || !published.updatedAt) return true;
+  return new Date(draft.updatedAt).getTime() >= new Date(published.updatedAt).getTime();
+}
+
 export async function loadRuntimeDefaultCards(): Promise<DefaultCardsData> {
   const codeDefaults = getCodeDefaultCards();
 
   if (isDraftDefaultHost()) {
-    const draft = await getDraftCards();
-    if (draft) return draft;
     const published = await getPublishedCards();
+    const draft = await getDraftCards();
+    if (shouldUseDraftCards(draft, published)) return draft;
     return published ?? codeDefaults;
   }
 
