@@ -100,27 +100,29 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     const current = data.homework[charId] ?? [];
     if (current.length === 0) continue;
     const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
-    const existingTitles = new Set(current.map((item) => item.title));
-    const newDefaults = homeworkDefaults.filter((hw) => !existingTitles.has(hw.title));
-
-    data.homework[charId] = [
-      ...current,
-      ...newDefaults.map((hw, i) => {
-        const saved = charStates.homework[hw.title];
+    data.homework[charId] = syncDefaultItems(
+      current,
+      homeworkDefaults,
+      (item) => item.defaultKey ?? item.title,
+      (item) => item.title,
+      (hw, existing) => {
+        const key = hw.title;
+        const saved = charStates.homework[key];
         const totalCount = hw.totalCount || parseTotalCount(hw.title);
         return {
-          id: `${charId}_hw_added_${current.length}_${i}`,
+          id: existing?.id ?? `${charId}_hw_added_${key}_${current.length}`,
           title: hw.title,
           reward: hw.reward,
           period: hw.period,
           totalCount,
-          completedCount: Math.min(saved?.completedCount ?? 0, totalCount),
-          isFavorite: saved?.isFavorite ?? false,
+          completedCount: Math.min(existing?.completedCount ?? saved?.completedCount ?? 0, totalCount),
+          isFavorite: existing?.isFavorite ?? saved?.isFavorite ?? false,
           isDefault: true,
+          defaultKey: key,
           scope: toScope(hw.scope),
         };
-      }),
-    ];
+      }
+    );
     savedStates[charId] = charStates;
   }
 
@@ -128,26 +130,28 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     const current = data.purchaseItems[charId] ?? [];
     if (current.length === 0) continue;
     const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
-    const existingNames = new Set(current.map((item) => item.itemName));
-    const newDefaults = purchaseDefaults.filter((item) => !existingNames.has(item.itemName));
-
-    data.purchaseItems[charId] = [
-      ...current,
-      ...newDefaults.map((item, i) => {
-        const saved = charStates.purchase[item.itemName];
+    data.purchaseItems[charId] = syncDefaultItems(
+      current,
+      purchaseDefaults,
+      (item) => item.defaultKey ?? item.itemName,
+      (item) => item.itemName,
+      (item, existing) => {
+        const key = item.itemName;
+        const saved = charStates.purchase[key];
         return {
-          id: `${charId}_pur_added_${current.length}_${i}`,
+          id: existing?.id ?? `${charId}_pur_added_${key}_${current.length}`,
           itemName: item.itemName,
           region: item.region,
           npcName: item.npcName,
           period: item.period,
-          completed: saved?.completed ?? false,
-          isFavorite: saved?.isFavorite ?? false,
+          completed: existing?.completed ?? saved?.completed ?? false,
+          isFavorite: existing?.isFavorite ?? saved?.isFavorite ?? false,
           isDefault: true,
+          defaultKey: key,
           scope: toScope(item.scope),
         };
-      }),
-    ];
+      }
+    );
     savedStates[charId] = charStates;
   }
 
@@ -155,59 +159,128 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     const current = data.tradeItems[charId] ?? [];
     if (current.length === 0) continue;
     const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
-    const existingNames = new Set(current.map((item) => item.itemName));
-    const newDefaults = tradeDefaults.filter((item) => !existingNames.has(item.itemName));
-
-    data.tradeItems[charId] = [
-      ...current,
-      ...newDefaults.map((item, i) => {
-        const saved = charStates.trade[item.itemName];
+    data.tradeItems[charId] = syncDefaultItems(
+      current,
+      tradeDefaults,
+      (item) => item.defaultKey ?? item.itemName,
+      (item) => item.itemName,
+      (item, existing) => {
+        const key = item.itemName;
+        const saved = charStates.trade[key];
         const parsed = parseTradeItemName(item.itemName);
         return {
-          id: `${charId}_trd_added_${current.length}_${i}`,
+          id: existing?.id ?? `${charId}_trd_added_${key}_${current.length}`,
           itemName: item.itemName,
           region: item.region,
           npcName: item.npcName,
           period: item.period,
-          completed: saved?.completed ?? false,
-          isFavorite: saved?.isFavorite ?? false,
+          completed: existing?.completed ?? saved?.completed ?? false,
+          isFavorite: existing?.isFavorite ?? saved?.isFavorite ?? false,
           isDefault: true,
+          defaultKey: key,
           scope: toScope(item.scope),
           ...(parsed ?? {}),
         };
-      }),
-    ];
+      }
+    );
     savedStates[charId] = charStates;
   }
 
   for (const charId of Object.keys(data.scrollItems ?? {})) {
     const current = data.scrollItems![charId] ?? [];
     if (current.length === 0) continue;
-    const existingTitles = new Set(current.map((item) => item.title));
-    const newDefaults = scrollDefaults.filter((item) => !existingTitles.has(item.title));
-
-    data.scrollItems![charId] = [
-      ...current,
-      ...newDefaults.map((item, i) => {
+    data.scrollItems![charId] = syncDefaultItems(
+      current,
+      scrollDefaults,
+      (item) => item.defaultKey ?? item.title,
+      (item) => item.title,
+      (item, existing) => {
+        const key = item.title;
         return {
-          id: `${charId}_scroll_added_${current.length}_${i}`,
+          id: existing?.id ?? `${charId}_scroll_added_${key}_${current.length}`,
           title: item.title,
           scrollType: item.scrollType,
           period: item.period,
           totalCount: item.totalCount || 3,
-          completedCount: 0,
-          isFavorite: false,
+          completedCount: Math.min(existing?.completedCount ?? 0, item.totalCount || 3),
+          isFavorite: existing?.isFavorite ?? false,
           isDefault: true,
+          defaultKey: key,
           scope: "character" as const,
           region: item.region,
           materials: item.materials === "-" ? ["-"] : item.materials.split(",").map((s) => s.trim()),
           reward: item.reward,
         };
-      }),
-    ];
+      }
+    );
   }
 
   data.savedItemStates = savedStates;
+  reconcileAllTabOrder(data);
+}
+
+function syncDefaultItems<Current extends { isDefault?: boolean; isModifiedDefault?: boolean; defaultKey?: string }, Default>(
+  current: Current[],
+  defaults: Default[],
+  getCurrentKey: (item: Current) => string,
+  getDefaultKey: (item: Default) => string,
+  buildDefault: (item: Default, existing?: Current) => Current
+): Current[] {
+  const defaultKeys = new Set(defaults.map(getDefaultKey));
+  const existingDefaults = new Map<string, Current>();
+  const customItems: Current[] = [];
+
+  for (const item of current) {
+    if (!item.isDefault) {
+      customItems.push(item);
+      continue;
+    }
+
+    const key = getCurrentKey(item);
+    if (defaultKeys.has(key)) {
+      existingDefaults.set(key, item);
+    } else if (item.isModifiedDefault) {
+      customItems.push({ ...item, isDefault: false });
+    }
+  }
+
+  const syncedDefaults = defaults.map((item) => {
+    const key = getDefaultKey(item);
+    const existing = existingDefaults.get(key);
+    if (existing?.isModifiedDefault) {
+      return { ...existing, defaultKey: key, isDefault: true };
+    }
+    return buildDefault(item, existing);
+  });
+
+  return [...syncedDefaults, ...customItems];
+}
+
+function reconcileAllTabOrder(data: AppData) {
+  if (!data.allTabOrder) return;
+
+  for (const charId of data.characters.map((char) => char.id)) {
+    const allIds = [
+      ...(data.homework[charId] ?? []).map((item) => item.id),
+      ...(data.purchaseItems[charId] ?? []).map((item) => item.id),
+      ...(data.tradeItems[charId] ?? []).map((item) => item.id),
+      ...((data.scrollItems ?? {})[charId] ?? []).map((item) => item.id),
+    ];
+    const allIdSet = new Set(allIds);
+    const nextOrder = (data.allTabOrder[charId] ?? []).filter((id) => allIdSet.has(id));
+
+    for (const id of allIds) {
+      if (nextOrder.includes(id)) continue;
+      const followingExistingId = allIds.slice(allIds.indexOf(id) + 1).find((nextId) => nextOrder.includes(nextId));
+      if (followingExistingId) {
+        nextOrder.splice(nextOrder.indexOf(followingExistingId), 0, id);
+      } else {
+        nextOrder.push(id);
+      }
+    }
+
+    data.allTabOrder[charId] = nextOrder;
+  }
 }
 
 function migrateIsDefault(data: AppData) {
@@ -250,6 +323,7 @@ export function createHomeworkForChar(charId: string, defaultCards?: DefaultCard
     completedCount: 0,
     isFavorite: false,
     isDefault: true,
+    defaultKey: hw.title,
     scope: toScope(hw.scope),
   }));
 }
@@ -264,6 +338,7 @@ export function createPurchaseForChar(charId: string, defaultCards?: DefaultCard
     completed: false,
     isFavorite: false,
     isDefault: true,
+    defaultKey: item.itemName,
     scope: toScope(item.scope),
   }));
 }
@@ -280,6 +355,7 @@ export function createTradeForChar(charId: string, defaultCards?: DefaultCardsDa
       completed: false,
       isFavorite: false,
       isDefault: true,
+      defaultKey: item.itemName,
       scope: toScope(item.scope),
       ...(parsed ?? {}),
     };
@@ -296,6 +372,7 @@ export function createScrollForChar(charId: string, defaultCards?: DefaultCardsD
     completedCount: 0,
     isFavorite: false,
     isDefault: true,
+    defaultKey: item.title,
     region: item.region,
     materials: item.materials === "-" ? ["-"] : item.materials.split(",").map((s) => s.trim()),
     reward: item.reward,
