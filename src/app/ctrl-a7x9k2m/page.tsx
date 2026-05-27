@@ -248,7 +248,7 @@ export default function AdminPage() {
       const key = adminKey(type);
       const arr = [...(prev[key] as any[])];
       if (index === null) {
-        arr.push(data);
+        arr.unshift(data);
       } else {
         arr[index] = data;
       }

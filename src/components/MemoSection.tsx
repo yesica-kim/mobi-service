@@ -30,10 +30,25 @@ export function MemoSection({ memo, onSave }: Props) {
   const [focusedLine, setFocusedLine] = useState<number>(0);
   const [allSelected, setAllSelected] = useState(false);
   const lineRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setText(memo);
   }, [memo]);
+
+  useEffect(() => {
+    if (text === memo) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      onSave(text);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    }, 500);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [text, memo, onSave]);
 
   const hasMemo = memo.trim().length > 0;
   const lines = text ? text.split("\n") : [""];
@@ -155,6 +170,7 @@ export function MemoSection({ memo, onSave }: Props) {
   };
 
   const handleSave = () => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     onSave(text);
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -162,6 +178,7 @@ export function MemoSection({ memo, onSave }: Props) {
 
   const handleClose = () => {
     if (text !== memo) {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
       onSave(text);
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
