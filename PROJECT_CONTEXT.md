@@ -9,6 +9,7 @@
 - **Production**: https://mobi-service.vercel.app
 - **Dev Preview**: https://mobi-service-git-dev-yesica-kim-s-projects.vercel.app
 - **현재 버전**: v1.2.1
+- **후속 작업 버전**: v1.3.0 후보
 - **현재 로컬 경로**: `/Users/yesica-mini/Documents/Codex/mobimobi`
 - **이전 폴더 백업 위치**: `/Users/yesica-mini/Documents/Codex/backup/mobi-service-backup-2026-05-26`
 
@@ -82,8 +83,16 @@
 - `docs/현재_기획서.md`, `docs/현재_기능정의서.md`, `docs/작업현황.md`, `docs/변경로그.md` 업데이트 완료
 - `docs/versions/v1.2.1/` 스냅샷 업데이트 완료
 - dev와 production 업데이트 노트 레이어에 v1.2.1 내용 추가 완료
-- 최신 dev 커밋: `0e46f12 chore: refresh dev deployment`
-- 이 이후 작업은 다음 버전(v1.3.0 예정)으로 진행
+- 최신 dev 커밋: `ff51875 fix: enable admin card sorting`
+- v1.2.1 이후 작업은 다음 버전(v1.3.0 후보)으로 진행
+
+### v1.3.0 후보 후속 보정
+- 캐릭터별 PC 숙제 카드 컨트롤을 한 줄 흐름으로 복원하고 세로 가운데 정렬을 보정.
+- 숙제 설정 버튼 스타일, 백업/복원 아이콘, 저장한 리스트 아이콘, 진행도 영역 버튼 배치를 조정.
+- 주요 모달에 `Esc` 닫기 공통 훅(`src/hooks/useEscapeClose.ts`) 적용.
+- 설정 모달의 관리자 버튼을 새 창으로 열도록 변경.
+- 사용자/관리자 카드 수정 아이콘 형태를 통일하고 관리자 카드 Row의 수정/삭제 아이콘을 기본 노출.
+- 관리자 카드 목록에 실제 드래그 정렬을 연결하고 일간/주간, 범위, 지역, 스크롤 타입, 보상/NPC/재료 메타 표시를 사용자 화면과 유사한 배지/태그 스타일로 보정.
 
 ## savedItemStates 시스템
 캐릭터별 즐겨찾기/체크 상태를 영구 저장. 프리셋 전환/카드 삭제 시에도 보존.
