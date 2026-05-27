@@ -24,6 +24,7 @@ interface Props {
   onAdd: () => void;
   onEdit: (char: Character) => void;
   onReorder?: (oldIndex: number, newIndex: number) => void;
+  showActiveState?: boolean;
 }
 
 function truncateNickname(name: string): string {
@@ -84,17 +85,15 @@ function SortableCharTab({
       >
         <div className="text-[11px] opacity-70">{char.subClass}</div>
         <div className="font-bold">{truncateNickname(char.name)}</div>
-        {active && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center hover:bg-slate-600 transition-colors"
-            title="캐릭터 수정"
-          >
-            <svg className="w-2.5 h-2.5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          </button>
-        )}
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onEdit(); }}
+        className="absolute top-6 -right-1 w-5 h-5 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center hover:bg-slate-600 transition-colors"
+        title="캐릭터 수정"
+      >
+        <svg className="w-2.5 h-2.5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
       </button>
     </div>
   );
@@ -107,6 +106,7 @@ export function CharacterTabs({
   onAdd,
   onEdit,
   onReorder,
+  showActiveState = true,
 }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -131,7 +131,7 @@ export function CharacterTabs({
             <SortableCharTab
               key={c.id}
               char={c}
-              active={c.id === selectedId}
+              active={showActiveState && c.id === selectedId}
               onSelect={() => onSelect(c.id)}
               onEdit={() => onEdit(c)}
             />

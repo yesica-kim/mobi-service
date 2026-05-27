@@ -482,7 +482,7 @@ export default function Home() {
           </div>
         )}
 
-        {viewMode === "character" && (
+        {state.serverChars.length > 0 && (
           <CharacterTabs
             characters={state.serverChars}
             selectedId={state.selectedCharId}
@@ -490,6 +490,7 @@ export default function Home() {
             onAdd={() => setShowCreateModal(true)}
             onEdit={(c) => setEditingChar(c)}
             onReorder={state.reorderCharacters}
+            showActiveState={viewMode === "character"}
           />
         )}
 
