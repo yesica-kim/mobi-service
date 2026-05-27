@@ -7,6 +7,7 @@ import { SortableList } from "@/components/SortableList";
 import { AddCardModal, type EditCard } from "@/components/AddCardModal";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { AlertTriangle, RotateCcw, Trash2, Upload } from "lucide-react";
 import {
   isAdminFirebaseUser,
   getPublishedCards,
@@ -41,6 +42,7 @@ type AdminCategory = "homework" | "purchase" | "trade" | "scroll";
 type AdminTab = "all" | AdminCategory;
 type AdminBadge = { label: string; className: string; plain?: boolean };
 type AdminRow = { id: string; tab: AdminCategory; index: number; item: any };
+type ConfirmIconType = "reset" | "publish" | "delete" | "rollback" | "warning";
 
 const ADMIN_PERIOD_BADGES: Record<PeriodType, AdminBadge> = {
   daily: { label: "일간", className: "bg-orange-600/20 text-orange-400" },
@@ -70,6 +72,14 @@ const ADMIN_SCROLL_TYPE_BADGES: Record<ScrollType, AdminBadge> = {
   "토벌": { label: "토벌", className: "bg-red-600/20 text-red-400" },
 };
 
+function getAdminActorEmail(user: {
+  email?: string | null;
+  providerData?: { email?: string | null }[];
+} | null | undefined): string {
+  const email = user?.email ?? user?.providerData?.find((provider) => provider.email)?.email;
+  return email?.trim().toLowerCase() || "알 수 없음";
+}
+
 function normalizeAdminScope(scope?: string): "character" | "server" {
   return scope === "on" || scope === "server" ? "server" : "character";
 }
@@ -94,6 +104,11 @@ function toMaterialList(materials: string | string[] | undefined): string[] {
 
 function toMaterialString(materials: string[] | undefined): string {
   return materials && materials.length > 0 ? materials.join(", ") : "-";
+}
+
+function formatAdminDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}년 ${String(d.getMonth() + 1).padStart(2, "0")}월 ${String(d.getDate()).padStart(2, "0")}일 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
 }
 
 // ── 코드 하드코딩 → DefaultCardsData 변환 ──
@@ -177,10 +192,7 @@ export default function AdminPage() {
     return !deepEqual(publishedData, editData);
   }, [publishedData, editData]);
 
-  const actorEmail = useMemo(
-    () => user?.email ?? user?.providerData?.find((provider) => provider.email)?.email ?? "알 수 없음",
-    [user]
-  );
+  const actorEmail = useMemo(() => getAdminActorEmail(user), [user]);
 
   // ── 액션 ──
   const showStatus = (msg: string, duration = 3000) => {
@@ -215,7 +227,7 @@ export default function AdminPage() {
     setSaving(true);
     try {
       const summary = generateChangeSummary(publishedData, editData);
-      await publishDraft(editData, summary, actorEmail);
+      await publishDraft(editData, summary, actorEmail, user?.uid);
       setPublishedData(structuredClone(editData));
       setDraftSaved(false);
       setShowPublishConfirm(false);
@@ -225,7 +237,7 @@ export default function AdminPage() {
       console.error(e);
     }
     setSaving(false);
-  }, [publishedData, editData, actorEmail]);
+  }, [publishedData, editData, actorEmail, user?.uid]);
 
   const handleShowHistory = useCallback(async () => {
     setShowHistory(true);
@@ -237,7 +249,7 @@ export default function AdminPage() {
 
   const handleRollback = useCallback(async (entry: HistoryEntry) => {
     try {
-      await rollbackToHistory(entry);
+      await rollbackToHistory(entry, actorEmail, user?.uid);
       setPublishedData(structuredClone(entry.data));
       setEditData(structuredClone(entry.data));
       setDraftSaved(false);
@@ -248,7 +260,7 @@ export default function AdminPage() {
       showStatus("롤백 실패");
       console.error(e);
     }
-  }, []);
+  }, [actorEmail, user?.uid]);
 
   // ── 카드 CRUD ──
   const deleteItem = useCallback(
@@ -669,9 +681,7 @@ export default function AdminPage() {
         <HistoryModal
           history={history}
           loading={historyLoading}
-          rollbackTarget={rollbackTarget}
           onSelectRollback={setRollbackTarget}
-          onConfirmRollback={handleRollback}
           onClose={() => {
             setShowHistory(false);
             setRollbackTarget(null);
@@ -684,6 +694,7 @@ export default function AdminPage() {
           title="수정사항을 초기화할까요?"
           description="현재 편집 중인 내용과 Dev 저장본을 버리고 현재 실섭 데이터로 되돌립니다."
           confirmLabel="초기화"
+          icon="reset"
           confirmClassName="bg-red-600 text-white hover:bg-red-500"
           onCancel={() => setShowResetConfirm(false)}
           onConfirm={handleReset}
@@ -695,6 +706,7 @@ export default function AdminPage() {
           title="실섭에 업로드할까요?"
           description="현재 Dev 저장본을 실섭 기본 카드로 반영합니다. 모든 사용자에게 적용될 수 있습니다."
           confirmLabel={saving ? "업로드 중..." : "업로드"}
+          icon="publish"
           confirmClassName="bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40"
           onCancel={() => setShowPublishConfirm(false)}
           onConfirm={handlePublish}
@@ -707,9 +719,22 @@ export default function AdminPage() {
           title="카드를 삭제할까요?"
           description="삭제한 카드는 Dev 저장 후 실섭 업로드 전까지 편집 데이터에만 반영됩니다."
           confirmLabel="삭제"
+          icon="delete"
           confirmClassName="bg-red-600 text-white hover:bg-red-500"
           onCancel={() => setDeleteTarget(null)}
           onConfirm={() => deleteItem(deleteTarget.tab, deleteTarget.index)}
+        />
+      )}
+
+      {rollbackTarget && (
+        <ConfirmModal
+          title="롤백하시겠습니까?"
+          description={`${formatAdminDate(rollbackTarget.createdAt)} 시점으로 되돌립니다.`}
+          confirmLabel="롤백"
+          icon="rollback"
+          confirmClassName="bg-red-600 text-white hover:bg-red-500"
+          onCancel={() => setRollbackTarget(null)}
+          onConfirm={() => handleRollback(rollbackTarget)}
         />
       )}
     </div>
@@ -721,6 +746,7 @@ function ConfirmModal({
   title,
   description,
   confirmLabel,
+  icon = "warning",
   confirmClassName,
   onCancel,
   onConfirm,
@@ -729,6 +755,7 @@ function ConfirmModal({
   title: string;
   description: string;
   confirmLabel: string;
+  icon?: ConfirmIconType;
   confirmClassName: string;
   onCancel: () => void;
   onConfirm: () => void;
@@ -737,16 +764,20 @@ function ConfirmModal({
   useEscapeClose(true, onCancel);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative z-10 w-full" onClick={(e) => e.stopPropagation()}>
-        <div className="mx-auto w-80 rounded-2xl bg-slate-800 p-6">
-          <p className="mb-2 text-center text-sm font-semibold text-white">{title}</p>
-          <p className="mb-6 text-center text-xs leading-relaxed text-slate-400">{description}</p>
-          <div className="flex gap-3">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm" onClick={onCancel}>
+      <div
+        className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex justify-center">
+          <ConfirmModalIcon icon={icon} />
+        </div>
+        <p className="mb-2 text-center text-base font-semibold text-white">{title}</p>
+        <p className="mb-5 break-keep text-center text-sm leading-relaxed text-slate-400">{description}</p>
+        <div className="flex gap-2">
             <button
               onClick={onCancel}
-              className="h-11 flex-1 rounded-xl bg-slate-700 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-600"
+              className="h-11 flex-1 rounded-xl bg-slate-800 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
             >
               취소
             </button>
@@ -757,9 +788,20 @@ function ConfirmModal({
             >
               {confirmLabel}
             </button>
-          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ConfirmModalIcon({ icon }: { icon: ConfirmIconType }) {
+  const iconClassName = "h-6 w-6";
+  const Icon = icon === "delete" ? Trash2 : icon === "publish" ? Upload : icon === "reset" || icon === "rollback" ? RotateCcw : AlertTriangle;
+  const tone = icon === "publish" ? "bg-blue-500/10 text-blue-400" : icon === "warning" ? "bg-amber-500/10 text-amber-400" : "bg-red-500/10 text-red-400";
+
+  return (
+    <div className={`flex h-12 w-12 items-center justify-center rounded-full ${tone}`}>
+      <Icon className={iconClassName} />
     </div>
   );
 }
@@ -867,24 +909,15 @@ function CardRow({
 function HistoryModal({
   history,
   loading,
-  rollbackTarget,
   onSelectRollback,
-  onConfirmRollback,
   onClose,
 }: {
   history: HistoryEntry[];
   loading: boolean;
-  rollbackTarget: HistoryEntry | null;
   onSelectRollback: (entry: HistoryEntry | null) => void;
-  onConfirmRollback: (entry: HistoryEntry) => void;
   onClose: () => void;
 }) {
   useEscapeClose(true, onClose);
-
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return `${d.getFullYear()}년 ${String(d.getMonth() + 1).padStart(2, "0")}월 ${String(d.getDate()).padStart(2, "0")}일 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
@@ -910,9 +943,9 @@ function HistoryModal({
                   className="w-full text-left bg-slate-800/50 rounded-xl px-4 py-3 border border-slate-700/50 hover:border-blue-500/50 transition-colors"
                 >
                   <p className="text-sm font-medium text-white">
-                    {formatDate(entry.createdAt)}
+                    {formatAdminDate(entry.createdAt)}
                   </p>
-                  <p className="mt-1 text-[11px] text-blue-400">
+                  <p className="mt-1 break-all text-xs font-medium text-blue-300">
                     {entry.actorEmail ?? "알 수 없음"}
                   </p>
                   <div className="mt-1.5 space-y-0.5">
@@ -935,32 +968,6 @@ function HistoryModal({
             닫기
           </button>
         </div>
-
-        {/* 롤백 확인 모달 */}
-        {rollbackTarget && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl">
-            <div className="bg-slate-800 rounded-xl p-5 mx-6 border border-slate-600">
-              <p className="text-sm text-white font-medium mb-1">롤백하시겠습니까?</p>
-              <p className="text-[12px] text-slate-400 mb-4">
-                {formatDate(rollbackTarget.createdAt)} 시점으로 되돌립니다.
-              </p>
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => onSelectRollback(null)}
-                  className="px-4 py-2 text-sm rounded-lg text-slate-400 hover:bg-slate-700 transition-colors"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={() => onConfirmRollback(rollbackTarget)}
-                  className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-500 font-medium transition-colors"
-                >
-                  롤백
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

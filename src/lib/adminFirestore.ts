@@ -177,9 +177,11 @@ export async function saveDraft(data: DefaultCardsData): Promise<void> {
 export async function publishDraft(
   newData: DefaultCardsData,
   changeSummary: string[],
-  actorEmail?: string | null
+  actorEmail?: string | null,
+  actorUid?: string | null
 ): Promise<void> {
   const sanitized = sanitizeDefaultCardsData(newData);
+  const normalizedActorEmail = normalizeActorEmail(actorEmail);
   // published에 저장
   await setDoc(doc(db, COLLECTION, PUBLISHED_DOC), {
     ...sanitized,
@@ -193,7 +195,10 @@ export async function publishDraft(
     data: sanitized,
     summary: changeSummary,
     createdAt: historyId,
-    actorEmail: actorEmail || "알 수 없음",
+    actorEmail: normalizedActorEmail,
+    updatedBy: normalizedActorEmail,
+    createdByEmail: normalizedActorEmail,
+    ...(actorUid ? { actorUid } : {}),
   });
 }
 
@@ -224,7 +229,7 @@ export async function getHistory(): Promise<HistoryEntry[]> {
         data: data.data as DefaultCardsData,
         summary: data.summary as string[],
         createdAt,
-        actorEmail: data.actorEmail as string | undefined,
+        actorEmail: readHistoryActorEmail(data),
       });
     }
     return entries;
@@ -235,13 +240,38 @@ export async function getHistory(): Promise<HistoryEntry[]> {
 }
 
 /** 히스토리에서 롤백: 해당 데이터를 published로 복원 */
-export async function rollbackToHistory(entry: HistoryEntry): Promise<void> {
+export async function rollbackToHistory(
+  entry: HistoryEntry,
+  actorEmail?: string | null,
+  actorUid?: string | null
+): Promise<void> {
+  const normalizedActorEmail = normalizeActorEmail(actorEmail);
+  const rollbackAt = new Date().toISOString();
   await setDoc(doc(db, COLLECTION, PUBLISHED_DOC), {
     ...entry.data,
-    updatedAt: new Date().toISOString(),
+    updatedAt: rollbackAt,
   });
   // draft도 삭제
   await deleteDoc(doc(db, COLLECTION, DRAFT_DOC));
+  await setDoc(doc(db, HISTORY_COLLECTION, rollbackAt), {
+    data: sanitizeDefaultCardsData(entry.data),
+    summary: [`히스토리 롤백: ${entry.createdAt} 시점으로 되돌림`],
+    createdAt: rollbackAt,
+    actorEmail: normalizedActorEmail,
+    updatedBy: normalizedActorEmail,
+    createdByEmail: normalizedActorEmail,
+    ...(actorUid ? { actorUid } : {}),
+  });
+}
+
+function normalizeActorEmail(email?: string | null): string {
+  return email?.trim().toLowerCase() || "알 수 없음";
+}
+
+function readHistoryActorEmail(data: Record<string, unknown>): string {
+  const candidates = [data.actorEmail, data.updatedBy, data.createdByEmail, data.email];
+  const email = candidates.find((value) => typeof value === "string" && value.trim());
+  return typeof email === "string" ? email : "알 수 없음";
 }
 
 // ── 변경사항 비교 (자동 요약 생성) ──
