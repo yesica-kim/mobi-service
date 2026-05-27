@@ -38,6 +38,7 @@ export interface DefaultHomework {
   title: string;
   reward: string;
   period: PeriodType;
+  totalCount?: number;
   scope?: string;
 }
 
@@ -61,6 +62,7 @@ export interface DefaultScrollItem {
   title: string;
   scrollType: ScrollType;
   period: PeriodType;
+  totalCount?: number;
   region: RegionName;
   materials: string;
   reward: string;
@@ -79,6 +81,7 @@ export interface HistoryEntry {
   data: DefaultCardsData;
   summary: string[];
   createdAt: string;
+  actorEmail?: string;
 }
 
 // ── Firestore 경로 ──
@@ -93,6 +96,7 @@ function sanitizeDefaultCardsData(data: DefaultCardsData): DefaultCardsData {
       title: item.title,
       reward: item.reward,
       period: item.period,
+      ...(item.totalCount ? { totalCount: item.totalCount } : {}),
       ...(item.scope ? { scope: item.scope } : {}),
     })),
     purchaseItems: data.purchaseItems.map((item) => ({
@@ -113,6 +117,7 @@ function sanitizeDefaultCardsData(data: DefaultCardsData): DefaultCardsData {
       title: item.title,
       scrollType: item.scrollType,
       period: item.period,
+      ...(item.totalCount ? { totalCount: item.totalCount } : {}),
       region: item.region,
       materials: item.materials,
       reward: item.reward,
@@ -171,7 +176,8 @@ export async function saveDraft(data: DefaultCardsData): Promise<void> {
 /** 실섭 업로드: draft → published + 히스토리 생성 */
 export async function publishDraft(
   newData: DefaultCardsData,
-  changeSummary: string[]
+  changeSummary: string[],
+  actorEmail?: string | null
 ): Promise<void> {
   const sanitized = sanitizeDefaultCardsData(newData);
   // published에 저장
@@ -187,6 +193,7 @@ export async function publishDraft(
     data: sanitized,
     summary: changeSummary,
     createdAt: historyId,
+    actorEmail: actorEmail || "알 수 없음",
   });
 }
 
@@ -202,13 +209,13 @@ export async function getHistory(): Promise<HistoryEntry[]> {
     const snap = await getDocs(q);
     const entries: HistoryEntry[] = [];
     const now = Date.now();
-    const FOURTEEN_DAYS = 14 * 24 * 60 * 60 * 1000;
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
     for (const d of snap.docs) {
       const data = d.data();
       const createdAt = data.createdAt as string;
-      // 14일 지난 항목 자동 삭제
-      if (now - new Date(createdAt).getTime() > FOURTEEN_DAYS) {
+      // 30일 지난 항목 자동 삭제
+      if (now - new Date(createdAt).getTime() > THIRTY_DAYS) {
         await deleteDoc(doc(db, HISTORY_COLLECTION, d.id));
         continue;
       }
@@ -217,6 +224,7 @@ export async function getHistory(): Promise<HistoryEntry[]> {
         data: data.data as DefaultCardsData,
         summary: data.summary as string[],
         createdAt,
+        actorEmail: data.actorEmail as string | undefined,
       });
     }
     return entries;

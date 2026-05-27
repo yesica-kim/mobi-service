@@ -99,7 +99,7 @@ export interface ScrollItem {
 
 // ── 기본 숙제 템플릿 ──
 // scope: "on" = 서버 범위 (같은 서버 캐릭터 전체 체크), "off" = 캐릭터 범위 (기본값)
-export const DEFAULT_HOMEWORK: { title: string; reward: string; period: PeriodType; scope?: string }[] = [
+export const DEFAULT_HOMEWORK: { title: string; reward: string; period: PeriodType; totalCount?: number; scope?: string }[] = [
   // 일일
   { title: "우편함 확인", reward: "보상 없음", period: "daily", scope: "off" },
   { title: "요일 던전", reward: "성수 1개, 하트 토큰 1개, 아르바이트 120", period: "daily", scope: "off" },
@@ -143,7 +143,7 @@ export const DEFAULT_TRADE_ITEMS: { itemName: string; region: RegionName; npcNam
 ];
 
 // ── 기본 임무게시판 스크롤 템플릿 ──
-export const DEFAULT_SCROLL_ITEMS: { title: string; scrollType: ScrollType; period: PeriodType; region: RegionName; materials: string; reward: string }[] = [
+export const DEFAULT_SCROLL_ITEMS: { title: string; scrollType: ScrollType; period: PeriodType; totalCount?: number; region: RegionName; materials: string; reward: string }[] = [
   // 이멘마하
   { title: "토벌 스크롤 : 센마이 평원", scrollType: "토벌", period: "weekly", region: "이멘마하", materials: "-", reward: "-" },
   { title: "요리 스크롤 : 마요네즈 고기볶음", scrollType: "요리", period: "weekly", region: "이멘마하", materials: "-", reward: "-" },

@@ -112,6 +112,8 @@ export default function AdminPage() {
   const [statusMsg, setStatusMsg] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ tab: AdminTab; index: number } | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [rollbackTarget, setRollbackTarget] = useState<HistoryEntry | null>(null);
@@ -160,6 +162,11 @@ export default function AdminPage() {
     return !deepEqual(publishedData, editData);
   }, [publishedData, editData]);
 
+  const actorEmail = useMemo(
+    () => user?.email ?? user?.providerData?.find((provider) => provider.email)?.email ?? "알 수 없음",
+    [user]
+  );
+
   // ── 액션 ──
   const showStatus = (msg: string, duration = 3000) => {
     setStatusMsg(msg);
@@ -190,20 +197,20 @@ export default function AdminPage() {
 
   const handlePublish = useCallback(async () => {
     if (!publishedData) return;
-    if (!confirm("실섭에 업로드하시겠습니까?\n모든 유저에게 즉시 반영됩니다.")) return;
     setSaving(true);
     try {
       const summary = generateChangeSummary(publishedData, editData);
-      await publishDraft(editData, summary);
+      await publishDraft(editData, summary, actorEmail);
       setPublishedData(structuredClone(editData));
       setDraftSaved(false);
+      setShowPublishConfirm(false);
       showStatus("실섭 업로드 완료!");
     } catch (e) {
       showStatus(`실섭 업로드 실패: ${getAdminFirestoreErrorMessage(e)}`, 12000);
       console.error(e);
     }
     setSaving(false);
-  }, [publishedData, editData]);
+  }, [publishedData, editData, actorEmail]);
 
   const handleShowHistory = useCallback(async () => {
     setShowHistory(true);
@@ -231,13 +238,13 @@ export default function AdminPage() {
   // ── 카드 CRUD ──
   const deleteItem = useCallback(
     (tab: AdminTab, index: number) => {
-      if (!confirm("삭제하시겠습니까?")) return;
       setEditData((prev) => {
         const key = adminKey(tab);
         const arr = [...(prev[key] as any[])];
         arr.splice(index, 1);
         return { ...prev, [key]: arr };
       });
+      setDeleteTarget(null);
     },
     []
   );
@@ -313,12 +320,12 @@ export default function AdminPage() {
   ];
   const createEmptyData = (tab: AdminTab) =>
     tab === "homework"
-      ? { title: "", reward: "-", period: "daily" as PeriodType, scope: "off" }
+      ? { title: "", reward: "-", period: "daily" as PeriodType, totalCount: 1, scope: "off" }
       : tab === "purchase"
       ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "daily" as PeriodType, scope: "off" }
       : tab === "trade"
       ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "weekly" as PeriodType, scope: "off" }
-      : { title: "", scrollType: "제작" as ScrollType, period: "weekly" as PeriodType, region: "던바튼" as RegionName, materials: "-", reward: "-" };
+      : { title: "", scrollType: "제작" as ScrollType, period: "weekly" as PeriodType, totalCount: 3, region: "던바튼" as RegionName, materials: "-", reward: "-" };
   const activeItems = (editData[adminKey(activeTab)] as any[]).map((_, index) => ({ id: `${activeTab}-${index}` }));
 
   return (
@@ -385,7 +392,7 @@ export default function AdminPage() {
                   onEdit={() =>
                     setEditModal({ type: "homework", index: i, data: { ...item } })
                   }
-                  onDelete={() => deleteItem("homework", i)}
+                  onDelete={() => setDeleteTarget({ tab: "homework", index: i })}
                 />
               ))}
             {activeTab === "purchase" &&
@@ -403,7 +410,7 @@ export default function AdminPage() {
                   onEdit={() =>
                     setEditModal({ type: "purchase", index: i, data: { ...item } })
                   }
-                  onDelete={() => deleteItem("purchase", i)}
+                  onDelete={() => setDeleteTarget({ tab: "purchase", index: i })}
                 />
               ))}
             {activeTab === "trade" &&
@@ -421,7 +428,7 @@ export default function AdminPage() {
                   onEdit={() =>
                     setEditModal({ type: "trade", index: i, data: { ...item } })
                   }
-                  onDelete={() => deleteItem("trade", i)}
+                  onDelete={() => setDeleteTarget({ tab: "trade", index: i })}
                 />
               ))}
             {activeTab === "scroll" &&
@@ -442,7 +449,7 @@ export default function AdminPage() {
                   onEdit={() =>
                     setEditModal({ type: "scroll", index: i, data: { ...item } })
                   }
-                  onDelete={() => deleteItem("scroll", i)}
+                  onDelete={() => setDeleteTarget({ tab: "scroll", index: i })}
                 />
               ))}
           </div>
@@ -479,7 +486,7 @@ export default function AdminPage() {
               {saving ? "저장 중..." : "Dev 저장"}
             </button>
             <button
-              onClick={handlePublish}
+              onClick={() => setShowPublishConfirm(true)}
               disabled={!draftSaved || !hasChanges || saving}
               className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                 draftSaved && hasChanges && !saving
@@ -536,6 +543,29 @@ export default function AdminPage() {
           onConfirm={handleReset}
         />
       )}
+
+      {showPublishConfirm && (
+        <ConfirmModal
+          title="실섭에 업로드할까요?"
+          description="현재 Dev 저장본을 실섭 기본 카드로 반영합니다. 모든 사용자에게 적용될 수 있습니다."
+          confirmLabel={saving ? "업로드 중..." : "업로드"}
+          confirmClassName="bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40"
+          onCancel={() => setShowPublishConfirm(false)}
+          onConfirm={handlePublish}
+          disabled={saving}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmModal
+          title="카드를 삭제할까요?"
+          description="삭제한 카드는 Dev 저장 후 실섭 업로드 전까지 편집 데이터에만 반영됩니다."
+          confirmLabel="삭제"
+          confirmClassName="bg-red-600 text-white hover:bg-red-500"
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => deleteItem(deleteTarget.tab, deleteTarget.index)}
+        />
+      )}
     </div>
   );
 }
@@ -548,6 +578,7 @@ function ConfirmModal({
   confirmClassName,
   onCancel,
   onConfirm,
+  disabled = false,
 }: {
   title: string;
   description: string;
@@ -555,6 +586,7 @@ function ConfirmModal({
   confirmClassName: string;
   onCancel: () => void;
   onConfirm: () => void;
+  disabled?: boolean;
 }) {
   useEscapeClose(true, onCancel);
 
@@ -574,7 +606,8 @@ function ConfirmModal({
             </button>
             <button
               onClick={onConfirm}
-              className={`h-11 flex-1 rounded-xl text-sm font-medium transition-colors ${confirmClassName}`}
+              disabled={disabled}
+              className={`h-11 flex-1 rounded-xl text-sm font-medium transition-colors disabled:cursor-not-allowed ${confirmClassName}`}
             >
               {confirmLabel}
             </button>
@@ -704,22 +737,20 @@ function EditModal({
   useEscapeClose(true, onClose);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div
-        className="bg-slate-900 rounded-2xl border border-slate-700/50 w-full max-w-lg max-h-[80vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="px-5 py-4 border-b border-slate-800">
-          <h3 className="text-base font-bold text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="mx-auto max-h-[80vh] w-80 overflow-y-auto rounded-2xl bg-slate-800 p-6">
+          <h3 className="mb-4 text-center text-sm font-semibold text-white">
             {isNew ? "카드 추가" : "카드 수정"}
           </h3>
-        </div>
-        <div className="px-5 py-4 space-y-3">
+          <div className="space-y-3 mb-4">
           {type === "homework" && (
             <>
               <Field label="제목" value={data.title} onChange={(v) => update("title", v)} />
               <Field label="보상" value={data.reward} onChange={(v) => update("reward", v)} />
               <SelectField label="주기" value={data.period} options={[["daily", "일일"], ["weekly", "주간"]]} onChange={(v) => update("period", v)} />
+              <CountField label="체크박스 수" value={data.totalCount || 1} onChange={(v) => update("totalCount", v)} />
               <SelectField label="범위" value={data.scope ?? "off"} options={[["off", "캐릭터"], ["on", "서버"]]} onChange={(v) => update("scope", v)} />
             </>
           )}
@@ -747,26 +778,28 @@ function EditModal({
               <SelectField label="스크롤 타입" value={data.scrollType} options={SCROLL_TYPES.map((s) => [s, s])} onChange={(v) => update("scrollType", v)} />
               <SelectField label="지역" value={data.region} options={REGIONS.map((r) => [r, r])} onChange={(v) => update("region", v)} />
               <SelectField label="주기" value={data.period} options={[["daily", "일일"], ["weekly", "주간"]]} onChange={(v) => update("period", v)} />
+              <CountField label="체크박스 수" value={data.totalCount || 3} onChange={(v) => update("totalCount", v)} />
               <Field label="재료" value={data.materials} onChange={(v) => update("materials", v)} />
               <Field label="보상" value={data.reward} onChange={(v) => update("reward", v)} />
             </>
           )}
-        </div>
-        <div className="px-5 py-4 border-t border-slate-800 flex gap-2 justify-end">
+          </div>
+        <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="flex-1 rounded-xl bg-slate-700 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-600"
           >
             취소
           </button>
           <button
             onClick={onSave}
-            className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-500 font-medium transition-colors"
+            className="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
           >
             {isNew ? "추가" : "저장"}
           </button>
         </div>
       </div>
+    </div>
     </div>
   );
 }
@@ -802,7 +835,7 @@ function HistoryModal({
       >
         <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
           <h3 className="text-base font-bold text-white">히스토리</h3>
-          <span className="text-[11px] text-slate-500">14일 이내 보관</span>
+          <span className="text-[11px] text-slate-500">30일 이내 보관</span>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-3">
           {loading ? (
@@ -819,6 +852,9 @@ function HistoryModal({
                 >
                   <p className="text-sm font-medium text-white">
                     {formatDate(entry.createdAt)}
+                  </p>
+                  <p className="mt-1 text-[11px] text-blue-400">
+                    {entry.actorEmail ?? "알 수 없음"}
                   </p>
                   <div className="mt-1.5 space-y-0.5">
                     {entry.summary.map((s, i) => (
@@ -890,7 +926,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-slate-800 text-white text-sm rounded-lg px-3 py-2 border border-slate-700 focus:border-blue-500 outline-none"
+        className="w-full rounded-xl bg-slate-700 px-4 py-2.5 text-sm text-white outline-none placeholder-slate-500 focus:ring-2 focus:ring-blue-500"
       />
     </div>
   );
@@ -913,7 +949,7 @@ function SelectField({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-slate-800 text-white text-sm rounded-lg px-3 py-2 border border-slate-700 focus:border-blue-500 outline-none"
+        className="w-full rounded-xl bg-slate-700 px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-blue-500"
       >
         {options.map(([val, label]) => (
           <option key={val} value={val}>
@@ -921,6 +957,39 @@ function SelectField({
           </option>
         ))}
       </select>
+    </div>
+  );
+}
+
+function CountField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-slate-500">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(1, value - 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-700 text-lg font-bold text-slate-300 hover:bg-slate-600"
+        >
+          -
+        </button>
+        <span className="w-6 text-center text-sm font-semibold text-white">{value}</span>
+        <button
+          type="button"
+          onClick={() => onChange(Math.min(20, value + 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-700 text-lg font-bold text-slate-300 hover:bg-slate-600"
+        >
+          +
+        </button>
+      </div>
     </div>
   );
 }

@@ -107,7 +107,7 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
       ...current,
       ...newDefaults.map((hw, i) => {
         const saved = charStates.homework[hw.title];
-        const totalCount = parseTotalCount(hw.title);
+        const totalCount = hw.totalCount || parseTotalCount(hw.title);
         return {
           id: `${charId}_hw_added_${current.length}_${i}`,
           title: hw.title,
@@ -194,7 +194,7 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
           title: item.title,
           scrollType: item.scrollType,
           period: item.period,
-          totalCount: 3,
+          totalCount: item.totalCount || 3,
           completedCount: 0,
           isFavorite: false,
           isDefault: true,
@@ -246,7 +246,7 @@ export function createHomeworkForChar(charId: string, defaultCards?: DefaultCard
     title: hw.title,
     reward: hw.reward,
     period: hw.period,
-    totalCount: parseTotalCount(hw.title),
+    totalCount: hw.totalCount || parseTotalCount(hw.title),
     completedCount: 0,
     isFavorite: false,
     isDefault: true,
@@ -292,7 +292,7 @@ export function createScrollForChar(charId: string, defaultCards?: DefaultCardsD
     title: item.title,
     scrollType: item.scrollType,
     period: item.period,
-    totalCount: 3,
+    totalCount: item.totalCount || 3,
     completedCount: 0,
     isFavorite: false,
     isDefault: true,
