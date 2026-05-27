@@ -831,13 +831,23 @@ export function useAppState(uid?: string | null) {
   const reorderCharacters = useCallback(
     (oldIndex: number, newIndex: number) => {
       persist((prev) => {
-        const list = [...prev.characters];
-        const [moved] = list.splice(oldIndex, 1);
-        list.splice(newIndex, 0, moved);
-        return { ...prev, characters: list };
+        const serverList = prev.characters.filter((char) => char.server === selectedServer);
+        const [moved] = serverList.splice(oldIndex, 1);
+        if (!moved) return prev;
+
+        serverList.splice(newIndex, 0, moved);
+        let serverIndex = 0;
+        const characters = prev.characters.map((char) => {
+          if (char.server !== selectedServer) return char;
+          const next = serverList[serverIndex];
+          serverIndex += 1;
+          return next ?? char;
+        });
+
+        return { ...prev, characters };
       }, { immediate: true });
     },
-    [persist]
+    [persist, selectedServer]
   );
 
   // ── 스크롤(임무게시판) CRUD ──
