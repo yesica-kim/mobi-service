@@ -169,7 +169,7 @@ function LoadingScreen({ message }: { message: string }) {
 export default function Home() {
   const { user, loading: authLoading, signingIn, isGuest, authError, signInWithGoogle, continueAsGuest, signOut, deleteAccount } = useAuth();
   const [isDevHost, setIsDevHost] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("character");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingChar, setEditingChar] = useState<Character | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
@@ -462,21 +462,21 @@ export default function Home() {
             <div className="grid grid-cols-2 rounded-xl bg-slate-800/80 p-1">
               <button
                 type="button"
-                onClick={() => setViewMode("character")}
-                className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${
-                  viewMode === "character" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-300"
-                }`}
-              >
-                캐릭터별로 보기
-              </button>
-              <button
-                type="button"
                 onClick={() => setViewMode("list")}
                 className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${
                   viewMode === "list" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-300"
                 }`}
               >
                 캐릭터 전체 보기
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("character")}
+                className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${
+                  viewMode === "character" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-300"
+                }`}
+              >
+                캐릭터별로 보기
               </button>
             </div>
           </div>
