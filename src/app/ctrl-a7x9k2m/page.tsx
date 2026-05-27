@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { SortableList } from "@/components/SortableList";
+import { AddCardModal, type EditCard } from "@/components/AddCardModal";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -29,15 +30,17 @@ import {
   DEFAULT_PURCHASE_ITEMS,
   DEFAULT_TRADE_ITEMS,
   DEFAULT_SCROLL_ITEMS,
-  REGIONS,
-  SCROLL_TYPES,
+  parseTotalCount,
   type PeriodType,
   type RegionName,
+  type ScopeType,
   type ScrollType,
 } from "@/types";
 
-type AdminTab = "homework" | "purchase" | "trade" | "scroll";
+type AdminCategory = "homework" | "purchase" | "trade" | "scroll";
+type AdminTab = "all" | AdminCategory;
 type AdminBadge = { label: string; className: string; plain?: boolean };
+type AdminRow = { id: string; tab: AdminCategory; index: number; item: any };
 
 const ADMIN_PERIOD_BADGES: Record<PeriodType, AdminBadge> = {
   daily: { label: "일간", className: "bg-orange-600/20 text-orange-400" },
@@ -77,8 +80,20 @@ function splitAdminTags(value: string | string[] | undefined): string[] {
   return list.map((item) => item.trim()).filter((item) => item && item !== "-");
 }
 
-function adminKey(tab: AdminTab): keyof DefaultCardsData {
+function adminKey(tab: AdminCategory): keyof DefaultCardsData {
   return tab === "homework" ? "homework" : tab === "purchase" ? "purchaseItems" : tab === "trade" ? "tradeItems" : "scrollItems";
+}
+
+function toScopeType(scope?: string): ScopeType {
+  return scope === "on" || scope === "server" ? "server" : "character";
+}
+
+function toMaterialList(materials: string | string[] | undefined): string[] {
+  return splitAdminTags(materials);
+}
+
+function toMaterialString(materials: string[] | undefined): string {
+  return materials && materials.length > 0 ? materials.join(", ") : "-";
 }
 
 // ── 코드 하드코딩 → DefaultCardsData 변환 ──
@@ -107,20 +122,20 @@ export default function AdminPage() {
   const [draftSaved, setDraftSaved] = useState(false); // Dev 저장 완료 여부
 
   // UI 상태
-  const [activeTab, setActiveTab] = useState<AdminTab>("homework");
+  const [activeTab, setActiveTab] = useState<AdminTab>("all");
   const [saving, setSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ tab: AdminTab; index: number } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ tab: AdminCategory; index: number } | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [rollbackTarget, setRollbackTarget] = useState<HistoryEntry | null>(null);
 
   // 편집 모달 상태
   const [editModal, setEditModal] = useState<{
-    type: AdminTab;
+    type: AdminCategory;
     index: number | null; // null = 새로 추가
     data: any;
   } | null>(null);
@@ -237,7 +252,7 @@ export default function AdminPage() {
 
   // ── 카드 CRUD ──
   const deleteItem = useCallback(
-    (tab: AdminTab, index: number) => {
+    (tab: AdminCategory, index: number) => {
       setEditData((prev) => {
         const key = adminKey(tab);
         const arr = [...(prev[key] as any[])];
@@ -249,9 +264,7 @@ export default function AdminPage() {
     []
   );
 
-  const saveEditModal = useCallback(() => {
-    if (!editModal) return;
-    const { type, index, data } = editModal;
+  const upsertAdminItem = useCallback((type: AdminCategory, index: number | null, data: any) => {
     setEditData((prev) => {
       const key = adminKey(type);
       const arr = [...(prev[key] as any[])];
@@ -263,9 +276,9 @@ export default function AdminPage() {
       return { ...prev, [key]: arr };
     });
     setEditModal(null);
-  }, [editModal]);
+  }, []);
 
-  const reorderItems = useCallback((tab: AdminTab, oldIndex: number, newIndex: number) => {
+  const reorderItems = useCallback((tab: AdminCategory, oldIndex: number, newIndex: number) => {
     setEditData((prev) => {
       const key = adminKey(tab);
       const arr = [...(prev[key] as any[])];
@@ -275,6 +288,107 @@ export default function AdminPage() {
       return { ...prev, [key]: arr };
     });
   }, []);
+
+  const createEmptyData = (tab: AdminCategory) =>
+    tab === "homework"
+      ? { title: "", reward: "-", period: "daily" as PeriodType, totalCount: 1, scope: "character" as ScopeType }
+      : tab === "purchase"
+      ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "daily" as PeriodType, scope: "character" as ScopeType }
+      : tab === "trade"
+      ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "weekly" as PeriodType, scope: "character" as ScopeType }
+      : { title: "", scrollType: "제작" as ScrollType, period: "weekly" as PeriodType, totalCount: 3, region: "던바튼" as RegionName, materials: "-", reward: "-" };
+
+  const adminRows = useMemo<AdminRow[]>(() => {
+    const rows: AdminRow[] = [];
+    if (activeTab === "all" || activeTab === "homework") {
+      editData.homework.forEach((item, index) => rows.push({ id: `homework-${index}`, tab: "homework", index, item }));
+    }
+    if (activeTab === "all" || activeTab === "purchase") {
+      editData.purchaseItems.forEach((item, index) => rows.push({ id: `purchase-${index}`, tab: "purchase", index, item }));
+    }
+    if (activeTab === "all" || activeTab === "trade") {
+      editData.tradeItems.forEach((item, index) => rows.push({ id: `trade-${index}`, tab: "trade", index, item }));
+    }
+    if (activeTab === "all" || activeTab === "scroll") {
+      editData.scrollItems.forEach((item, index) => rows.push({ id: `scroll-${index}`, tab: "scroll", index, item }));
+    }
+    return rows;
+  }, [activeTab, editData]);
+
+  const activeItems = useMemo(() => adminRows.map((row) => ({ id: row.id })), [adminRows]);
+
+  const reorderRows = useCallback((oldIndex: number, newIndex: number) => {
+    const from = adminRows[oldIndex];
+    const to = adminRows[newIndex];
+    if (!from || !to || from.tab !== to.tab) return;
+    reorderItems(from.tab, from.index, to.index);
+  }, [adminRows, reorderItems]);
+
+  const openAddModal = useCallback(() => {
+    const type: AdminCategory = activeTab === "all" ? "homework" : activeTab;
+    setEditModal({ type, index: null, data: createEmptyData(type) });
+  }, [activeTab]);
+
+  const editCardForModal = useMemo<EditCard | null>(() => {
+    if (!editModal || editModal.index === null) return null;
+    const data = editModal.data;
+    const id = `admin-${editModal.type}-${editModal.index}`;
+    if (editModal.type === "homework") {
+      return {
+        type: "homework",
+        item: {
+          id,
+          title: data.title ?? "",
+          reward: data.reward ?? "-",
+          period: data.period ?? "daily",
+          totalCount: data.totalCount || parseTotalCount(data.title ?? ""),
+          completedCount: 0,
+          isFavorite: false,
+          scope: toScopeType(data.scope),
+          isDefault: true,
+        },
+      };
+    }
+    if (editModal.type === "purchase" || editModal.type === "trade") {
+      return {
+        type: editModal.type,
+        item: {
+          id,
+          itemName: data.itemName ?? "",
+          region: data.region ?? "던바튼",
+          npcName: data.npcName ?? "-",
+          period: data.period ?? (editModal.type === "trade" ? "weekly" : "daily"),
+          completed: false,
+          isFavorite: false,
+          scope: toScopeType(data.scope),
+          isDefault: true,
+        },
+      };
+    }
+    return {
+      type: "scroll",
+      item: {
+        id,
+        title: data.title ?? "",
+        scrollType: data.scrollType ?? "제작",
+        period: data.period ?? "weekly",
+        totalCount: data.totalCount || 3,
+        completedCount: 0,
+        isFavorite: false,
+        scope: "character",
+        region: data.region ?? "던바튼",
+        materials: toMaterialList(data.materials),
+        reward: data.reward ?? "-",
+        isDefault: true,
+      },
+    };
+  }, [editModal]);
+
+  const initialModalType = useMemo(() => {
+    if (!editModal) return "daily";
+    if (editModal.type === "purchase" || editModal.type === "trade" || editModal.type === "scroll") return editModal.type;
+    return editModal.data?.period === "weekly" ? "weekly" : "daily";
+  }, [editModal]);
 
   // ── 로딩/비인가 ──
   if (authLoading || !authChecked || (authorized && loading)) {
@@ -313,20 +427,16 @@ export default function AdminPage() {
   }
 
   const tabs: { id: AdminTab; label: string; count: number }[] = [
+    {
+      id: "all",
+      label: "전체",
+      count: editData.homework.length + editData.purchaseItems.length + editData.tradeItems.length + editData.scrollItems.length,
+    },
     { id: "homework", label: "숙제", count: editData.homework.length },
     { id: "purchase", label: "구매", count: editData.purchaseItems.length },
     { id: "trade", label: "물물교환", count: editData.tradeItems.length },
     { id: "scroll", label: "임무게시판", count: editData.scrollItems.length },
   ];
-  const createEmptyData = (tab: AdminTab) =>
-    tab === "homework"
-      ? { title: "", reward: "-", period: "daily" as PeriodType, totalCount: 1, scope: "off" }
-      : tab === "purchase"
-      ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "daily" as PeriodType, scope: "off" }
-      : tab === "trade"
-      ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "weekly" as PeriodType, scope: "off" }
-      : { title: "", scrollType: "제작" as ScrollType, period: "weekly" as PeriodType, totalCount: 3, region: "던바튼" as RegionName, materials: "-", reward: "-" };
-  const activeItems = (editData[adminKey(activeTab)] as any[]).map((_, index) => ({ id: `${activeTab}-${index}` }));
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
@@ -367,7 +477,7 @@ export default function AdminPage() {
           ))}
         </div>
         <button
-          onClick={() => setEditModal({ type: activeTab, index: null, data: createEmptyData(activeTab) })}
+          onClick={openAddModal}
           className="mt-3 w-full rounded-xl border-2 border-dashed border-slate-700 py-3 text-sm font-medium text-slate-500 transition-colors hover:border-blue-500 hover:text-blue-400"
         >
           + 카드 추가
@@ -376,13 +486,15 @@ export default function AdminPage() {
 
       {/* 카드 목록 */}
       <div className="max-w-3xl mx-auto w-full px-4 py-4 flex-1 overflow-y-auto">
-        <SortableList items={activeItems} onReorder={(oldIndex, newIndex) => reorderItems(activeTab, oldIndex, newIndex)}>
+        <SortableList items={activeItems} onReorder={reorderRows}>
           <div className="space-y-2">
-            {activeTab === "homework" &&
-              editData.homework.map((item, i) => (
+            {adminRows.map((row) => {
+              if (row.tab === "homework") {
+                const item = row.item as DefaultHomework;
+                return (
                 <CardRow
-                  key={`${activeTab}-${i}`}
-                  id={`${activeTab}-${i}`}
+                  key={row.id}
+                  id={row.id}
                   title={item.title}
                   badges={[
                     ADMIN_PERIOD_BADGES[item.period],
@@ -390,16 +502,18 @@ export default function AdminPage() {
                   ]}
                   details={splitAdminTags(item.reward).map((label) => ({ label, className: "border border-slate-600/50 text-slate-400" }))}
                   onEdit={() =>
-                    setEditModal({ type: "homework", index: i, data: { ...item } })
+                    setEditModal({ type: "homework", index: row.index, data: { ...item } })
                   }
-                  onDelete={() => setDeleteTarget({ tab: "homework", index: i })}
+                  onDelete={() => setDeleteTarget({ tab: "homework", index: row.index })}
                 />
-              ))}
-            {activeTab === "purchase" &&
-              editData.purchaseItems.map((item, i) => (
+                );
+              }
+              if (row.tab === "purchase") {
+                const item = row.item as DefaultPurchaseItem;
+                return (
                 <CardRow
-                  key={`${activeTab}-${i}`}
-                  id={`${activeTab}-${i}`}
+                  key={row.id}
+                  id={row.id}
                   title={item.itemName}
                   badges={[
                     ADMIN_PERIOD_BADGES[item.period],
@@ -408,16 +522,18 @@ export default function AdminPage() {
                   ]}
                   details={splitAdminTags(item.npcName).map((label) => ({ label, className: "text-slate-400", plain: true }))}
                   onEdit={() =>
-                    setEditModal({ type: "purchase", index: i, data: { ...item } })
+                    setEditModal({ type: "purchase", index: row.index, data: { ...item } })
                   }
-                  onDelete={() => setDeleteTarget({ tab: "purchase", index: i })}
+                  onDelete={() => setDeleteTarget({ tab: "purchase", index: row.index })}
                 />
-              ))}
-            {activeTab === "trade" &&
-              editData.tradeItems.map((item, i) => (
+                );
+              }
+              if (row.tab === "trade") {
+                const item = row.item as DefaultTradeItem;
+                return (
                 <CardRow
-                  key={`${activeTab}-${i}`}
-                  id={`${activeTab}-${i}`}
+                  key={row.id}
+                  id={row.id}
                   title={item.itemName}
                   badges={[
                     ADMIN_PERIOD_BADGES[item.period],
@@ -426,16 +542,17 @@ export default function AdminPage() {
                   ]}
                   details={splitAdminTags(item.npcName).map((label) => ({ label, className: "text-slate-400", plain: true }))}
                   onEdit={() =>
-                    setEditModal({ type: "trade", index: i, data: { ...item } })
+                    setEditModal({ type: "trade", index: row.index, data: { ...item } })
                   }
-                  onDelete={() => setDeleteTarget({ tab: "trade", index: i })}
+                  onDelete={() => setDeleteTarget({ tab: "trade", index: row.index })}
                 />
-              ))}
-            {activeTab === "scroll" &&
-              editData.scrollItems.map((item, i) => (
+                );
+              }
+              const item = row.item as DefaultScrollItem;
+              return (
                 <CardRow
-                  key={`${activeTab}-${i}`}
-                  id={`${activeTab}-${i}`}
+                  key={row.id}
+                  id={row.id}
                   title={item.title}
                   badges={[
                     ADMIN_PERIOD_BADGES[item.period],
@@ -447,11 +564,12 @@ export default function AdminPage() {
                     ...splitAdminTags(item.reward).map((label) => ({ label, className: "text-slate-500", plain: true })),
                   ]}
                   onEdit={() =>
-                    setEditModal({ type: "scroll", index: i, data: { ...item } })
+                    setEditModal({ type: "scroll", index: row.index, data: { ...item } })
                   }
-                  onDelete={() => setDeleteTarget({ tab: "scroll", index: i })}
+                  onDelete={() => setDeleteTarget({ tab: "scroll", index: row.index })}
                 />
-              ))}
+              );
+            })}
           </div>
         </SortableList>
       </div>
@@ -508,13 +626,41 @@ export default function AdminPage() {
 
       {/* 편집 모달 */}
       {editModal && (
-        <EditModal
-          type={editModal.type}
-          data={editModal.data}
-          isNew={editModal.index === null}
-          onChange={(data) => setEditModal({ ...editModal, data })}
-          onSave={saveEditModal}
+        <AddCardModal
+          open={!!editModal}
+          initialType={initialModalType}
+          editCard={editCardForModal}
           onClose={() => setEditModal(null)}
+          onAddHomework={(hw) => upsertAdminItem("homework", null, hw)}
+          onAddShopItem={(type, item) => upsertAdminItem(type, null, item)}
+          onAddScrollItem={(item) =>
+            upsertAdminItem("scroll", null, {
+              ...item,
+              materials: toMaterialString(item.materials),
+            })
+          }
+          onUpdateHomework={(_, updates) => {
+            if (!editModal || editModal.type !== "homework") return;
+            upsertAdminItem("homework", editModal.index, {
+              ...editModal.data,
+              ...updates,
+            });
+          }}
+          onUpdateShopItem={(_, type, updates) => {
+            if (!editModal || editModal.type !== type) return;
+            upsertAdminItem(type, editModal.index, {
+              ...editModal.data,
+              ...updates,
+            });
+          }}
+          onUpdateScrollItem={(_, updates) => {
+            if (!editModal || editModal.type !== "scroll") return;
+            upsertAdminItem("scroll", editModal.index, {
+              ...editModal.data,
+              ...updates,
+              materials: toMaterialString(updates.materials ?? toMaterialList(editModal.data.materials)),
+            });
+          }}
         />
       )}
 
@@ -717,93 +863,6 @@ function CardRow({
   );
 }
 
-// ── 편집 모달 ──
-function EditModal({
-  type,
-  data,
-  isNew,
-  onChange,
-  onSave,
-  onClose,
-}: {
-  type: AdminTab;
-  data: any;
-  isNew: boolean;
-  onChange: (data: any) => void;
-  onSave: () => void;
-  onClose: () => void;
-}) {
-  const update = (key: string, value: any) => onChange({ ...data, [key]: value });
-  useEscapeClose(true, onClose);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full" onClick={(e) => e.stopPropagation()}>
-        <div className="mx-auto max-h-[80vh] w-80 overflow-y-auto rounded-2xl bg-slate-800 p-6">
-          <h3 className="mb-4 text-center text-sm font-semibold text-white">
-            {isNew ? "카드 추가" : "카드 수정"}
-          </h3>
-          <div className="space-y-3 mb-4">
-          {type === "homework" && (
-            <>
-              <Field label="제목" value={data.title} onChange={(v) => update("title", v)} />
-              <Field label="보상" value={data.reward} onChange={(v) => update("reward", v)} />
-              <SelectField label="주기" value={data.period} options={[["daily", "일일"], ["weekly", "주간"]]} onChange={(v) => update("period", v)} />
-              <CountField label="체크박스 수" value={data.totalCount || 1} onChange={(v) => update("totalCount", v)} />
-              <SelectField label="범위" value={data.scope ?? "off"} options={[["off", "캐릭터"], ["on", "서버"]]} onChange={(v) => update("scope", v)} />
-            </>
-          )}
-          {type === "purchase" && (
-            <>
-              <Field label="아이템명" value={data.itemName} onChange={(v) => update("itemName", v)} />
-              <SelectField label="지역" value={data.region} options={REGIONS.map((r) => [r, r])} onChange={(v) => update("region", v)} />
-              <Field label="NPC" value={data.npcName} onChange={(v) => update("npcName", v)} />
-              <SelectField label="주기" value={data.period} options={[["daily", "일일"], ["weekly", "주간"]]} onChange={(v) => update("period", v)} />
-              <SelectField label="범위" value={data.scope ?? "off"} options={[["off", "캐릭터"], ["on", "서버"]]} onChange={(v) => update("scope", v)} />
-            </>
-          )}
-          {type === "trade" && (
-            <>
-              <Field label="아이템명" value={data.itemName} onChange={(v) => update("itemName", v)} />
-              <SelectField label="지역" value={data.region} options={REGIONS.map((r) => [r, r])} onChange={(v) => update("region", v)} />
-              <Field label="NPC" value={data.npcName} onChange={(v) => update("npcName", v)} />
-              <SelectField label="주기" value={data.period} options={[["daily", "일일"], ["weekly", "주간"]]} onChange={(v) => update("period", v)} />
-              <SelectField label="범위" value={data.scope ?? "off"} options={[["off", "캐릭터"], ["on", "서버"]]} onChange={(v) => update("scope", v)} />
-            </>
-          )}
-          {type === "scroll" && (
-            <>
-              <Field label="제목" value={data.title} onChange={(v) => update("title", v)} />
-              <SelectField label="스크롤 타입" value={data.scrollType} options={SCROLL_TYPES.map((s) => [s, s])} onChange={(v) => update("scrollType", v)} />
-              <SelectField label="지역" value={data.region} options={REGIONS.map((r) => [r, r])} onChange={(v) => update("region", v)} />
-              <SelectField label="주기" value={data.period} options={[["daily", "일일"], ["weekly", "주간"]]} onChange={(v) => update("period", v)} />
-              <CountField label="체크박스 수" value={data.totalCount || 3} onChange={(v) => update("totalCount", v)} />
-              <Field label="재료" value={data.materials} onChange={(v) => update("materials", v)} />
-              <Field label="보상" value={data.reward} onChange={(v) => update("reward", v)} />
-            </>
-          )}
-          </div>
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-xl bg-slate-700 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-600"
-          >
-            취소
-          </button>
-          <button
-            onClick={onSave}
-            className="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
-          >
-            {isNew ? "추가" : "저장"}
-          </button>
-        </div>
-      </div>
-    </div>
-    </div>
-  );
-}
-
 // ── 히스토리 모달 ──
 function HistoryModal({
   history,
@@ -902,93 +961,6 @@ function HistoryModal({
             </div>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-// ── 폼 필드 ──
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-[12px] text-slate-400 mb-1">{label}</label>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-xl bg-slate-700 px-4 py-2.5 text-sm text-white outline-none placeholder-slate-500 focus:ring-2 focus:ring-blue-500"
-      />
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: [string, string][];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div>
-      <label className="block text-[12px] text-slate-400 mb-1">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl bg-slate-700 px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        {options.map(([val, label]) => (
-          <option key={val} value={val}>
-            {label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function CountField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-xs text-slate-500">{label}</span>
-      <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={() => onChange(Math.max(1, value - 1))}
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-700 text-lg font-bold text-slate-300 hover:bg-slate-600"
-        >
-          -
-        </button>
-        <span className="w-6 text-center text-sm font-semibold text-white">{value}</span>
-        <button
-          type="button"
-          onClick={() => onChange(Math.min(20, value + 1))}
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-700 text-lg font-bold text-slate-300 hover:bg-slate-600"
-        >
-          +
-        </button>
       </div>
     </div>
   );

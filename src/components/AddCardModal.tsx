@@ -10,6 +10,7 @@ type CardType = "daily" | "weekly" | "purchase" | "trade" | "scroll";
 interface Props {
   open: boolean;
   onClose: () => void;
+  initialType?: CardType;
   onAddHomework: (hw: { title: string; reward: string; period: PeriodType; totalCount: number; scope: ScopeType }) => void;
   onAddShopItem: (type: "purchase" | "trade", item: { itemName: string; region: RegionName; npcName: string; period: PeriodType; scope: ScopeType }) => void;
   onAddScrollItem?: (item: { title: string; scrollType: ScrollType; period: PeriodType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => void;
@@ -35,6 +36,7 @@ const TYPE_OPTIONS: { value: CardType; label: string; color: string }[] = [
 export function AddCardModal({
   open,
   onClose,
+  initialType,
   onAddHomework,
   onAddShopItem,
   onAddScrollItem,
@@ -92,6 +94,11 @@ export function AddCardModal({
       setMaterials(editCard.item.materials?.filter((item) => item && item !== "-") ?? []);
     }
   }, [editCard, open]);
+
+  useEffect(() => {
+    if (!open || editCard) return;
+    setCardType(initialType ?? "daily");
+  }, [editCard, initialType, open]);
 
   const isHomework = cardType === "daily" || cardType === "weekly";
   const isShop = cardType === "purchase" || cardType === "trade";

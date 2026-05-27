@@ -195,7 +195,7 @@ export const DEFAULT_SCROLL_ITEMS: { title: string; scrollType: ScrollType; peri
 
 /** scope 문자열을 ScopeType으로 변환 */
 export function toScope(s?: string): ScopeType {
-  return s === "on" ? "server" : "character";
+  return s === "on" || s === "server" ? "server" : "character";
 }
 
 /** 타이틀에서 "N회" 또는 "N종" 패턴 추출 (없으면 1) */
