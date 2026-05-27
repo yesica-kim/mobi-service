@@ -559,26 +559,26 @@ function ConfirmModal({
   useEscapeClose(true, onCancel);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onCancel}>
-      <div
-        className="w-full max-w-sm rounded-2xl border border-slate-700/50 bg-slate-900 p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-base font-bold text-white">{title}</h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-400">{description}</p>
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            className="h-11 rounded-xl px-4 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
-          >
-            취소
-          </button>
-          <button
-            onClick={onConfirm}
-            className={`h-11 rounded-xl px-4 text-sm font-medium transition-colors ${confirmClassName}`}
-          >
-            {confirmLabel}
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative z-10 w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="mx-auto w-80 rounded-2xl bg-slate-800 p-6">
+          <p className="mb-2 text-center text-sm font-semibold text-white">{title}</p>
+          <p className="mb-6 text-center text-xs leading-relaxed text-slate-400">{description}</p>
+          <div className="flex gap-3">
+            <button
+              onClick={onCancel}
+              className="h-11 flex-1 rounded-xl bg-slate-700 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-600"
+            >
+              취소
+            </button>
+            <button
+              onClick={onConfirm}
+              className={`h-11 flex-1 rounded-xl text-sm font-medium transition-colors ${confirmClassName}`}
+            >
+              {confirmLabel}
+            </button>
+          </div>
         </div>
       </div>
     </div>
