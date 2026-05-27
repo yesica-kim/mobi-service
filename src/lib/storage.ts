@@ -100,50 +100,26 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     const current = data.homework[charId] ?? [];
     if (current.length === 0) continue;
     const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
-    const defaultItems = current.filter((item) => item.isDefault);
-    const customItems = current.filter((item) => !item.isDefault);
-
-    for (const item of defaultItems) {
-      const stillExists = defaults.homework.some((hw, i) => hw.title === item.title || `${charId}_hw_${i}` === item.id);
-      if (!stillExists) {
-        charStates.homework[item.title] = {
-          completedCount: item.completedCount,
-          isFavorite: item.isFavorite,
-        };
-      }
-    }
+    const existingTitles = new Set(current.map((item) => item.title));
+    const newDefaults = homeworkDefaults.filter((hw) => !existingTitles.has(hw.title));
 
     data.homework[charId] = [
-      ...homeworkDefaults.map((hw, i) => {
-        const id = `${charId}_hw_${i}`;
-        const existing = defaultItems.find((item) => item.title === hw.title) ?? defaultItems.find((item) => item.id === id);
+      ...current,
+      ...newDefaults.map((hw, i) => {
         const saved = charStates.homework[hw.title];
         const totalCount = parseTotalCount(hw.title);
-        if (existing?.isModifiedDefault) {
-          const existingTotalCount = existing.totalCount || totalCount;
-          return {
-            ...existing,
-            id,
-            totalCount: existingTotalCount,
-            completedCount: Math.min(existing.completedCount ?? saved?.completedCount ?? 0, existingTotalCount),
-            isFavorite: existing.isFavorite ?? saved?.isFavorite ?? false,
-            isDefault: true,
-            isModifiedDefault: true,
-          };
-        }
         return {
-          id,
+          id: `${charId}_hw_added_${current.length}_${i}`,
           title: hw.title,
           reward: hw.reward,
           period: hw.period,
           totalCount,
-          completedCount: Math.min(existing?.completedCount ?? saved?.completedCount ?? 0, totalCount),
-          isFavorite: existing?.isFavorite ?? saved?.isFavorite ?? false,
+          completedCount: Math.min(saved?.completedCount ?? 0, totalCount),
+          isFavorite: saved?.isFavorite ?? false,
           isDefault: true,
           scope: toScope(hw.scope),
         };
       }),
-      ...customItems,
     ];
     savedStates[charId] = charStates;
   }
@@ -152,47 +128,25 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     const current = data.purchaseItems[charId] ?? [];
     if (current.length === 0) continue;
     const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
-    const defaultItems = current.filter((item) => item.isDefault);
-    const customItems = current.filter((item) => !item.isDefault);
-
-    for (const item of defaultItems) {
-      const stillExists = defaults.purchaseItems.some((def, i) => def.itemName === item.itemName || `${charId}_pur_${i}` === item.id);
-      if (!stillExists) {
-        charStates.purchase[item.itemName] = {
-          completed: item.completed,
-          isFavorite: item.isFavorite,
-        };
-      }
-    }
+    const existingNames = new Set(current.map((item) => item.itemName));
+    const newDefaults = purchaseDefaults.filter((item) => !existingNames.has(item.itemName));
 
     data.purchaseItems[charId] = [
-      ...purchaseDefaults.map((item, i) => {
-        const id = `${charId}_pur_${i}`;
-        const existing = defaultItems.find((currentItem) => currentItem.itemName === item.itemName) ?? defaultItems.find((currentItem) => currentItem.id === id);
+      ...current,
+      ...newDefaults.map((item, i) => {
         const saved = charStates.purchase[item.itemName];
-        if (existing?.isModifiedDefault) {
-          return {
-            ...existing,
-            id,
-            completed: existing.completed ?? saved?.completed ?? false,
-            isFavorite: existing.isFavorite ?? saved?.isFavorite ?? false,
-            isDefault: true,
-            isModifiedDefault: true,
-          };
-        }
         return {
-          id,
+          id: `${charId}_pur_added_${current.length}_${i}`,
           itemName: item.itemName,
           region: item.region,
           npcName: item.npcName,
           period: item.period,
-          completed: existing?.completed ?? saved?.completed ?? false,
-          isFavorite: existing?.isFavorite ?? saved?.isFavorite ?? false,
+          completed: saved?.completed ?? false,
+          isFavorite: saved?.isFavorite ?? false,
           isDefault: true,
           scope: toScope(item.scope),
         };
       }),
-      ...customItems,
     ];
     savedStates[charId] = charStates;
   }
@@ -201,49 +155,27 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     const current = data.tradeItems[charId] ?? [];
     if (current.length === 0) continue;
     const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
-    const defaultItems = current.filter((item) => item.isDefault);
-    const customItems = current.filter((item) => !item.isDefault);
-
-    for (const item of defaultItems) {
-      const stillExists = defaults.tradeItems.some((def, i) => def.itemName === item.itemName || `${charId}_trd_${i}` === item.id);
-      if (!stillExists) {
-        charStates.trade[item.itemName] = {
-          completed: item.completed,
-          isFavorite: item.isFavorite,
-        };
-      }
-    }
+    const existingNames = new Set(current.map((item) => item.itemName));
+    const newDefaults = tradeDefaults.filter((item) => !existingNames.has(item.itemName));
 
     data.tradeItems[charId] = [
-      ...tradeDefaults.map((item, i) => {
-        const id = `${charId}_trd_${i}`;
-        const existing = defaultItems.find((currentItem) => currentItem.itemName === item.itemName) ?? defaultItems.find((currentItem) => currentItem.id === id);
+      ...current,
+      ...newDefaults.map((item, i) => {
         const saved = charStates.trade[item.itemName];
         const parsed = parseTradeItemName(item.itemName);
-        if (existing?.isModifiedDefault) {
-          return {
-            ...existing,
-            id,
-            completed: existing.completed ?? saved?.completed ?? false,
-            isFavorite: existing.isFavorite ?? saved?.isFavorite ?? false,
-            isDefault: true,
-            isModifiedDefault: true,
-          };
-        }
         return {
-          id,
+          id: `${charId}_trd_added_${current.length}_${i}`,
           itemName: item.itemName,
           region: item.region,
           npcName: item.npcName,
           period: item.period,
-          completed: existing?.completed ?? saved?.completed ?? false,
-          isFavorite: existing?.isFavorite ?? saved?.isFavorite ?? false,
+          completed: saved?.completed ?? false,
+          isFavorite: saved?.isFavorite ?? false,
           isDefault: true,
           scope: toScope(item.scope),
           ...(parsed ?? {}),
         };
       }),
-      ...customItems,
     ];
     savedStates[charId] = charStates;
   }
@@ -251,33 +183,20 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
   for (const charId of Object.keys(data.scrollItems ?? {})) {
     const current = data.scrollItems![charId] ?? [];
     if (current.length === 0) continue;
-    const defaultItems = current.filter((item) => item.isDefault);
-    const customItems = current.filter((item) => !item.isDefault);
+    const existingTitles = new Set(current.map((item) => item.title));
+    const newDefaults = scrollDefaults.filter((item) => !existingTitles.has(item.title));
 
     data.scrollItems![charId] = [
-      ...scrollDefaults.map((item, i) => {
-        const id = `${charId}_scroll_${i}`;
-        const existing = defaultItems.find((currentItem) => currentItem.title === item.title) ?? defaultItems.find((currentItem) => currentItem.id === id);
-        if (existing?.isModifiedDefault) {
-          const existingTotalCount = existing.totalCount || 3;
-          return {
-            ...existing,
-            id,
-            totalCount: existingTotalCount,
-            completedCount: Math.min(existing.completedCount ?? 0, existingTotalCount),
-            isFavorite: existing.isFavorite ?? false,
-            isDefault: true,
-            isModifiedDefault: true,
-          };
-        }
+      ...current,
+      ...newDefaults.map((item, i) => {
         return {
-          id,
+          id: `${charId}_scroll_added_${current.length}_${i}`,
           title: item.title,
           scrollType: item.scrollType,
           period: item.period,
           totalCount: 3,
-          completedCount: Math.min(existing?.completedCount ?? 0, 3),
-          isFavorite: existing?.isFavorite ?? false,
+          completedCount: 0,
+          isFavorite: false,
           isDefault: true,
           scope: "character" as const,
           region: item.region,
@@ -285,7 +204,6 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
           reward: item.reward,
         };
       }),
-      ...customItems,
     ];
   }
 
