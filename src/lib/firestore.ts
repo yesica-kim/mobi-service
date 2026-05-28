@@ -11,7 +11,7 @@ export async function saveUserData(uid: string, data: AppData): Promise<void> {
   const updatedAt = new Date().toISOString();
   await setDoc(doc(db, "users", uid), {
     ...data,
-    clientUpdatedAt: data.clientUpdatedAt ?? updatedAt,
+    clientUpdatedAt: updatedAt,
     updatedAt,
   });
 }
@@ -22,7 +22,7 @@ export async function saveUserData(uid: string, data: AppData): Promise<void> {
 function normalizeUserData(rawData: AppData & { updatedAt?: string }): AppData {
   const raw = rawData;
   const { updatedAt, ...appData } = raw;
-  appData.clientUpdatedAt = appData.clientUpdatedAt ?? updatedAt;
+  appData.clientUpdatedAt = updatedAt ?? appData.clientUpdatedAt;
 
   // 마이그레이션: homework totalCount / scope 보정
   if (appData.homework) {
