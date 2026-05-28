@@ -216,7 +216,7 @@ export function ScrollCard({ item, onToggle, onToggleFavorite, onUpdate, onDelet
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded-2xl py-4 pl-2 pr-4 transition-all duration-200 ${
+      className={`[content-visibility:auto] [contain-intrinsic-size:120px] rounded-2xl py-4 pl-2 pr-4 transition-all duration-200 ${
         fullyDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"
       }`}
     >

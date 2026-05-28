@@ -1058,7 +1058,7 @@ function ListMatrixMobileCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded-2xl border border-slate-800 px-3 py-3 ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}
+      className={`[content-visibility:auto] [contain-intrinsic-size:180px] rounded-2xl border border-slate-800 px-3 py-3 ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}
     >
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
@@ -1246,7 +1246,7 @@ function ListMatrixRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`grid grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[340px_1fr] ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}
+      className={`grid [content-visibility:auto] [contain-intrinsic-size:96px] grid-cols-[minmax(188px,52vw)_1fr] md:grid-cols-[340px_1fr] ${rowDone ? "bg-slate-800/40 opacity-50" : "bg-slate-800"}`}
     >
       <div className="min-w-0 py-3 pl-2 pr-3">
         <div className="flex h-full min-w-0 items-center gap-2">
