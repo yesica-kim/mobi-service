@@ -13,6 +13,36 @@ function getDefaultCards(defaultCards?: DefaultCardsData): DefaultCardsData {
   };
 }
 
+type DefaultCardWithId = { defaultId?: string };
+
+function defaultHomeworkKey(item: { defaultId?: string; title: string }): string {
+  return item.defaultId ?? item.title;
+}
+
+function defaultShopKey(item: { defaultId?: string; itemName: string }): string {
+  return item.defaultId ?? item.itemName;
+}
+
+function defaultScrollKey(item: { defaultId?: string; title: string }): string {
+  return item.defaultId ?? item.title;
+}
+
+function isDeletedDefault(deleted: Set<string>, stableKey: string, legacyKey: string): boolean {
+  return deleted.has(stableKey) || deleted.has(legacyKey);
+}
+
+function resolveDefaultKey<Default extends DefaultCardWithId>(
+  currentKey: string,
+  legacyKey: string,
+  defaults: Default[],
+  getDefaultKey: (item: Default) => string,
+  getLegacyKey: (item: Default) => string
+): string {
+  if (defaults.some((item) => getDefaultKey(item) === currentKey)) return currentKey;
+  const legacyMatch = defaults.find((item) => getLegacyKey(item) === currentKey || getLegacyKey(item) === legacyKey);
+  return legacyMatch ? getDefaultKey(legacyMatch) : currentKey;
+}
+
 /** server -> region 마이그레이션 */
 function migrateShopItems(items: Record<string, any[]>) {
   for (const charId of Object.keys(items)) {
@@ -91,10 +121,10 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
   const deletedPurchase = new Set(deletedDefaults.purchase ?? []);
   const deletedTrade = new Set(deletedDefaults.trade ?? []);
   const deletedScroll = new Set(deletedDefaults.scroll ?? []);
-  const homeworkDefaults = defaults.homework.filter((item) => !deletedHomework.has(item.title));
-  const purchaseDefaults = defaults.purchaseItems.filter((item) => !deletedPurchase.has(item.itemName));
-  const tradeDefaults = defaults.tradeItems.filter((item) => !deletedTrade.has(item.itemName));
-  const scrollDefaults = defaults.scrollItems.filter((item) => !deletedScroll.has(item.title));
+  const homeworkDefaults = defaults.homework.filter((item) => !isDeletedDefault(deletedHomework, defaultHomeworkKey(item), item.title));
+  const purchaseDefaults = defaults.purchaseItems.filter((item) => !isDeletedDefault(deletedPurchase, defaultShopKey(item), item.itemName));
+  const tradeDefaults = defaults.tradeItems.filter((item) => !isDeletedDefault(deletedTrade, defaultShopKey(item), item.itemName));
+  const scrollDefaults = defaults.scrollItems.filter((item) => !isDeletedDefault(deletedScroll, defaultScrollKey(item), item.title));
 
   for (const charId of Object.keys(data.homework ?? {})) {
     const current = data.homework[charId] ?? [];
@@ -103,11 +133,11 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     data.homework[charId] = syncDefaultItems(
       current,
       homeworkDefaults,
-      (item) => item.defaultKey ?? item.title,
-      (item) => item.title,
+      (item) => resolveDefaultKey(item.defaultKey ?? item.title, item.title, homeworkDefaults, defaultHomeworkKey, (defaultItem) => defaultItem.title),
+      defaultHomeworkKey,
       (hw, existing) => {
-        const key = hw.title;
-        const saved = charStates.homework[key];
+        const key = defaultHomeworkKey(hw);
+        const saved = charStates.homework[key] ?? charStates.homework[hw.title];
         const totalCount = hw.totalCount || parseTotalCount(hw.title);
         return {
           id: existing?.id ?? `${charId}_hw_added_${key}_${current.length}`,
@@ -133,11 +163,11 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     data.purchaseItems[charId] = syncDefaultItems(
       current,
       purchaseDefaults,
-      (item) => item.defaultKey ?? item.itemName,
-      (item) => item.itemName,
+      (item) => resolveDefaultKey(item.defaultKey ?? item.itemName, item.itemName, purchaseDefaults, defaultShopKey, (defaultItem) => defaultItem.itemName),
+      defaultShopKey,
       (item, existing) => {
-        const key = item.itemName;
-        const saved = charStates.purchase[key];
+        const key = defaultShopKey(item);
+        const saved = charStates.purchase[key] ?? charStates.purchase[item.itemName];
         return {
           id: existing?.id ?? `${charId}_pur_added_${key}_${current.length}`,
           itemName: item.itemName,
@@ -162,11 +192,11 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     data.tradeItems[charId] = syncDefaultItems(
       current,
       tradeDefaults,
-      (item) => item.defaultKey ?? item.itemName,
-      (item) => item.itemName,
+      (item) => resolveDefaultKey(item.defaultKey ?? item.itemName, item.itemName, tradeDefaults, defaultShopKey, (defaultItem) => defaultItem.itemName),
+      defaultShopKey,
       (item, existing) => {
-        const key = item.itemName;
-        const saved = charStates.trade[key];
+        const key = defaultShopKey(item);
+        const saved = charStates.trade[key] ?? charStates.trade[item.itemName];
         const parsed = parseTradeItemName(item.itemName);
         return {
           id: existing?.id ?? `${charId}_trd_added_${key}_${current.length}`,
@@ -192,10 +222,10 @@ function migrateNewDefaults(data: AppData, defaultCards?: DefaultCardsData) {
     data.scrollItems![charId] = syncDefaultItems(
       current,
       scrollDefaults,
-      (item) => item.defaultKey ?? item.title,
-      (item) => item.title,
+      (item) => resolveDefaultKey(item.defaultKey ?? item.title, item.title, scrollDefaults, defaultScrollKey, (defaultItem) => defaultItem.title),
+      defaultScrollKey,
       (item, existing) => {
-        const key = item.title;
+        const key = defaultScrollKey(item);
         return {
           id: existing?.id ?? `${charId}_scroll_added_${key}_${current.length}`,
           title: item.title,
@@ -345,7 +375,7 @@ export function createHomeworkForChar(charId: string, defaultCards?: DefaultCard
     completedCount: 0,
     isFavorite: false,
     isDefault: true,
-    defaultKey: hw.title,
+    defaultKey: defaultHomeworkKey(hw),
     scope: toScope(hw.scope),
   }));
 }
@@ -360,7 +390,7 @@ export function createPurchaseForChar(charId: string, defaultCards?: DefaultCard
     completed: false,
     isFavorite: false,
     isDefault: true,
-    defaultKey: item.itemName,
+    defaultKey: defaultShopKey(item),
     scope: toScope(item.scope),
   }));
 }
@@ -377,7 +407,7 @@ export function createTradeForChar(charId: string, defaultCards?: DefaultCardsDa
       completed: false,
       isFavorite: false,
       isDefault: true,
-      defaultKey: item.itemName,
+      defaultKey: defaultShopKey(item),
       scope: toScope(item.scope),
       ...(parsed ?? {}),
     };
@@ -394,7 +424,7 @@ export function createScrollForChar(charId: string, defaultCards?: DefaultCardsD
     completedCount: 0,
     isFavorite: false,
     isDefault: true,
-    defaultKey: item.title,
+    defaultKey: defaultScrollKey(item),
     region: item.region,
     materials: item.materials === "-" ? ["-"] : item.materials.split(",").map((s) => s.trim()),
     reward: item.reward,

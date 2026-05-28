@@ -59,28 +59,33 @@ function getIndexedDefaultKey<T>(id: string, prefix: string, defaults: T[], getK
 }
 
 function getHomeworkDefaultDeleteKey(item: HomeworkItem, defaultCards?: DefaultCardsData | null): string | undefined {
+  const defaults = defaultCards?.homework ?? (DEFAULT_HOMEWORK as DefaultCardsData["homework"]);
+  const matched = defaults.find((defaultItem) => defaultItem.defaultId === item.defaultKey || defaultItem.title === item.title || defaultItem.title === item.defaultKey);
+  if (matched) return matched.defaultId ?? matched.title;
   if (item.defaultKey) return item.defaultKey;
-  const defaults = defaultCards?.homework ?? DEFAULT_HOMEWORK;
-  const matched = defaults.find((defaultItem) => defaultItem.title === item.title)?.title;
-  const indexed = getIndexedDefaultKey(item.id, "hw", defaults, (defaultItem) => defaultItem.title);
-  return matched ?? indexed ?? (item.isDefault ? item.title : undefined);
+  const indexed = getIndexedDefaultKey(item.id, "hw", defaults, (defaultItem) => defaultItem.defaultId ?? defaultItem.title);
+  return indexed ?? (item.isDefault ? item.title : undefined);
 }
 
 function getShopDefaultDeleteKey(item: ShopItem, type: "purchase" | "trade", defaultCards?: DefaultCardsData | null): string | undefined {
-  if (item.defaultKey) return item.defaultKey;
-  const defaults = type === "purchase" ? defaultCards?.purchaseItems ?? DEFAULT_PURCHASE_ITEMS : defaultCards?.tradeItems ?? DEFAULT_TRADE_ITEMS;
+  const defaults = type === "purchase"
+    ? defaultCards?.purchaseItems ?? (DEFAULT_PURCHASE_ITEMS as DefaultCardsData["purchaseItems"])
+    : defaultCards?.tradeItems ?? (DEFAULT_TRADE_ITEMS as DefaultCardsData["tradeItems"]);
   const prefix = type === "purchase" ? "pur" : "trd";
-  const matched = defaults.find((defaultItem) => defaultItem.itemName === item.itemName)?.itemName;
-  const indexed = getIndexedDefaultKey(item.id, prefix, defaults, (defaultItem) => defaultItem.itemName);
-  return matched ?? indexed ?? (item.isDefault ? item.itemName : undefined);
+  const matched = defaults.find((defaultItem) => defaultItem.defaultId === item.defaultKey || defaultItem.itemName === item.itemName || defaultItem.itemName === item.defaultKey);
+  if (matched) return matched.defaultId ?? matched.itemName;
+  if (item.defaultKey) return item.defaultKey;
+  const indexed = getIndexedDefaultKey(item.id, prefix, defaults, (defaultItem) => defaultItem.defaultId ?? defaultItem.itemName);
+  return indexed ?? (item.isDefault ? item.itemName : undefined);
 }
 
 function getScrollDefaultDeleteKey(item: ScrollItem, defaultCards?: DefaultCardsData | null): string | undefined {
+  const defaults = defaultCards?.scrollItems ?? (DEFAULT_SCROLL_ITEMS as DefaultCardsData["scrollItems"]);
+  const matched = defaults.find((defaultItem) => defaultItem.defaultId === item.defaultKey || defaultItem.title === item.title || defaultItem.title === item.defaultKey);
+  if (matched) return matched.defaultId ?? matched.title;
   if (item.defaultKey) return item.defaultKey;
-  const defaults = defaultCards?.scrollItems ?? DEFAULT_SCROLL_ITEMS;
-  const matched = defaults.find((defaultItem) => defaultItem.title === item.title)?.title;
-  const indexed = getIndexedDefaultKey(item.id, "scroll", defaults, (defaultItem) => defaultItem.title);
-  return matched ?? indexed ?? (item.isDefault ? item.title : undefined);
+  const indexed = getIndexedDefaultKey(item.id, "scroll", defaults, (defaultItem) => defaultItem.defaultId ?? defaultItem.title);
+  return indexed ?? (item.isDefault ? item.title : undefined);
 }
 
 function normalizeRecordByTemplate<T>(
@@ -910,7 +915,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, homework: newHomework };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getAllCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
   // ── 숙제 수정 (전체 서버/캐릭터 동기화) ──

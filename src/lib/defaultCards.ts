@@ -7,18 +7,19 @@ import {
 import {
   getDraftCards,
   getPublishedCards,
+  normalizeDefaultCardsData,
   subscribeDraftCards,
   subscribePublishedCards,
   type DefaultCardsData,
 } from "@/lib/adminFirestore";
 
 export function getCodeDefaultCards(): DefaultCardsData {
-  return {
+  return normalizeDefaultCardsData({
     homework: DEFAULT_HOMEWORK.map((item) => ({ ...item })),
     purchaseItems: DEFAULT_PURCHASE_ITEMS.map((item) => ({ ...item })),
     tradeItems: DEFAULT_TRADE_ITEMS.map((item) => ({ ...item })),
     scrollItems: DEFAULT_SCROLL_ITEMS.map((item) => ({ ...item })),
-  };
+  });
 }
 
 function isDraftDefaultHost(): boolean {

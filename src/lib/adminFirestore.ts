@@ -37,6 +37,7 @@ export function isAdminFirebaseUser(user: {
 
 // ── Firestore 기본 카드 데이터 타입 ──
 export interface DefaultHomework {
+  defaultId?: string;
   title: string;
   reward: string;
   period: PeriodType;
@@ -45,6 +46,7 @@ export interface DefaultHomework {
 }
 
 export interface DefaultPurchaseItem {
+  defaultId?: string;
   itemName: string;
   region: RegionName;
   npcName: string;
@@ -53,6 +55,7 @@ export interface DefaultPurchaseItem {
 }
 
 export interface DefaultTradeItem {
+  defaultId?: string;
   itemName: string;
   region: RegionName;
   npcName: string;
@@ -61,6 +64,7 @@ export interface DefaultTradeItem {
 }
 
 export interface DefaultScrollItem {
+  defaultId?: string;
   title: string;
   scrollType: ScrollType;
   period: PeriodType;
@@ -92,30 +96,95 @@ const PUBLISHED_DOC = "published";
 const DRAFT_DOC = "draft";
 const HISTORY_COLLECTION = "defaultCardsHistory";
 
-function sanitizeDefaultCardsData(data: DefaultCardsData): DefaultCardsData {
+type DefaultCardCategory = "homework" | "purchase" | "trade" | "scroll";
+
+function slugDefaultIdValue(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 36) || "item";
+}
+
+function fallbackDefaultId(type: DefaultCardCategory, label: string, index: number): string {
+  return `${type}_${index}_${slugDefaultIdValue(label)}`;
+}
+
+export function createDefaultCardId(type: DefaultCardCategory): string {
+  const random = Math.random().toString(36).slice(2, 8);
+  return `${type}_${Date.now()}_${random}`;
+}
+
+export function normalizeDefaultCardsData(data: DefaultCardsData): DefaultCardsData {
   return {
-    homework: data.homework.map((item) => ({
+    homework: (data.homework ?? []).map((item, index) => ({
+      defaultId: item.defaultId ?? fallbackDefaultId("homework", item.title, index),
       title: item.title,
       reward: item.reward,
       period: item.period,
       ...(item.totalCount ? { totalCount: item.totalCount } : {}),
       ...(item.scope ? { scope: item.scope } : {}),
     })),
-    purchaseItems: data.purchaseItems.map((item) => ({
+    purchaseItems: (data.purchaseItems ?? []).map((item, index) => ({
+      defaultId: item.defaultId ?? fallbackDefaultId("purchase", item.itemName, index),
       itemName: item.itemName,
       region: item.region,
       npcName: item.npcName,
       period: item.period,
       ...(item.scope ? { scope: item.scope } : {}),
     })),
-    tradeItems: data.tradeItems.map((item) => ({
+    tradeItems: (data.tradeItems ?? []).map((item, index) => ({
+      defaultId: item.defaultId ?? fallbackDefaultId("trade", item.itemName, index),
       itemName: item.itemName,
       region: item.region,
       npcName: item.npcName,
       period: item.period,
       ...(item.scope ? { scope: item.scope } : {}),
     })),
-    scrollItems: data.scrollItems.map((item) => ({
+    scrollItems: (data.scrollItems ?? []).map((item, index) => ({
+      defaultId: item.defaultId ?? fallbackDefaultId("scroll", item.title, index),
+      title: item.title,
+      scrollType: item.scrollType,
+      period: item.period,
+      ...(item.totalCount ? { totalCount: item.totalCount } : {}),
+      region: item.region,
+      materials: item.materials,
+      reward: item.reward,
+    })),
+    ...(data.updatedAt ? { updatedAt: data.updatedAt } : {}),
+  };
+}
+
+function sanitizeDefaultCardsData(data: DefaultCardsData): DefaultCardsData {
+  const normalized = normalizeDefaultCardsData(data);
+  return {
+    homework: normalized.homework.map((item) => ({
+      defaultId: item.defaultId,
+      title: item.title,
+      reward: item.reward,
+      period: item.period,
+      ...(item.totalCount ? { totalCount: item.totalCount } : {}),
+      ...(item.scope ? { scope: item.scope } : {}),
+    })),
+    purchaseItems: normalized.purchaseItems.map((item) => ({
+      defaultId: item.defaultId,
+      itemName: item.itemName,
+      region: item.region,
+      npcName: item.npcName,
+      period: item.period,
+      ...(item.scope ? { scope: item.scope } : {}),
+    })),
+    tradeItems: normalized.tradeItems.map((item) => ({
+      defaultId: item.defaultId,
+      itemName: item.itemName,
+      region: item.region,
+      npcName: item.npcName,
+      period: item.period,
+      ...(item.scope ? { scope: item.scope } : {}),
+    })),
+    scrollItems: normalized.scrollItems.map((item) => ({
+      defaultId: item.defaultId,
       title: item.title,
       scrollType: item.scrollType,
       period: item.period,
@@ -148,7 +217,7 @@ export function getAdminFirestoreErrorMessage(error: unknown): string {
 export async function getPublishedCards(): Promise<DefaultCardsData | null> {
   try {
     const snap = await getDoc(doc(db, COLLECTION, PUBLISHED_DOC));
-    return snap.exists() ? (snap.data() as DefaultCardsData) : null;
+    return snap.exists() ? normalizeDefaultCardsData(snap.data() as DefaultCardsData) : null;
   } catch (e) {
     console.error("published 로드 실패:", e);
     return null;
@@ -158,7 +227,7 @@ export async function getPublishedCards(): Promise<DefaultCardsData | null> {
 export async function getDraftCards(): Promise<DefaultCardsData | null> {
   try {
     const snap = await getDoc(doc(db, COLLECTION, DRAFT_DOC));
-    return snap.exists() ? (snap.data() as DefaultCardsData) : null;
+    return snap.exists() ? normalizeDefaultCardsData(snap.data() as DefaultCardsData) : null;
   } catch (e) {
     console.error("draft 로드 실패:", e);
     return null;
@@ -171,7 +240,7 @@ export function subscribePublishedCards(
 ): Unsubscribe {
   return onSnapshot(
     doc(db, COLLECTION, PUBLISHED_DOC),
-    (snap) => onData(snap.exists() ? (snap.data() as DefaultCardsData) : null),
+    (snap) => onData(snap.exists() ? normalizeDefaultCardsData(snap.data() as DefaultCardsData) : null),
     (error) => onError?.(error)
   );
 }
@@ -182,7 +251,7 @@ export function subscribeDraftCards(
 ): Unsubscribe {
   return onSnapshot(
     doc(db, COLLECTION, DRAFT_DOC),
-    (snap) => onData(snap.exists() ? (snap.data() as DefaultCardsData) : null),
+    (snap) => onData(snap.exists() ? normalizeDefaultCardsData(snap.data() as DefaultCardsData) : null),
     (error) => onError?.(error)
   );
 }
@@ -250,7 +319,7 @@ export async function getHistory(): Promise<HistoryEntry[]> {
       }
       entries.push({
         id: d.id,
-        data: data.data as DefaultCardsData,
+        data: normalizeDefaultCardsData(data.data as DefaultCardsData),
         summary: data.summary as string[],
         createdAt,
         actorEmail: readHistoryActorEmail(data),

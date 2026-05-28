@@ -20,6 +20,7 @@ import {
   rollbackToHistory,
   generateChangeSummary,
   getAdminFirestoreErrorMessage,
+  createDefaultCardId,
   type DefaultCardsData,
   type DefaultHomework,
   type DefaultPurchaseItem,
@@ -280,10 +281,11 @@ export default function AdminPage() {
     setEditData((prev) => {
       const key = adminKey(type);
       const arr = [...(prev[key] as any[])];
+      const nextData = data.defaultId ? data : { ...data, defaultId: createDefaultCardId(type) };
       if (index === null) {
-        arr.unshift(data);
+        arr.unshift(nextData);
       } else {
-        arr[index] = data;
+        arr[index] = nextData;
       }
       return { ...prev, [key]: arr };
     });
@@ -303,12 +305,12 @@ export default function AdminPage() {
 
   const createEmptyData = (tab: AdminCategory) =>
     tab === "homework"
-      ? { title: "", reward: "-", period: "daily" as PeriodType, totalCount: 1, scope: "character" as ScopeType }
+      ? { defaultId: createDefaultCardId(tab), title: "", reward: "-", period: "daily" as PeriodType, totalCount: 1, scope: "character" as ScopeType }
       : tab === "purchase"
-      ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "daily" as PeriodType, scope: "character" as ScopeType }
+      ? { defaultId: createDefaultCardId(tab), itemName: "", region: "던바튼" as RegionName, npcName: "", period: "daily" as PeriodType, scope: "character" as ScopeType }
       : tab === "trade"
-      ? { itemName: "", region: "던바튼" as RegionName, npcName: "", period: "weekly" as PeriodType, scope: "character" as ScopeType }
-      : { title: "", scrollType: "제작" as ScrollType, period: "weekly" as PeriodType, totalCount: 3, region: "던바튼" as RegionName, materials: "-", reward: "-" };
+      ? { defaultId: createDefaultCardId(tab), itemName: "", region: "던바튼" as RegionName, npcName: "", period: "weekly" as PeriodType, scope: "character" as ScopeType }
+      : { defaultId: createDefaultCardId(tab), title: "", scrollType: "제작" as ScrollType, period: "weekly" as PeriodType, totalCount: 3, region: "던바튼" as RegionName, materials: "-", reward: "-" };
 
   const adminRows = useMemo<AdminRow[]>(() => {
     const rows: AdminRow[] = [];
