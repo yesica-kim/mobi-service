@@ -574,14 +574,8 @@ export function useAppState(uid?: string | null) {
           const next = applyResets(structuredClone(prev), defaults);
           if (JSON.stringify(next) === before) return prev;
 
-          const syncedNext = {
-            ...next,
-            clientUpdatedAt: new Date().toISOString(),
-            syncRevision: createSyncRevision("defaults"),
-          };
-          saveData(syncedNext);
-          queueUserDataSave(syncedNext);
-          return syncedNext;
+          saveData(next);
+          return next;
         });
       },
       (error) => {
@@ -590,7 +584,7 @@ export function useAppState(uid?: string | null) {
     );
 
     return () => unsubscribe();
-  }, [data !== null, queueUserDataSave]);
+  }, [data !== null]);
 
   useEffect(() => {
     if (!uid || !data) return;
