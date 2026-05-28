@@ -255,8 +255,23 @@ function syncDefaultItems<Current extends { isDefault?: boolean; isModifiedDefau
   const missingDefaults = defaults
     .filter((item) => !seenDefaultKeys.has(getDefaultKey(item)))
     .map((item) => buildDefault(item));
+  const defaultIndex = new Map(defaults.map((item, index) => [getDefaultKey(item), index] as const));
+  const merged = [...syncedCurrent];
 
-  return [...syncedCurrent, ...missingDefaults];
+  for (const missingItem of missingDefaults) {
+    const missingIndex = defaultIndex.get(getCurrentKey(missingItem)) ?? Number.MAX_SAFE_INTEGER;
+    const insertAt = merged.findIndex((item) => {
+      if (!item.isDefault) return false;
+      return (defaultIndex.get(getCurrentKey(item)) ?? Number.MAX_SAFE_INTEGER) > missingIndex;
+    });
+    if (insertAt === -1) {
+      merged.push(missingItem);
+    } else {
+      merged.splice(insertAt, 0, missingItem);
+    }
+  }
+
+  return merged;
 }
 
 function reconcileAllTabOrder(data: AppData) {
@@ -273,8 +288,20 @@ function reconcileAllTabOrder(data: AppData) {
     const allIdSet = new Set(allIds);
     const orderedIds = (data.allTabOrder[charId] ?? []).filter((id) => allIdSet.has(id));
     const missingIds = allIds.filter((id) => !orderedIds.includes(id));
+    const order = [...orderedIds];
+    const itemIndex = new Map(allIds.map((id, index) => [id, index]));
 
-    data.allTabOrder[charId] = [...orderedIds, ...missingIds];
+    for (const missingId of missingIds) {
+      const missingIndex = itemIndex.get(missingId) ?? Number.MAX_SAFE_INTEGER;
+      const insertAt = order.findIndex((id) => (itemIndex.get(id) ?? Number.MAX_SAFE_INTEGER) > missingIndex);
+      if (insertAt === -1) {
+        order.push(missingId);
+      } else {
+        order.splice(insertAt, 0, missingId);
+      }
+    }
+
+    data.allTabOrder[charId] = order;
   }
 }
 

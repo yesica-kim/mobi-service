@@ -7,6 +7,8 @@ import {
 import {
   getDraftCards,
   getPublishedCards,
+  subscribeDraftCards,
+  subscribePublishedCards,
   type DefaultCardsData,
 } from "@/lib/adminFirestore";
 
@@ -47,4 +49,48 @@ export async function loadRuntimeDefaultCards(): Promise<DefaultCardsData> {
 
   const published = await getPublishedCards();
   return published ?? codeDefaults;
+}
+
+export function subscribeRuntimeDefaultCards(
+  onData: (data: DefaultCardsData) => void,
+  onError?: (error: Error) => void
+): () => void {
+  const codeDefaults = getCodeDefaultCards();
+  let draft: DefaultCardsData | null = null;
+  let published: DefaultCardsData | null = null;
+  let hasDraftSnapshot = !isDraftDefaultHost();
+  let hasPublishedSnapshot = false;
+
+  const emit = () => {
+    if (!hasPublishedSnapshot || !hasDraftSnapshot) return;
+    if (isDraftDefaultHost() && shouldUseDraftCards(draft, published)) {
+      onData(draft);
+      return;
+    }
+    onData(published ?? codeDefaults);
+  };
+
+  const unsubscribePublished = subscribePublishedCards(
+    (data) => {
+      published = data;
+      hasPublishedSnapshot = true;
+      emit();
+    },
+    onError
+  );
+  const unsubscribeDraft = isDraftDefaultHost()
+    ? subscribeDraftCards(
+        (data) => {
+          draft = data;
+          hasDraftSnapshot = true;
+          emit();
+        },
+        onError
+      )
+    : undefined;
+
+  return () => {
+    unsubscribePublished();
+    unsubscribeDraft?.();
+  };
 }

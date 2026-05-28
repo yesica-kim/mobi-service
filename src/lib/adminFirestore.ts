@@ -7,6 +7,8 @@ import {
   deleteDoc,
   query,
   orderBy,
+  onSnapshot,
+  type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { PeriodType, ScrollType, RegionName } from "@/types";
@@ -161,6 +163,28 @@ export async function getDraftCards(): Promise<DefaultCardsData | null> {
     console.error("draft 로드 실패:", e);
     return null;
   }
+}
+
+export function subscribePublishedCards(
+  onData: (data: DefaultCardsData | null) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  return onSnapshot(
+    doc(db, COLLECTION, PUBLISHED_DOC),
+    (snap) => onData(snap.exists() ? (snap.data() as DefaultCardsData) : null),
+    (error) => onError?.(error)
+  );
+}
+
+export function subscribeDraftCards(
+  onData: (data: DefaultCardsData | null) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  return onSnapshot(
+    doc(db, COLLECTION, DRAFT_DOC),
+    (snap) => onData(snap.exists() ? (snap.data() as DefaultCardsData) : null),
+    (error) => onError?.(error)
+  );
 }
 
 // ── 쓰기 ──

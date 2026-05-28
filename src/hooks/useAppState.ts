@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyResets, createScrollForChar, getNextDailyResetMs, getNextWeeklyResetMs, loadData, saveData } from "@/lib/storage";
 import { loadUserData, saveUserData, subscribeUserData } from "@/lib/firestore";
-import { loadRuntimeDefaultCards } from "@/lib/defaultCards";
+import { loadRuntimeDefaultCards, subscribeRuntimeDefaultCards } from "@/lib/defaultCards";
 import type { DefaultCardsData } from "@/lib/adminFirestore";
 import type { AppData, AutoBackupSnapshot, Character, HomeworkItem, HomeworkPreset, MembershipInfo, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType} from "@/types";
 import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, DEFAULT_SCROLL_ITEMS, MAX_CHARS_PER_SERVER, SERVERS, parseTotalCount, toScope } from "@/types";
@@ -414,6 +414,10 @@ function hasNewRestoreSync(cloudData: AppData, currentData: AppData): boolean {
   return Boolean(cloudData.restoreSyncId && cloudData.restoreSyncId !== currentData.restoreSyncId);
 }
 
+function getDefaultCardsFingerprint(defaults: DefaultCardsData | null): string {
+  return JSON.stringify(defaults ?? null);
+}
+
 export function useAppState(uid?: string | null) {
   const [data, setData] = useState<AppData | null>(null);
   const [runtimeDefaults, setRuntimeDefaults] = useState<DefaultCardsData | null>(null);
@@ -429,6 +433,7 @@ export function useAppState(uid?: string | null) {
   const [backupNotice, setBackupNotice] = useState<string | null>(null);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const saveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const runtimeDefaultsFingerprintRef = useRef<string>("");
   const selectedServerRef = useRef<ServerName | null>(null);
   const selectedCharIdRef = useRef<string | null>(null);
 
@@ -532,6 +537,7 @@ export function useAppState(uid?: string | null) {
       }
 
       if (cancelled) return;
+      runtimeDefaultsFingerprintRef.current = getDefaultCardsFingerprint(defaults);
       setRuntimeDefaults(defaults);
       setData(loaded);
       if (loaded.characters.length > 0) {
@@ -552,6 +558,39 @@ export function useAppState(uid?: string | null) {
     init();
     return () => { cancelled = true; };
   }, [uid]);
+
+  useEffect(() => {
+    if (!data) return;
+
+    const unsubscribe = subscribeRuntimeDefaultCards(
+      (defaults) => {
+        const fingerprint = getDefaultCardsFingerprint(defaults);
+        if (fingerprint === runtimeDefaultsFingerprintRef.current) return;
+        runtimeDefaultsFingerprintRef.current = fingerprint;
+        setRuntimeDefaults(defaults);
+        setData((prev) => {
+          if (!prev) return prev;
+          const before = JSON.stringify(prev);
+          const next = applyResets(structuredClone(prev), defaults);
+          if (JSON.stringify(next) === before) return prev;
+
+          const syncedNext = {
+            ...next,
+            clientUpdatedAt: new Date().toISOString(),
+            syncRevision: createSyncRevision("defaults"),
+          };
+          saveData(syncedNext);
+          queueUserDataSave(syncedNext);
+          return syncedNext;
+        });
+      },
+      (error) => {
+        console.error("기본 카드 실시간 동기화 실패:", error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [data !== null, queueUserDataSave]);
 
   useEffect(() => {
     if (!uid || !data) return;
