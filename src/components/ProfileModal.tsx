@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useEscapeClose } from "@/hooks/useEscapeClose";
 import type { AutoBackupSnapshot } from "@/types";
 
@@ -20,6 +20,7 @@ interface Props {
   onImportData?: (data: any) => void;
   automaticBackups?: AutoBackupSnapshot[];
   onRestoreBackup?: (backupId: string) => void;
+  initialPage?: "menu" | "terms" | "privacy" | "restore";
 }
 
 type PageType = "menu" | "terms" | "privacy" | "restore";
@@ -46,6 +47,7 @@ export function ProfileModal({
   onImportData,
   automaticBackups = [],
   onRestoreBackup,
+  initialPage = "menu",
 }: Props) {
   const [page, setPage] = useState<PageType>("menu");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -64,6 +66,10 @@ export function ProfileModal({
   }, [onClose]);
 
   useEscapeClose(open, handleClose);
+
+  useEffect(() => {
+    if (open) setPage(initialPage);
+  }, [open, initialPage]);
 
   if (!open) return null;
 
@@ -133,7 +139,7 @@ export function ProfileModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={handleClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
-        <div className="bg-slate-800 rounded-2xl w-80 max-h-[80vh] overflow-y-auto">
+        <div className="w-[calc(100vw-2rem)] max-w-lg rounded-2xl bg-slate-800 max-h-[80vh] overflow-y-auto">
           {page === "menu" ? (
             <div className="p-6">
               {/* 프로필 정보 */}

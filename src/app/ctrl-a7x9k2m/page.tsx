@@ -444,7 +444,7 @@ export default function AdminPage() {
       label: "전체",
       count: editData.homework.length + editData.purchaseItems.length + editData.tradeItems.length + editData.scrollItems.length,
     },
-    { id: "homework", label: "숙제", count: editData.homework.length },
+    { id: "homework", label: "일일/주간", count: editData.homework.length },
     { id: "purchase", label: "구매", count: editData.purchaseItems.length },
     { id: "trade", label: "물물교환", count: editData.tradeItems.length },
     { id: "scroll", label: "임무게시판", count: editData.scrollItems.length },
@@ -492,7 +492,7 @@ export default function AdminPage() {
           onClick={openAddModal}
           className="mt-3 w-full rounded-xl border-2 border-dashed border-slate-700 py-3 text-sm font-medium text-slate-500 transition-colors hover:border-blue-500 hover:text-blue-400"
         >
-          + 카드 추가
+          + 숙제 추가
         </button>
       </div>
 

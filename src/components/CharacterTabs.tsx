@@ -138,7 +138,7 @@ export function CharacterTabs({
           ))}
           <button
             onClick={onAdd}
-            className="flex h-[52px] flex-shrink-0 items-center rounded-xl border-2 border-dashed border-slate-600 px-5 text-sm font-semibold text-slate-400 transition-colors hover:border-blue-500 hover:text-blue-400"
+            className="flex h-[52px] flex-shrink-0 items-center rounded-xl border-2 border-dashed border-slate-700 px-5 text-sm font-medium text-slate-500 transition-colors hover:border-blue-500 hover:text-blue-400"
           >
             + 캐릭터 추가
           </button>

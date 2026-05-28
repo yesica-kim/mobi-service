@@ -558,7 +558,7 @@ export function useAppState(uid?: string | null) {
       const previousBackupId = prev.automaticBackups?.[0]?.id;
       const next = { ...updater(prev), clientUpdatedAt: new Date().toISOString() };
       if (next.automaticBackups?.[0]?.id && next.automaticBackups[0].id !== previousBackupId) {
-        setBackupNotice("현재 데이터가 자동백업 됐습니다.");
+        setBackupNotice("데이터가 자동백업 되었습니다.\n설정 > 이전 데이터 복구에서 확인하실 수 있습니다.");
       }
       // localStorage에 즉시 저장
       saveData(next);
@@ -623,7 +623,7 @@ export function useAppState(uid?: string | null) {
           allTabOrder,
         };
       }, { immediate: true });
-      persist((prev) => addAutoBackupIfUseful(prev, `${char.name} 캐릭터 추가 후`), { immediate: true });
+      persist((prev) => addAutoBackupIfUseful(prev, `'${char.name}' 캐릭터 추가 후`), { immediate: true });
       setSelectedServer(char.server);
       setSelectedCharId(id);
     },
@@ -647,7 +647,7 @@ export function useAppState(uid?: string | null) {
     (charId: string) => {
       persist((prev) => {
         const targetChar = prev.characters.find((char) => char.id === charId);
-        prev = addAutoBackupIfUseful(prev, `${targetChar?.name ?? "선택한"} 캐릭터 삭제 전`);
+        prev = addAutoBackupIfUseful(prev, `'${targetChar?.name ?? "선택한"}' 캐릭터 삭제 전`);
         const chars = prev.characters.filter((c) => c.id !== charId);
         const hw = { ...prev.homework };
         const pur = { ...prev.purchaseItems };
@@ -2001,7 +2001,7 @@ export function useAppState(uid?: string | null) {
     saveData(next);
     if (uid) saveUserData(uid, next);
     setData(next);
-    setBackupNotice(backup ? "현재 데이터가 자동백업 됐습니다." : "백업 파일을 가져왔습니다.");
+    setBackupNotice(backup ? "데이터가 자동백업 되었습니다.\n설정 > 이전 데이터 복구에서 확인하실 수 있습니다." : "백업 파일을 가져왔습니다.");
     const first = next.characters[0];
     setSelectedServer(first?.server ?? null);
     setSelectedCharId(first?.id ?? null);

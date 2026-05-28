@@ -207,6 +207,7 @@ export default function Home() {
   const [editingCard, setEditingCard] = useState<EditCard | null>(null);
   const [deleteRow, setDeleteRow] = useState<MatrixRow | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [profileInitialPage, setProfileInitialPage] = useState<"menu" | "restore">("menu");
   const [showUpdateNotes, setShowUpdateNotes] = useState(false);
   const state = useAppState(user?.uid);
 
@@ -216,7 +217,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!state.backupNotice) return;
-    const timer = window.setTimeout(state.dismissBackupNotice, 2600);
+    const timer = window.setTimeout(state.dismissBackupNotice, 5200);
     return () => window.clearTimeout(timer);
   }, [state.backupNotice, state.dismissBackupNotice]);
 
@@ -593,7 +594,7 @@ export default function Home() {
             <div className="px-4 pt-3">
               <button
                 onClick={() => setShowAddCard(true)}
-                className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-700 text-slate-400 text-sm font-medium hover:border-blue-500 hover:text-blue-400 transition-colors flex items-center justify-center gap-2"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-700 py-3 text-sm font-medium text-slate-500 transition-colors hover:border-blue-500 hover:text-blue-400"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -861,7 +862,10 @@ export default function Home() {
       />
       <ProfileModal
         open={showProfile}
-        onClose={() => setShowProfile(false)}
+        onClose={() => {
+          setShowProfile(false);
+          setProfileInitialPage("menu");
+        }}
         userName={user?.displayName}
         userEmail={user?.email}
         providerEmails={providerEmails}
@@ -874,15 +878,27 @@ export default function Home() {
         authError={authError}
         automaticBackups={state.automaticBackups}
         onRestoreBackup={state.restoreAutoBackup}
+        initialPage={profileInitialPage}
         onImportData={(importedData) => {
           state.importAccountData(importedData);
         }}
       />
       <UpdateNotesModal open={showUpdateNotes} onClose={() => setShowUpdateNotes(false)} />
       {state.backupNotice && (
-        <div className="fixed bottom-5 left-1/2 z-[80] -translate-x-1/2 rounded-2xl border border-blue-400/30 bg-slate-900/95 px-4 py-3 text-sm font-medium text-slate-100 shadow-2xl shadow-black/30">
-          {state.backupNotice}
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setProfileInitialPage("restore");
+            setShowProfile(true);
+            state.dismissBackupNotice();
+          }}
+          className="fixed left-1/2 top-5 z-[80] flex w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 items-center justify-between gap-3 rounded-2xl border border-blue-400/30 bg-slate-900/95 px-4 py-3 text-left text-sm font-medium text-slate-100 shadow-2xl shadow-black/30 transition-colors hover:border-blue-400/60 hover:bg-slate-900"
+        >
+          <span className="whitespace-pre-line leading-relaxed">{state.backupNotice}</span>
+          <span className="shrink-0 rounded-xl bg-blue-600/20 px-2.5 py-1 text-xs font-semibold text-blue-300">
+            바로가기 &gt;
+          </span>
+        </button>
       )}
     </div>
   );

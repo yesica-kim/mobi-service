@@ -208,7 +208,7 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
 
       {showBackupModal && (
         <ModalOverlay onClose={() => setShowBackupModal(false)}>
-          <div className="mx-auto w-80 rounded-2xl bg-slate-800 p-6">
+          <div className="bg-slate-800 rounded-2xl p-6 w-80 mx-auto">
             <h3 className="mb-4 text-center text-sm font-semibold text-white">백업/복원</h3>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -251,7 +251,7 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
 
       {showCreateEmptyConfirm && (
         <ModalOverlay onClose={() => setShowCreateEmptyConfirm(false)}>
-          <div className="bg-slate-800 rounded-2xl p-6 w-80 mx-auto">
+          <div className="mx-auto w-[calc(100vw-2rem)] max-w-lg rounded-2xl bg-slate-800 p-6">
             <p className="text-white text-sm text-center mb-2">
               현재 숙제 리스트를 저장할까요?
             </p>
@@ -301,7 +301,7 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
       {/* 설정 저장 모달 */}
       {showSaveModal && (
         <ModalOverlay onClose={() => setShowSaveModal(false)}>
-          <div className="bg-slate-800 rounded-2xl p-6 w-80 mx-auto">
+          <div className="mx-auto w-[calc(100vw-2rem)] max-w-lg rounded-2xl bg-slate-800 p-6">
             <h3 className="text-white text-sm font-semibold text-center mb-4">숙제 설정 저장</h3>
             <input
               type="text"
@@ -352,7 +352,7 @@ export function HomeworkToolbar({ presets, onSavePreset, onLoadPreset, onDeleteP
       {/* 설정 불러오기 모달 */}
       {showLoadModal && (
         <ModalOverlay onClose={() => setShowLoadModal(false)}>
-          <div className="bg-slate-800 rounded-2xl p-6 w-80 mx-auto max-h-[70vh] flex flex-col">
+          <div className="mx-auto flex max-h-[70vh] w-[calc(100vw-2rem)] max-w-lg flex-col rounded-2xl bg-slate-800 p-6">
             <h3 className="text-white text-sm font-semibold text-center mb-4">설정 불러오기</h3>
             {presets.length > 0 ? (
               <div className="flex-1 overflow-y-auto space-y-2 mb-4">

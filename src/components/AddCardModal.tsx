@@ -219,7 +219,7 @@ export function AddCardModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
       <div className="relative z-10 w-full">
-        <div className="bg-slate-800 rounded-2xl p-6 w-80 mx-auto max-h-[80vh] overflow-y-auto">
+        <div className="mx-auto w-[calc(100vw-2rem)] max-w-lg rounded-2xl bg-slate-800 p-6 max-h-[80vh] overflow-y-auto">
           <h3 className="text-white text-sm font-semibold text-center mb-4">{isEditing ? "카드 수정" : "숙제 추가"}</h3>
 
           {/* Type 선택 */}
