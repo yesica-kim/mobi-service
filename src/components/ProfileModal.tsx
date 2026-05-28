@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useEscapeClose } from "@/hooks/useEscapeClose";
+import type { AutoBackupSnapshot } from "@/types";
 
 interface Props {
   open: boolean;
@@ -17,9 +18,11 @@ interface Props {
   onDeleteAccount?: () => Promise<void>;
   onSignInWithGoogle?: () => Promise<void>;
   onImportData?: (data: any) => void;
+  automaticBackups?: AutoBackupSnapshot[];
+  onRestoreBackup?: (backupId: string) => void;
 }
 
-type PageType = "menu" | "terms" | "privacy";
+type PageType = "menu" | "terms" | "privacy" | "restore";
 
 function formatFilename() {
   const now = new Date();
@@ -27,10 +30,27 @@ function formatFilename() {
   return `mobi-account-data-${date}.json`;
 }
 
-export function ProfileModal({ open, onClose, userName, userEmail, providerEmails = [], userPhoto, isGuest, isAdmin, authError, onSignOut, onDeleteAccount, onSignInWithGoogle, onImportData }: Props) {
+export function ProfileModal({
+  open,
+  onClose,
+  userName,
+  userEmail,
+  providerEmails = [],
+  userPhoto,
+  isGuest,
+  isAdmin,
+  authError,
+  onSignOut,
+  onDeleteAccount,
+  onSignInWithGoogle,
+  onImportData,
+  automaticBackups = [],
+  onRestoreBackup,
+}: Props) {
   const [page, setPage] = useState<PageType>("menu");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLogoutWarning, setShowLogoutWarning] = useState(false);
+  const [restoreTarget, setRestoreTarget] = useState<AutoBackupSnapshot | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,6 +58,7 @@ export function ProfileModal({ open, onClose, userName, userEmail, providerEmail
     setPage("menu");
     setShowDeleteConfirm(false);
     setShowLogoutWarning(false);
+    setRestoreTarget(null);
     setDeleteError(null);
     onClose();
   }, [onClose]);
@@ -45,6 +66,17 @@ export function ProfileModal({ open, onClose, userName, userEmail, providerEmail
   useEscapeClose(open, handleClose);
 
   if (!open) return null;
+
+  const backupList = automaticBackups;
+
+  const formatBackupTime = (value: string) =>
+    new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value));
 
   const handleExport = () => {
     try {
@@ -183,6 +215,15 @@ export function ProfileModal({ open, onClose, userName, userEmail, providerEmail
                   </svg>
                   계정 데이터 가져오기
                 </button>
+                <button
+                  onClick={() => setPage("restore")}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm text-slate-300 hover:bg-slate-700 transition-colors"
+                >
+                  <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a6 6 0 016 6v1m0 0l-3-3m3 3l3-3M3 4v6h6" />
+                  </svg>
+                  이전 데이터 복구
+                </button>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -311,7 +352,7 @@ export function ProfileModal({ open, onClose, userName, userEmail, providerEmail
                 닫기
               </button>
             </div>
-          ) : (
+          ) : page === "privacy" ? (
             <div className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <button onClick={() => setPage("menu")} className="text-slate-400 hover:text-white transition-colors">
@@ -342,8 +383,89 @@ export function ProfileModal({ open, onClose, userName, userEmail, providerEmail
                 닫기
               </button>
             </div>
+          ) : (
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <button onClick={() => setPage("menu")} className="text-slate-400 hover:text-white transition-colors">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <h3 className="text-white text-sm font-semibold">이전 데이터 복구</h3>
+              </div>
+              <p className="mb-3 text-xs leading-relaxed text-slate-400">
+                자동 백업은 최근 20개까지만 보관돼. 복구 전 현재 상태도 한 번 더 백업돼.
+              </p>
+              {backupList.length === 0 ? (
+                <div className="rounded-2xl bg-slate-900/60 px-4 py-6 text-center text-xs text-slate-500">
+                  저장된 자동 백업이 없어.
+                </div>
+              ) : (
+                <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-1">
+                  {backupList.map((backup) => (
+                    <div key={backup.id} className="rounded-2xl bg-slate-900/60 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white">{backup.reason}</p>
+                          <p className="mt-1 text-xs text-slate-400">{backup.summary}</p>
+                          <p className="mt-1 text-[11px] text-slate-500">{formatBackupTime(backup.createdAt)}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setRestoreTarget(backup)}
+                          className="h-9 shrink-0 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-blue-500"
+                        >
+                          복구
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={() => setPage("menu")}
+                className="mt-4 w-full rounded-xl bg-slate-700 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-600"
+              >
+                닫기
+              </button>
+            </div>
           )}
         </div>
+
+        {restoreTarget && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={() => setRestoreTarget(null)}>
+            <div className="absolute inset-0 bg-black/60" />
+            <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
+              <div className="w-80 rounded-2xl bg-slate-800 p-6">
+                <p className="mb-2 text-center text-sm font-semibold text-white">이 백업으로 복구할까?</p>
+                <p className="mb-6 text-center text-xs leading-relaxed text-slate-400">
+                  {formatBackupTime(restoreTarget.createdAt)} 상태로 되돌아가.<br />
+                  현재 상태도 먼저 자동 백업돼.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRestoreTarget(null)}
+                    className="h-11 flex-1 rounded-xl bg-slate-700 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-600"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onRestoreBackup?.(restoreTarget.id);
+                      setRestoreTarget(null);
+                      handleClose();
+                    }}
+                    className="h-11 flex-1 rounded-xl bg-red-600 text-sm font-semibold text-white transition-colors hover:bg-red-500"
+                  >
+                    복구
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 로그인 화면 이동 경고 모달 */}
         {showLogoutWarning && (

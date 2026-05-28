@@ -31,6 +31,8 @@ import type { Character, HomeworkItem, RegionName, ScrollItem, ShopItem } from "
 type FilterState = { favoriteOnly: boolean; searchQuery: string; regionFilter: RegionName[]; periodFilter: string; scopeFilter: string };
 type ViewMode = "character" | "list";
 type Badge = { label: string; className: string; plain?: boolean };
+type CategoryProgress = { label: string; done: number; total: number; pct: number; color: string };
+type ProgressSummary = { done: number; total: number; pct: number; categories: CategoryProgress[] };
 
 const PERIOD_BADGES: Record<"daily" | "weekly", Badge> = {
   daily: { label: "일간", className: "bg-orange-600/20 text-orange-400" },
@@ -53,7 +55,7 @@ const REGION_BADGES: Record<string, Badge> = {
 
 const SCROLL_TYPE_BADGES: Record<string, Badge> = {
   "제작": { label: "제작", className: "bg-indigo-600/20 text-indigo-400" },
-  "채집": { label: "채집", className: "bg-emerald-600/20 text-emerald-400" },
+  "채집": { label: "채집", className: "bg-lime-600/20 text-lime-400" },
   "요리": { label: "요리", className: "bg-amber-600/20 text-amber-400" },
   "토벌": { label: "토벌", className: "bg-red-600/20 text-red-400" },
 };
@@ -157,6 +159,35 @@ function sortAllTabCards(cards: AllTabCard[], order: string[]) {
   });
 }
 
+function makePct(done: number, total: number): number {
+  return total > 0 ? Math.round((done / total) * 100) : 0;
+}
+
+function makeMatrixProgress(rows: MatrixRow[]): ProgressSummary {
+  const buckets: Record<string, { label: string; color: string; done: number; total: number }> = {
+    daily: { label: "일일 숙제", done: 0, total: 0, color: "bg-orange-500" },
+    weekly: { label: "주간 숙제", done: 0, total: 0, color: "bg-green-500" },
+    purchase: { label: "구매", done: 0, total: 0, color: "bg-purple-500" },
+    trade: { label: "물물교환", done: 0, total: 0, color: "bg-pink-500" },
+    scroll: { label: "임무게시판", done: 0, total: 0, color: "bg-yellow-500" },
+  };
+
+  for (const row of rows) {
+    const key = row.type === "homework" ? (row.sourceItem as HomeworkItem).period : row.type;
+    const bucket = buckets[key];
+    if (!bucket) continue;
+    bucket.total += 1;
+    if (isMatrixRowDone(row)) bucket.done += 1;
+  }
+
+  const categories = Object.values(buckets)
+    .filter((bucket) => bucket.total > 0)
+    .map((bucket) => ({ ...bucket, pct: makePct(bucket.done, bucket.total) }));
+  const total = categories.reduce((sum, category) => sum + category.total, 0);
+  const done = categories.reduce((sum, category) => sum + category.done, 0);
+  return { done, total, pct: makePct(done, total), categories };
+}
+
 function LoadingScreen({ message }: { message: string }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-950 px-6">
@@ -182,6 +213,12 @@ export default function Home() {
   useEffect(() => {
     setIsDevHost(window.location.hostname.includes("-git-dev-"));
   }, []);
+
+  useEffect(() => {
+    if (!state.backupNotice) return;
+    const timer = window.setTimeout(state.dismissBackupNotice, 2600);
+    return () => window.clearTimeout(timer);
+  }, [state.backupNotice, state.dismissBackupNotice]);
 
   // 인증 로딩
   if (authLoading) {
@@ -260,7 +297,7 @@ export default function Home() {
     ],
     state.allTabOrder
   );
-  const matrixRows: MatrixRow[] = (() => {
+  const { matrixRows, listProgress }: { matrixRows: MatrixRow[]; listProgress: ProgressSummary } = (() => {
     const makeHomeworkRow = (item: HomeworkItem): MatrixRow | null => {
       const index = state.allHomework.indexOf(item);
       if (index === -1) return null;
@@ -315,27 +352,41 @@ export default function Home() {
       };
     };
 
+    const allProgressCards = sortAllTabCards(
+      [
+        ...state.allHomework.map((item): AllTabCard => ({ id: item.id, type: "homework", item })),
+        ...state.allPurchaseItems.map((item): AllTabCard => ({ id: item.id, type: "purchase", item })),
+        ...state.allTradeItems.map((item): AllTabCard => ({ id: item.id, type: "trade", item })),
+        ...state.allScrollItems.map((item): AllTabCard => ({ id: item.id, type: "scroll", item })),
+      ].filter((card) => !state.favoriteOnly || card.item.isFavorite),
+      state.allTabOrder
+    )
+      .map((card) => {
+        if (card.type === "homework") return makeHomeworkRow(card.item);
+        if (card.type === "scroll") return makeScrollRow(card.item);
+        return makeShopRow(card.item, card.type);
+      })
+      .filter(Boolean) as MatrixRow[];
+
+    let rows: MatrixRow[] = [];
     if (state.activeTab === "all") {
-      return allTabCards
+      rows = allTabCards
         .map((card) => {
           if (card.type === "homework") return makeHomeworkRow(card.item);
           if (card.type === "scroll") return makeScrollRow(card.item);
           return makeShopRow(card.item, card.type);
         })
         .filter(Boolean) as MatrixRow[];
+    } else if (state.activeTab === "daily" || state.activeTab === "weekly") {
+      rows = state.currentHomework.map(makeHomeworkRow).filter(Boolean) as MatrixRow[];
+    } else if (state.activeTab === "purchase" || state.activeTab === "trade") {
+      rows = state.currentShopItems.map((item) => makeShopRow(item, state.activeTab as "purchase" | "trade")).filter(Boolean) as MatrixRow[];
+    } else if (state.activeTab === "scroll") {
+      rows = state.currentScrollItems.map(makeScrollRow).filter(Boolean) as MatrixRow[];
     }
-    if (state.activeTab === "daily" || state.activeTab === "weekly") {
-      return state.currentHomework.map(makeHomeworkRow).filter(Boolean) as MatrixRow[];
-    }
-    if (state.activeTab === "purchase" || state.activeTab === "trade") {
-      return state.currentShopItems.map((item) => makeShopRow(item, state.activeTab as "purchase" | "trade")).filter(Boolean) as MatrixRow[];
-    }
-    if (state.activeTab === "scroll") {
-      return state.currentScrollItems.map(makeScrollRow).filter(Boolean) as MatrixRow[];
-    }
-    return [];
+    return { matrixRows: rows, listProgress: makeMatrixProgress(allProgressCards) };
   })();
-
+  const visibleProgress = viewMode === "list" ? listProgress : state.progress;
   // 대시보드
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
@@ -399,8 +450,7 @@ export default function Home() {
                           const importedData = JSON.parse(ev.target?.result as string);
                           if (importedData.characters && importedData.homework) {
                             if (confirm("계정 데이터를 가져오시겠습니까?\n현재 데이터가 덮어씌워집니다.")) {
-                              localStorage.setItem("mabimobi_data", JSON.stringify(importedData));
-                              window.location.reload();
+                              state.importAccountData(importedData);
                             }
                           } else {
                             alert("올바른 mobimobi 백업 파일이 아닙니다.");
@@ -486,7 +536,7 @@ export default function Home() {
           <CharacterTabs
             characters={state.serverChars}
             selectedId={state.selectedCharId}
-            onSelect={state.setSelectedCharId}
+            onSelect={viewMode === "character" ? state.setSelectedCharId : () => {}}
             onAdd={() => setShowCreateModal(true)}
             onEdit={(c) => setEditingChar(c)}
             onReorder={state.reorderCharacters}
@@ -515,10 +565,10 @@ export default function Home() {
             />
             <WeeklyCountdown />
             <ProgressBar
-              done={state.progress.done}
-              total={state.progress.total}
-              pct={state.progress.pct}
-              categories={state.progress.categories}
+              done={visibleProgress.done}
+              total={visibleProgress.total}
+              pct={visibleProgress.pct}
+              categories={visibleProgress.categories}
               favoriteOnly={state.favoriteOnly}
               onFavoriteToggle={state.setFavoriteOnly}
               onReset={state.resetHomework}
@@ -822,12 +872,18 @@ export default function Home() {
         onDeleteAccount={user ? deleteAccount : undefined}
         onSignInWithGoogle={isGuest ? signInWithGoogle : undefined}
         authError={authError}
+        automaticBackups={state.automaticBackups}
+        onRestoreBackup={state.restoreAutoBackup}
         onImportData={(importedData) => {
-          localStorage.setItem("mabimobi_data", JSON.stringify(importedData));
-          window.location.reload();
+          state.importAccountData(importedData);
         }}
       />
       <UpdateNotesModal open={showUpdateNotes} onClose={() => setShowUpdateNotes(false)} />
+      {state.backupNotice && (
+        <div className="fixed bottom-5 left-1/2 z-[80] -translate-x-1/2 rounded-2xl border border-blue-400/30 bg-slate-900/95 px-4 py-3 text-sm font-medium text-slate-100 shadow-2xl shadow-black/30">
+          {state.backupNotice}
+        </div>
+      )}
     </div>
   );
 }

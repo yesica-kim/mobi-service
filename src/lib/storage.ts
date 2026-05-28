@@ -227,33 +227,36 @@ function syncDefaultItems<Current extends { isDefault?: boolean; isModifiedDefau
   buildDefault: (item: Default, existing?: Current) => Current
 ): Current[] {
   const defaultKeys = new Set(defaults.map(getDefaultKey));
-  const existingDefaults = new Map<string, Current>();
-  const customItems: Current[] = [];
+  const defaultsByKey = new Map(defaults.map((item) => [getDefaultKey(item), item] as const));
+  const seenDefaultKeys = new Set<string>();
 
-  for (const item of current) {
+  const syncedCurrent = current.reduce<Current[]>((items, item) => {
     if (!item.isDefault) {
-      customItems.push(item);
-      continue;
+      items.push(item);
+      return items;
     }
 
     const key = getCurrentKey(item);
-    if (defaultKeys.has(key)) {
-      existingDefaults.set(key, item);
-    } else if (item.isModifiedDefault) {
-      customItems.push({ ...item, isDefault: false });
+    const defaultItem = defaultsByKey.get(key);
+    if (!defaultItem) {
+      if (item.isModifiedDefault) items.push({ ...item, isDefault: false });
+      return items;
     }
-  }
 
-  const syncedDefaults = defaults.map((item) => {
-    const key = getDefaultKey(item);
-    const existing = existingDefaults.get(key);
-    if (existing?.isModifiedDefault) {
-      return { ...existing, defaultKey: key, isDefault: true };
+    seenDefaultKeys.add(key);
+    if (item.isModifiedDefault) {
+      items.push({ ...item, defaultKey: key, isDefault: true });
+    } else {
+      items.push(buildDefault(defaultItem, item));
     }
-    return buildDefault(item, existing);
-  });
+    return items;
+  }, []);
 
-  return [...syncedDefaults, ...customItems];
+  const missingDefaults = defaults
+    .filter((item) => !seenDefaultKeys.has(getDefaultKey(item)))
+    .map((item) => buildDefault(item));
+
+  return [...syncedCurrent, ...missingDefaults];
 }
 
 function reconcileAllTabOrder(data: AppData) {
@@ -267,13 +270,11 @@ function reconcileAllTabOrder(data: AppData) {
       ...((data.scrollItems ?? {})[charId] ?? []),
     ];
     const allIds = allItems.map((item) => item.id);
-    const defaultIds = allItems.filter((item) => item.isDefault).map((item) => item.id);
     const allIdSet = new Set(allIds);
-    const defaultIdSet = new Set(defaultIds);
-    const orderedCustomIds = (data.allTabOrder[charId] ?? []).filter((id) => allIdSet.has(id) && !defaultIdSet.has(id));
-    const missingCustomIds = allIds.filter((id) => !defaultIdSet.has(id) && !orderedCustomIds.includes(id));
+    const orderedIds = (data.allTabOrder[charId] ?? []).filter((id) => allIdSet.has(id));
+    const missingIds = allIds.filter((id) => !orderedIds.includes(id));
 
-    data.allTabOrder[charId] = [...defaultIds, ...orderedCustomIds, ...missingCustomIds];
+    data.allTabOrder[charId] = [...orderedIds, ...missingIds];
   }
 }
 
@@ -417,7 +418,10 @@ export function loadData(defaultCards?: DefaultCardsData): AppData {
 
 export function saveData(data: AppData): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    ...data,
+    clientUpdatedAt: data.clientUpdatedAt ?? new Date().toISOString(),
+  }));
 }
 
 // ── 리셋 로직 ──

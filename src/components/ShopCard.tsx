@@ -108,6 +108,101 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete,
   };
 
   const npcTags = npcToTags(item.npcName);
+  const renderDragHandle = (sizeClass = "h-11 w-11") => (
+    <button
+      {...attributes}
+      {...listeners}
+      className={`flex ${sizeClass} flex-shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none`}
+      title="드래그하여 순서 변경"
+    >
+      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+        <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+        <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+        <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+      </svg>
+    </button>
+  );
+  const renderFavoriteButton = (sizeClass = "h-11 w-11", textClass = "text-xl") => (
+    <button
+      onClick={() => onToggleFavorite(item.id)}
+      className={`flex ${sizeClass} flex-shrink-0 items-center justify-center rounded-lg ${textClass} leading-none transition-all ${
+        item.isFavorite ? "text-yellow-400 hover:bg-slate-700/70" : "text-slate-600 hover:bg-slate-700/70 hover:text-slate-400"
+      }`}
+    >
+      {item.isFavorite ? "★" : "☆"}
+    </button>
+  );
+  const renderActionButtons = (sizeClass = "h-11 w-11") => (
+    <>
+      {onUpdate && (
+        <button onClick={() => onEditRequest ? onEditRequest(item) : setEditing(true)} className={`flex ${sizeClass} items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-slate-400 transition-colors`} title="수정">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </button>
+      )}
+      {onDelete && (
+        <button onClick={() => setShowDeleteConfirm(true)} className={`flex ${sizeClass} items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-red-400 transition-colors`} title="삭제">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      )}
+    </>
+  );
+  const renderCardContent = () => (
+    <>
+      <div className="flex flex-wrap items-center gap-1">
+        {(item.period ?? "daily") === "weekly" ? (
+          <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-green-600/20 text-green-400">주간</span>
+        ) : (
+          <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-orange-600/20 text-orange-400">일간</span>
+        )}
+        <span className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${
+          scope === "server" ? "bg-teal-600/20 text-teal-400" : "bg-blue-600/20 text-blue-400"
+        }`}>
+          {scope === "server" ? "서버" : "캐릭터"}
+        </span>
+        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${REGION_COLORS[item.region]?.bg ?? "bg-blue-600/20"} ${REGION_COLORS[item.region]?.text ?? "text-blue-400"}`}>
+          {item.region}
+        </span>
+      </div>
+      <div className="mt-1.5">
+        {item.fromItem && item.toItem ? (
+          <p className={`whitespace-normal break-keep text-[15px] font-medium leading-snug ${item.completed ? "line-through text-slate-500" : "text-white"}`}>
+            <span>{item.fromItem}</span>
+            <span className="text-slate-500 text-[12px]">({item.fromCount})</span>
+            <span className="text-slate-500 mx-1">→</span>
+            <span>{item.toItem}</span>
+            <span className="text-slate-500 text-[12px]">({item.toCount})</span>
+          </p>
+        ) : (
+          <p className={`whitespace-normal break-keep text-[15px] font-medium leading-snug ${item.completed ? "line-through text-slate-500" : "text-white"}`}>
+            {item.itemName}
+          </p>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+        {npcTags.map((tag, idx) => (
+          <span key={idx} className={`text-[11px] ${item.completed ? "text-slate-600 line-through" : "text-slate-400"}`}>
+            {tag}
+          </span>
+        ))}
+      </div>
+    </>
+  );
+  const renderCheckButton = (sizeClass = "h-10 min-w-10", textClass = "text-sm") => (
+    <button
+      onClick={() => onToggle(item.id)}
+      className={`${sizeClass} rounded-lg border px-3 flex items-center justify-center ${textClass} font-bold transition-all ${
+        item.completed
+          ? scope === "server" ? "border-teal-500 bg-teal-600 text-white" : "border-blue-500 bg-blue-600 text-white"
+          : "border-slate-600 bg-slate-900/70 text-slate-500 hover:border-blue-500 hover:text-blue-300"
+      }`}
+    >
+      {item.completed ? "✓" : ""}
+    </button>
+  );
 
   return (
     <div
@@ -117,48 +212,32 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete,
         item.completed ? "bg-slate-800/40 opacity-50" : "bg-slate-800"
       }`}
     >
-      <div className={editing ? "flex items-start gap-3" : "space-y-3"}>
+      <div className={editing ? "flex items-start gap-3" : ""}>
         {!editing && (
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1">
-              <button
-                {...attributes}
-                {...listeners}
-                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-slate-400 cursor-grab active:cursor-grabbing touch-none"
-                title="드래그하여 순서 변경"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
-                  <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
-                  <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
-                </svg>
-              </button>
-              <button
-                onClick={() => onToggleFavorite(item.id)}
-                className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-xl leading-none transition-all ${
-                  item.isFavorite ? "text-yellow-400 hover:bg-slate-700/70" : "text-slate-600 hover:bg-slate-700/70 hover:text-slate-400"
-                }`}
-              >
-                {item.isFavorite ? "★" : "☆"}
-              </button>
+          <>
+            <div className="space-y-3 lg:hidden">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1">
+                  {renderDragHandle()}
+                  {renderFavoriteButton()}
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {renderActionButtons()}
+                </div>
+              </div>
+              <div className="min-w-0">{renderCardContent()}</div>
+              <div className="flex justify-end">{renderCheckButton()}</div>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              {onUpdate && (
-                <button onClick={() => onEditRequest ? onEditRequest(item) : setEditing(true)} className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-slate-400 transition-colors" title="수정">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
-              )}
-              {onDelete && (
-                <button onClick={() => setShowDeleteConfirm(true)} className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-700/70 hover:text-red-400 transition-colors" title="삭제">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              )}
+            <div className="hidden lg:flex lg:items-center lg:gap-3">
+              {renderDragHandle("h-10 w-10")}
+              {renderFavoriteButton("h-10 w-10", "text-[18px]")}
+              <div className="min-w-0 flex-1">{renderCardContent()}</div>
+              <div className="flex flex-shrink-0 items-center gap-1">
+                {renderActionButtons("h-9 w-9")}
+                {renderCheckButton("h-9 min-w-9", "text-xs")}
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {editing && (
@@ -172,8 +251,8 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete,
           </button>
         )}
 
-        <div className="flex-1 min-w-0">
-          {editing ? (
+        {editing && (
+          <div className="flex-1 min-w-0">
             <div className="space-y-2">
               <input
                 ref={nameRef}
@@ -276,61 +355,6 @@ export function ShopCard({ item, onToggle, onToggleFavorite, onUpdate, onDelete,
                 <button onClick={handleSave} className="text-xs px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors">저장</button>
               </div>
             </div>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-1">
-                {(item.period ?? "daily") === "weekly" ? (
-                  <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-green-600/20 text-green-400">주간</span>
-                ) : (
-                  <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md bg-orange-600/20 text-orange-400">일간</span>
-                )}
-                <span className={`flex-shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                  scope === "server" ? "bg-teal-600/20 text-teal-400" : "bg-blue-600/20 text-blue-400"
-                }`}>
-                  {scope === "server" ? "서버" : "캐릭터"}
-                </span>
-                <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${REGION_COLORS[item.region]?.bg ?? "bg-blue-600/20"} ${REGION_COLORS[item.region]?.text ?? "text-blue-400"}`}>
-                  {item.region}
-                </span>
-              </div>
-              <div className="mt-1.5">
-                {item.fromItem && item.toItem ? (
-                  <p className={`whitespace-normal break-keep text-[15px] font-medium leading-snug ${item.completed ? "line-through text-slate-500" : "text-white"}`}>
-                    <span>{item.fromItem}</span>
-                    <span className="text-slate-500 text-[12px]">({item.fromCount})</span>
-                    <span className="text-slate-500 mx-1">→</span>
-                    <span>{item.toItem}</span>
-                    <span className="text-slate-500 text-[12px]">({item.toCount})</span>
-                  </p>
-                ) : (
-                  <p className={`whitespace-normal break-keep text-[15px] font-medium leading-snug ${item.completed ? "line-through text-slate-500" : "text-white"}`}>
-                    {item.itemName}
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                {npcTags.map((tag, idx) => (
-                  <span key={idx} className={`text-[11px] ${item.completed ? "text-slate-600 line-through" : "text-slate-400"}`}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {!editing && (
-          <div className="flex justify-end">
-            <button
-              onClick={() => onToggle(item.id)}
-              className={`h-10 min-w-10 rounded-lg border px-3 flex items-center justify-center text-sm font-bold transition-all ${
-                item.completed
-                  ? scope === "server" ? "border-teal-500 bg-teal-600 text-white" : "border-blue-500 bg-blue-600 text-white"
-                  : "border-slate-600 bg-slate-900/70 text-slate-500 hover:border-blue-500 hover:text-blue-300"
-              }`}
-            >
-              {item.completed ? "✓" : ""}
-            </button>
           </div>
         )}
       </div>

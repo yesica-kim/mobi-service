@@ -288,6 +288,11 @@ export function generateChangeSummary(
     "숙제",
     changes
   );
+  diffOrder(
+    oldData.homework.map((h) => h.title),
+    newData.homework.map((h) => h.title),
+    changes
+  );
   // 숙제 내용 변경 (같은 타이틀인데 보상/주기 변경)
   for (const newItem of newData.homework) {
     const oldItem = oldData.homework.find((h) => h.title === newItem.title);
@@ -308,6 +313,11 @@ export function generateChangeSummary(
     "구매",
     changes
   );
+  diffOrder(
+    oldData.purchaseItems.map((p) => p.itemName),
+    newData.purchaseItems.map((p) => p.itemName),
+    changes
+  );
 
   // 물물교환 비교
   diffList(
@@ -316,12 +326,22 @@ export function generateChangeSummary(
     "물물교환",
     changes
   );
+  diffOrder(
+    oldData.tradeItems.map((t) => t.itemName),
+    newData.tradeItems.map((t) => t.itemName),
+    changes
+  );
 
   // 임무게시판 비교
   diffList(
     oldData.scrollItems.map((s) => s.title),
     newData.scrollItems.map((s) => s.title),
     "임무게시판",
+    changes
+  );
+  diffOrder(
+    oldData.scrollItems.map((s) => s.title),
+    newData.scrollItems.map((s) => s.title),
     changes
   );
 
@@ -337,5 +357,22 @@ function diffList(oldNames: string[], newNames: string[], category: string, chan
   }
   for (const name of oldNames) {
     if (!newSet.has(name)) changes.push(`${category} 삭제: ${name}`);
+  }
+}
+
+function diffOrder(oldNames: string[], newNames: string[], changes: string[]) {
+  if (oldNames.length !== newNames.length) return;
+  const oldSet = new Set(oldNames);
+  const newSet = new Set(newNames);
+  if (oldSet.size !== newSet.size) return;
+  for (const name of oldNames) {
+    if (!newSet.has(name)) return;
+  }
+
+  for (let index = 0; index < newNames.length; index += 1) {
+    const name = newNames[index];
+    if (oldNames[index] !== name) {
+      changes.push(`${name} 순서 변경`);
+    }
   }
 }

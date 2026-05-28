@@ -207,7 +207,7 @@ export function SearchFilterBar({
                 {SCROLL_TYPES.map((t) => {
                   const colors: Record<string, { bg: string; text: string; active: string }> = {
                     "제작": { bg: "bg-amber-600/10", text: "text-amber-400", active: "bg-amber-600" },
-                    "채집": { bg: "bg-emerald-600/10", text: "text-emerald-400", active: "bg-emerald-600" },
+                    "채집": { bg: "bg-lime-600/10", text: "text-lime-400", active: "bg-lime-600" },
                     "요리": { bg: "bg-rose-600/10", text: "text-rose-400", active: "bg-rose-600" },
                     "토벌": { bg: "bg-red-600/10", text: "text-red-400", active: "bg-red-600" },
                   };

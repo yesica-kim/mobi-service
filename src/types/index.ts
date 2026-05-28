@@ -226,6 +226,14 @@ export interface HomeworkPreset {
   scrollItems?: Omit<ScrollItem, "id" | "completedCount" | "isFavorite">[];
 }
 
+export interface AutoBackupSnapshot {
+  id: string;
+  createdAt: string;
+  reason: string;
+  summary: string;
+  data: Omit<AppData, "automaticBackups">;
+}
+
 // ── 멤버십 ──
 export interface MembershipInfo {
   /** 만료 날짜 (ISO string, 날짜만: "2025-06-15") */
@@ -241,6 +249,31 @@ export interface UpdateNote {
 
 export const UPDATE_NOTES: UpdateNote[] = [
   {
+    version: "1.3.0",
+    date: "2026-05-28",
+    changes: [
+      "하루 첫 접속과 주요 변경 작업 전후에 최근 상태를 자동 백업하도록 추가",
+      "설정에서 최근 자동 백업 목록을 확인하고 이전 데이터로 복구할 수 있도록 추가",
+      "백업 파일 가져오기 시 현재 상태를 먼저 자동 백업한 뒤 적용하도록 보강",
+    ],
+  },
+  {
+    version: "1.2.3",
+    date: "2026-05-28",
+    changes: [
+      "다른 기기의 오래된 로컬 데이터가 Google 계정 데이터를 덮어쓸 수 있는 동기화 문제 수정",
+      "즐겨찾기와 체크 상태가 다른 기기에 더 빠르게 반영되도록 저장 주기 보강",
+    ],
+  },
+  {
+    version: "1.2.2",
+    date: "2026-05-28",
+    changes: [
+      "PC 캐릭터별 보기에서 구매, 물물교환, 임무게시판 카드가 PC 카드 레이아웃으로 보이도록 수정",
+      "삭제한 기본 숙제 카드가 새로고침 후 다시 나타날 수 있는 문제 수정",
+    ],
+  },
+  {
     version: "1.2.1",
     date: "2026-05-26",
     changes: [
@@ -253,7 +286,6 @@ export const UPDATE_NOTES: UpdateNote[] = [
       "구글 로그인 전환 화면과 데이터 로딩 화면 개선",
       "체크박스/완료 카드 컬러와 즐겨찾기 진행도 계산 개선",
       "체크 초기화 버튼을 전체 진행도 영역으로 이동",
-      "관리자 기본 카드 운영 및 Firestore 기본 카드 반영 안정화",
     ],
   },
   {
@@ -303,6 +335,8 @@ export const UPDATE_NOTES: UpdateNote[] = [
 
 // ── 저장 데이터 형태 ──
 export interface AppData {
+  /** 사용자 데이터 최종 수정 시각. 저장/백업 표시와 동기화 보조 정보로 사용 */
+  clientUpdatedAt?: string;
   characters: Character[];
   homework: Record<string, HomeworkItem[]>;
   /** charId -> ShopItem[] */
@@ -332,4 +366,6 @@ export interface AppData {
   };
   /** 전체 탭에서 서로 다른 카드 타입 간 공통 정렬 순서 */
   allTabOrder?: Record<string, string[]>;
+  /** 최근 자동 백업 스냅샷 */
+  automaticBackups?: AutoBackupSnapshot[];
 }

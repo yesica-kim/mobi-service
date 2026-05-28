@@ -8,9 +8,11 @@ import { parseTotalCount } from "@/types";
  * 경로: users/{uid}
  */
 export async function saveUserData(uid: string, data: AppData): Promise<void> {
+  const updatedAt = new Date().toISOString();
   await setDoc(doc(db, "users", uid), {
     ...data,
-    updatedAt: new Date().toISOString(),
+    clientUpdatedAt: data.clientUpdatedAt ?? updatedAt,
+    updatedAt,
   });
 }
 
@@ -24,6 +26,7 @@ export async function loadUserData(uid: string): Promise<AppData | null> {
   const raw = snap.data() as AppData & { updatedAt?: string };
   // updatedAt 필드 제거 후 반환
   const { updatedAt, ...appData } = raw;
+  appData.clientUpdatedAt = appData.clientUpdatedAt ?? updatedAt;
   // 마이그레이션: homework totalCount / scope 보정
   if (appData.homework) {
     for (const charId of Object.keys(appData.homework)) {

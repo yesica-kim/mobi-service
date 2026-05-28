@@ -5,7 +5,7 @@ import { applyResets, createScrollForChar, getNextDailyResetMs, getNextWeeklyRes
 import { loadUserData, saveUserData } from "@/lib/firestore";
 import { loadRuntimeDefaultCards } from "@/lib/defaultCards";
 import type { DefaultCardsData } from "@/lib/adminFirestore";
-import type { AppData, Character, HomeworkItem, HomeworkPreset, MembershipInfo, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType} from "@/types";
+import type { AppData, AutoBackupSnapshot, Character, HomeworkItem, HomeworkPreset, MembershipInfo, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType} from "@/types";
 import { DEFAULT_HOMEWORK, DEFAULT_PURCHASE_ITEMS, DEFAULT_TRADE_ITEMS, DEFAULT_SCROLL_ITEMS, MAX_CHARS_PER_SERVER, SERVERS, parseTotalCount, toScope } from "@/types";
 
 function cloneHomeworkForChar(charId: string, item: HomeworkItem, index: number): HomeworkItem {
@@ -13,7 +13,7 @@ function cloneHomeworkForChar(charId: string, item: HomeworkItem, index: number)
     ...item,
     id: `${charId}_hw_clone_${Date.now()}_${index}`,
     completedCount: 0,
-    isFavorite: false,
+    isFavorite: item.isFavorite ?? false,
   };
 }
 
@@ -22,7 +22,7 @@ function cloneShopForChar(charId: string, item: ShopItem, prefix: "pur" | "trd",
     ...item,
     id: `${charId}_${prefix}_clone_${Date.now()}_${index}`,
     completed: false,
-    isFavorite: false,
+    isFavorite: item.isFavorite ?? false,
   };
 }
 
@@ -31,7 +31,7 @@ function cloneScrollForChar(charId: string, item: ScrollItem, index: number): Sc
     ...item,
     id: `${charId}_scroll_clone_${Date.now()}_${index}`,
     completedCount: 0,
-    isFavorite: false,
+    isFavorite: item.isFavorite ?? false,
   };
 }
 
@@ -49,6 +49,38 @@ function markDeletedDefault(prev: AppData, type: "homework" | "purchase" | "trad
   existing.add(key);
   deletedDefaultItems[type] = Array.from(existing);
   return deletedDefaultItems;
+}
+
+function getIndexedDefaultKey<T>(id: string, prefix: string, defaults: T[], getKey: (item: T) => string): string | undefined {
+  const match = id.match(new RegExp(`_${prefix}_(\\d+)(?:$|_)`));
+  if (!match) return undefined;
+  const index = Number(match[1]);
+  return Number.isInteger(index) ? defaults[index] ? getKey(defaults[index]) : undefined : undefined;
+}
+
+function getHomeworkDefaultDeleteKey(item: HomeworkItem, defaultCards?: DefaultCardsData | null): string | undefined {
+  if (item.defaultKey) return item.defaultKey;
+  const defaults = defaultCards?.homework ?? DEFAULT_HOMEWORK;
+  const matched = defaults.find((defaultItem) => defaultItem.title === item.title)?.title;
+  const indexed = getIndexedDefaultKey(item.id, "hw", defaults, (defaultItem) => defaultItem.title);
+  return matched ?? indexed ?? (item.isDefault ? item.title : undefined);
+}
+
+function getShopDefaultDeleteKey(item: ShopItem, type: "purchase" | "trade", defaultCards?: DefaultCardsData | null): string | undefined {
+  if (item.defaultKey) return item.defaultKey;
+  const defaults = type === "purchase" ? defaultCards?.purchaseItems ?? DEFAULT_PURCHASE_ITEMS : defaultCards?.tradeItems ?? DEFAULT_TRADE_ITEMS;
+  const prefix = type === "purchase" ? "pur" : "trd";
+  const matched = defaults.find((defaultItem) => defaultItem.itemName === item.itemName)?.itemName;
+  const indexed = getIndexedDefaultKey(item.id, prefix, defaults, (defaultItem) => defaultItem.itemName);
+  return matched ?? indexed ?? (item.isDefault ? item.itemName : undefined);
+}
+
+function getScrollDefaultDeleteKey(item: ScrollItem, defaultCards?: DefaultCardsData | null): string | undefined {
+  if (item.defaultKey) return item.defaultKey;
+  const defaults = defaultCards?.scrollItems ?? DEFAULT_SCROLL_ITEMS;
+  const matched = defaults.find((defaultItem) => defaultItem.title === item.title)?.title;
+  const indexed = getIndexedDefaultKey(item.id, "scroll", defaults, (defaultItem) => defaultItem.title);
+  return matched ?? indexed ?? (item.isDefault ? item.title : undefined);
 }
 
 function normalizeRecordByTemplate<T>(
@@ -86,6 +118,33 @@ function normalizeRecordByTemplate<T>(
   return { records: normalized, changed };
 }
 
+function normalizeFavoritesByIndex<T extends { isFavorite: boolean }>(
+  records: Record<string, T[]>,
+  charIds: string[]
+): { records: Record<string, T[]>; changed: boolean } {
+  const maxLength = Math.max(0, ...charIds.map((charId) => (records[charId] ?? []).length));
+  if (maxLength === 0) return { records, changed: false };
+
+  const sharedFavorites = Array.from({ length: maxLength }, (_, index) =>
+    charIds.some((charId) => Boolean((records[charId] ?? [])[index]?.isFavorite))
+  );
+
+  let changed = false;
+  const normalized: Record<string, T[]> = { ...records };
+
+  for (const charId of charIds) {
+    const list = records[charId] ?? [];
+    normalized[charId] = list.map((item, index) => {
+      const isFavorite = sharedFavorites[index] ?? false;
+      if (item.isFavorite === isFavorite) return item;
+      changed = true;
+      return { ...item, isFavorite };
+    });
+  }
+
+  return { records: normalized, changed };
+}
+
 function normalizeCharacterCardLists(data: AppData): { data: AppData; changed: boolean } {
   const charIds = data.characters.map((char) => char.id);
   if (charIds.length === 0) return { data, changed: false };
@@ -115,18 +174,165 @@ function normalizeCharacterCardLists(data: AppData): { data: AppData; changed: b
     cloneScrollForChar
   );
 
-  const changed = homework.changed || purchaseItems.changed || tradeItems.changed || scrollItems.changed;
+  const favoriteHomework = normalizeFavoritesByIndex(homework.records, charIds);
+  const favoritePurchase = normalizeFavoritesByIndex(purchaseItems.records, charIds);
+  const favoriteTrade = normalizeFavoritesByIndex(tradeItems.records, charIds);
+  const favoriteScroll = normalizeFavoritesByIndex(scrollItems.records, charIds);
+
+  const changed = homework.changed || purchaseItems.changed || tradeItems.changed || scrollItems.changed
+    || favoriteHomework.changed || favoritePurchase.changed || favoriteTrade.changed || favoriteScroll.changed;
   if (!changed) return { data, changed: false };
 
   return {
     data: {
       ...data,
-      homework: homework.records,
-      purchaseItems: purchaseItems.records,
-      tradeItems: tradeItems.records,
-      scrollItems: scrollItems.records,
+      homework: favoriteHomework.records,
+      purchaseItems: favoritePurchase.records,
+      tradeItems: favoriteTrade.records,
+      scrollItems: favoriteScroll.records,
     },
     changed: true,
+  };
+}
+
+function syncRecordFromTemplate<T>(
+  records: Record<string, T[]>,
+  charIds: string[],
+  templateCharId: string,
+  getKey: (item: T) => string,
+  cloneItem: (charId: string, item: T, index: number) => T,
+  mergeItem: (templateItem: T, existingItem: T, charId: string, index: number) => T
+): Record<string, T[]> {
+  const template = records[templateCharId] ?? pickTemplateList(records, charIds);
+  if (template.length === 0) return records;
+
+  const synced: Record<string, T[]> = { ...records };
+  for (const charId of charIds) {
+    if (charId === templateCharId) {
+      synced[charId] = template;
+      continue;
+    }
+
+    const current = records[charId] ?? [];
+    const used = new Set<number>();
+    synced[charId] = template.map((templateItem, index) => {
+      const key = getKey(templateItem);
+      const existingIndex = current.findIndex((item, itemIndex) => !used.has(itemIndex) && getKey(item) === key);
+      if (existingIndex === -1) return cloneItem(charId, templateItem, index);
+      used.add(existingIndex);
+      return mergeItem(templateItem, current[existingIndex], charId, index);
+    });
+  }
+
+  return synced;
+}
+
+function syncAllTabOrderFromTemplate(data: AppData, templateCharId: string): AppData["allTabOrder"] {
+  const allTabOrder = { ...(data.allTabOrder ?? {}) };
+  const templateOrder = (allTabOrder[templateCharId] ?? getAllTabIds(data, templateCharId)).filter((id) =>
+    getAllTabIds(data, templateCharId).includes(id)
+  );
+  const templateLists = {
+    homework: data.homework[templateCharId] ?? [],
+    purchase: data.purchaseItems[templateCharId] ?? [],
+    trade: data.tradeItems[templateCharId] ?? [],
+    scroll: (data.scrollItems ?? {})[templateCharId] ?? [],
+  };
+  const descriptors = templateOrder.map((id) => {
+    const homeworkIndex = templateLists.homework.findIndex((item) => item.id === id);
+    if (homeworkIndex !== -1) return { type: "homework" as const, index: homeworkIndex };
+    const purchaseIndex = templateLists.purchase.findIndex((item) => item.id === id);
+    if (purchaseIndex !== -1) return { type: "purchase" as const, index: purchaseIndex };
+    const tradeIndex = templateLists.trade.findIndex((item) => item.id === id);
+    if (tradeIndex !== -1) return { type: "trade" as const, index: tradeIndex };
+    const scrollIndex = templateLists.scroll.findIndex((item) => item.id === id);
+    if (scrollIndex !== -1) return { type: "scroll" as const, index: scrollIndex };
+    return null;
+  }).filter((descriptor): descriptor is NonNullable<typeof descriptor> => descriptor !== null);
+
+  for (const char of data.characters) {
+    const targetLists = {
+      homework: data.homework[char.id] ?? [],
+      purchase: data.purchaseItems[char.id] ?? [],
+      trade: data.tradeItems[char.id] ?? [],
+      scroll: (data.scrollItems ?? {})[char.id] ?? [],
+    };
+    const orderedIds = descriptors
+      .map((descriptor) => targetLists[descriptor.type][descriptor.index]?.id)
+      .filter((id): id is string => Boolean(id));
+    const targetIds = getAllTabIds(data, char.id);
+    allTabOrder[char.id] = [
+      ...orderedIds,
+      ...targetIds.filter((id) => !orderedIds.includes(id)),
+    ];
+  }
+
+  return allTabOrder;
+}
+
+function syncAllCardListsFromTemplate(data: AppData, templateCharId: string): AppData {
+  const charIds = data.characters.map((char) => char.id);
+  if (charIds.length === 0 || !charIds.includes(templateCharId)) return data;
+
+  const homework = syncRecordFromTemplate(
+    data.homework,
+    charIds,
+    templateCharId,
+    (item) => `${item.defaultKey ?? ""}|${item.period}|${item.scope ?? "character"}|${item.title}|${item.reward}`,
+    cloneHomeworkForChar,
+    (templateItem, existingItem) => ({
+      ...templateItem,
+      id: existingItem.id,
+      completedCount: Math.min(existingItem.completedCount, templateItem.totalCount),
+    })
+  );
+  const purchaseItems = syncRecordFromTemplate(
+    data.purchaseItems,
+    charIds,
+    templateCharId,
+    (item) => `${item.defaultKey ?? ""}|${item.period}|${item.scope ?? "character"}|${item.region}|${item.npcName}|${item.itemName}`,
+    (charId, item, index) => cloneShopForChar(charId, item, "pur", index),
+    (templateItem, existingItem) => ({
+      ...templateItem,
+      id: existingItem.id,
+      completed: existingItem.completed,
+    })
+  );
+  const tradeItems = syncRecordFromTemplate(
+    data.tradeItems,
+    charIds,
+    templateCharId,
+    (item) => `${item.defaultKey ?? ""}|${item.period}|${item.scope ?? "character"}|${item.region}|${item.npcName}|${item.itemName}`,
+    (charId, item, index) => cloneShopForChar(charId, item, "trd", index),
+    (templateItem, existingItem) => ({
+      ...templateItem,
+      id: existingItem.id,
+      completed: existingItem.completed,
+    })
+  );
+  const scrollItems = syncRecordFromTemplate(
+    data.scrollItems ?? {},
+    charIds,
+    templateCharId,
+    (item) => `${item.defaultKey ?? ""}|${item.period}|${item.scope ?? "character"}|${item.region}|${item.scrollType}|${item.title}|${item.reward}`,
+    cloneScrollForChar,
+    (templateItem, existingItem) => ({
+      ...templateItem,
+      id: existingItem.id,
+      completedCount: Math.min(existingItem.completedCount, templateItem.totalCount),
+    })
+  );
+
+  const next = {
+    ...data,
+    homework,
+    purchaseItems,
+    tradeItems,
+    scrollItems,
+  };
+  return {
+    ...next,
+    allTabOrder: syncAllTabOrderFromTemplate(next, templateCharId),
   };
 }
 
@@ -145,6 +351,63 @@ function hasStoredCards(data: AppData): boolean {
   return hasItems(data.homework) || hasItems(data.purchaseItems) || hasItems(data.tradeItems) || hasItems(data.scrollItems);
 }
 
+const MAX_AUTO_BACKUPS = 20;
+
+function stripAutomaticBackups(data: AppData): Omit<AppData, "automaticBackups"> {
+  const { automaticBackups, ...snapshot } = data;
+  return snapshot;
+}
+
+function getKstDateKey(value: string | Date = new Date()): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  return new Date(date.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function countRecordItems(records: Record<string, unknown[]> | undefined): number {
+  return Object.values(records ?? {}).reduce((sum, items) => sum + items.length, 0);
+}
+
+function getBackupSummary(data: AppData): string {
+  const cardCount =
+    countRecordItems(data.homework) +
+    countRecordItems(data.purchaseItems) +
+    countRecordItems(data.tradeItems) +
+    countRecordItems(data.scrollItems);
+  return `캐릭터 ${data.characters.length}명 / 카드 ${cardCount}개`;
+}
+
+function createBackupSnapshot(data: AppData, reason: string): AutoBackupSnapshot {
+  const createdAt = new Date().toISOString();
+  return {
+    id: `backup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt,
+    reason,
+    summary: getBackupSummary(data),
+    data: {
+      ...stripAutomaticBackups(data),
+      clientUpdatedAt: data.clientUpdatedAt ?? createdAt,
+    },
+  };
+}
+
+function addAutoBackup(data: AppData, reason: string): AppData {
+  const snapshot = createBackupSnapshot(data, reason);
+  const backups = [snapshot, ...(data.automaticBackups ?? [])].slice(0, MAX_AUTO_BACKUPS);
+  return { ...data, automaticBackups: backups };
+}
+
+function addAutoBackupIfUseful(data: AppData, reason: string): AppData {
+  return hasStoredCards(data) || data.characters.length > 0 ? addAutoBackup(data, reason) : data;
+}
+
+function shouldCreateDailyBackup(data: AppData): boolean {
+  if (!hasStoredCards(data)) return false;
+  const today = getKstDateKey();
+  return !(data.automaticBackups ?? []).some((backup) =>
+    backup.reason === "하루 첫 접속" && getKstDateKey(backup.createdAt) === today
+  );
+}
+
 export function useAppState(uid?: string | null) {
   const [data, setData] = useState<AppData | null>(null);
   const [runtimeDefaults, setRuntimeDefaults] = useState<DefaultCardsData | null>(null);
@@ -157,6 +420,7 @@ export function useAppState(uid?: string | null) {
   const [periodFilter, setPeriodFilter] = useState<PeriodType | "all">("all");
   const [scopeFilter, setScopeFilter] = useState<ScopeType | "all">("all");
   const [scrollTypeFilter, setScrollTypeFilter] = useState<ScrollType | "all">("all");
+  const [backupNotice, setBackupNotice] = useState<string | null>(null);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 초기 로드: Firestore 우선, 없으면 localStorage
@@ -222,6 +486,16 @@ export function useAppState(uid?: string | null) {
       const normalized = normalizeCharacterCardLists(loaded);
       if (normalized.changed) {
         loaded = normalized.data;
+      }
+      if (loaded.characters.length > 0) {
+        loaded = syncAllCardListsFromTemplate(loaded, loaded.characters[0].id);
+      }
+      let createdDailyBackup = false;
+      if (shouldCreateDailyBackup(loaded)) {
+        loaded = addAutoBackup(loaded, "하루 첫 접속");
+        createdDailyBackup = true;
+      }
+      if (normalized.changed || loaded.characters.length > 0) {
         saveData(loaded);
         if (uid) {
           try {
@@ -235,6 +509,9 @@ export function useAppState(uid?: string | null) {
       if (cancelled) return;
       setRuntimeDefaults(defaults);
       setData(loaded);
+      if (createdDailyBackup) {
+        setBackupNotice("하루 첫 접속 백업이 저장됐어.");
+      }
       if (loaded.characters.length > 0) {
         // SERVERS 순서 기준으로 첫 서버의 첫 캐릭터 선택
         const charServers = new Set(loaded.characters.map((c) => c.server));
@@ -299,10 +576,14 @@ export function useAppState(uid?: string | null) {
   const persist = useCallback((updater: (prev: AppData) => AppData, options?: { immediate?: boolean }) => {
     setData((prev) => {
       if (!prev) return prev;
-      const next = updater(prev);
+      const previousBackupId = prev.automaticBackups?.[0]?.id;
+      const next = { ...updater(prev), clientUpdatedAt: new Date().toISOString() };
+      if (next.automaticBackups?.[0]?.id && next.automaticBackups[0].id !== previousBackupId) {
+        setBackupNotice("이전 상태가 자동 백업됐어.");
+      }
       // localStorage에 즉시 저장
       saveData(next);
-      // 카드 구조 변경은 기기 간 차이를 줄이기 위해 즉시 저장하고, 체크 같은 잦은 변경은 debounce 저장
+      // 로그인 상태에서는 다른 기기와의 차이를 줄이기 위해 모든 변경을 빠르게 Firestore에 저장한다.
       if (uid) {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         if (options?.immediate) {
@@ -310,7 +591,7 @@ export function useAppState(uid?: string | null) {
         } else {
           saveTimerRef.current = setTimeout(() => {
             saveUserData(uid, next);
-          }, 1000);
+          }, 300);
         }
       }
       return next;
@@ -362,7 +643,8 @@ export function useAppState(uid?: string | null) {
           scrollItems: { ...(prev.scrollItems ?? {}), [id]: scrollItems },
           allTabOrder,
         };
-      });
+      }, { immediate: true });
+      persist((prev) => addAutoBackupIfUseful(prev, "캐릭터 추가 후"), { immediate: true });
       setSelectedServer(char.server);
       setSelectedCharId(id);
     },
@@ -385,6 +667,7 @@ export function useAppState(uid?: string | null) {
   const deleteCharacter = useCallback(
     (charId: string) => {
       persist((prev) => {
+        prev = addAutoBackupIfUseful(prev, "캐릭터 삭제 전");
         const chars = prev.characters.filter((c) => c.id !== charId);
         const hw = { ...prev.homework };
         const pur = { ...prev.purchaseItems };
@@ -421,6 +704,11 @@ export function useAppState(uid?: string | null) {
       return prev.characters.filter((c) => c.server === selectedServer).map((c) => c.id);
     },
     [selectedServer]
+  );
+
+  const getAllCharIds = useCallback(
+    (prev: AppData): string[] => prev.characters.map((c) => c.id),
+    []
   );
 
   const getCharServerCharIds = useCallback((prev: AppData, charId: string): string[] => {
@@ -506,32 +794,37 @@ export function useAppState(uid?: string | null) {
     (hwId: string) => {
       if (!selectedCharId) return;
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const currentList = prev.homework[selectedCharId] ?? [];
         const idx = currentList.findIndex((hw) => hw.id === hwId);
         if (idx === -1) return prev;
+        const isFavorite = !currentList[idx].isFavorite;
 
         const newHomework = { ...prev.homework };
-        newHomework[selectedCharId] = currentList.map((hw, i) =>
-          i === idx ? { ...hw, isFavorite: !hw.isFavorite } : hw
-        );
+        for (const charId of getAllCharIds(prev)) {
+          newHomework[charId] = (newHomework[charId] ?? []).map((hw, i) =>
+            i === idx ? { ...hw, isFavorite } : hw
+          );
+        }
         return { ...prev, homework: newHomework };
-      });
+      }, { immediate: true });
     },
-    [persist, selectedCharId]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
-  // ── 숙제 수정 (현재 서버 전체 캐릭터 동기화) ──
+  // ── 숙제 수정 (전체 서버/캐릭터 동기화) ──
   const updateHomework = useCallback(
     (hwId: string, updates: Partial<Pick<import("@/types").HomeworkItem, "title" | "reward" | "totalCount" | "scope">>) => {
       if (!selectedCharId) return;
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const currentList = prev.homework[selectedCharId] ?? [];
         const idx = currentList.findIndex((hw) => hw.id === hwId);
         if (idx === -1) return prev;
         const target = currentList[idx];
 
         const newHomework = { ...prev.homework };
-        for (const charId of getSameServerCharIds(prev)) {
+        for (const charId of getAllCharIds(prev)) {
           newHomework[charId] = (newHomework[charId] ?? []).map((hw, i) => {
             if (i !== idx) return hw;
             const updated = { ...hw, ...updates, ...(target.isDefault ? { isModifiedDefault: true, defaultKey: target.defaultKey ?? target.title } : {}) };
@@ -544,7 +837,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, homework: newHomework };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
   // ── 구매/물물교환 토글 ──
@@ -626,33 +919,38 @@ export function useAppState(uid?: string | null) {
       if (!selectedCharId) return;
       const key = type === "purchase" ? "purchaseItems" : "tradeItems";
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const currentList = prev[key][selectedCharId] ?? [];
         const idx = currentList.findIndex((item) => item.id === itemId);
         if (idx === -1) return prev;
+        const isFavorite = !currentList[idx].isFavorite;
 
         const newItems = { ...prev[key] };
-        newItems[selectedCharId] = currentList.map((item, i) =>
-          i === idx ? { ...item, isFavorite: !item.isFavorite } : item
-        );
+        for (const charId of getAllCharIds(prev)) {
+          newItems[charId] = (newItems[charId] ?? []).map((item, i) =>
+            i === idx ? { ...item, isFavorite } : item
+          );
+        }
         return { ...prev, [key]: newItems };
-      });
+      }, { immediate: true });
     },
-    [persist, selectedCharId]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
-  // ── 구매/물물교환 수정 (현재 서버 전체 캐릭터 동기화) ──
+  // ── 구매/물물교환 수정 (전체 서버/캐릭터 동기화) ──
   const updateShopItem = useCallback(
     (itemId: string, type: "purchase" | "trade", updates: Partial<Pick<import("@/types").ShopItem, "itemName" | "region" | "npcName" | "period" | "scope">>) => {
       if (!selectedCharId) return;
       const key = type === "purchase" ? "purchaseItems" : "tradeItems";
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const currentList = prev[key][selectedCharId] ?? [];
         const idx = currentList.findIndex((item) => item.id === itemId);
         if (idx === -1) return prev;
         const target = currentList[idx];
 
         const newItems = { ...prev[key] };
-        for (const charId of getSameServerCharIds(prev)) {
+        for (const charId of getAllCharIds(prev)) {
           newItems[charId] = (newItems[charId] ?? []).map((item, i) =>
             i === idx ? { ...item, ...updates, ...(target.isDefault ? { isModifiedDefault: true, defaultKey: target.defaultKey ?? target.itemName } : {}) } : item
           );
@@ -660,20 +958,21 @@ export function useAppState(uid?: string | null) {
         return { ...prev, [key]: newItems };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
-  // ── 숙제 삭제 (현재 서버 전체 캐릭터 동기화) ──
+  // ── 숙제 삭제 (전체 서버/캐릭터 동기화) ──
   const deleteHomework = useCallback(
     (hwId: string) => {
       if (!selectedCharId) return;
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const currentList = prev.homework[selectedCharId] ?? [];
         const idx = currentList.findIndex((hw) => hw.id === hwId);
         if (idx === -1) return prev;
         const target = currentList[idx];
-        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, "homework", target.defaultKey ?? target.title) : prev.deletedDefaultItems;
-        const charIds = getSameServerCharIds(prev);
+        const deletedDefaultItems = markDeletedDefault(prev, "homework", getHomeworkDefaultDeleteKey(target, runtimeDefaults));
+        const charIds = getAllCharIds(prev);
 
         // 삭제 전 모든 캐릭터의 상태 저장
         const savedStates = { ...(prev.savedItemStates ?? {}) };
@@ -696,18 +995,19 @@ export function useAppState(uid?: string | null) {
         return { ...prev, homework: newHomework, savedItemStates: savedStates, deletedDefaultItems, allTabOrder };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
-  // ── 숙제 추가 (현재 서버 전체 캐릭터 동기화) ──
+  // ── 숙제 추가 (전체 서버/캐릭터 동기화) ──
   const addHomework = useCallback(
     (hw: { title: string; reward: string; period: PeriodType; totalCount: number; scope: ScopeType }) => {
       if (!selectedCharId) return;
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const newHomework = { ...prev.homework };
         const allTabOrder = { ...(prev.allTabOrder ?? {}) };
         const ts = Date.now();
-        for (const charId of getSameServerCharIds(prev)) {
+        for (const charId of getAllCharIds(prev)) {
           const list = [...(newHomework[charId] ?? [])];
           const newItem: HomeworkItem = {
             id: `${charId}_hw_${ts}`,
@@ -725,22 +1025,23 @@ export function useAppState(uid?: string | null) {
         return { ...prev, homework: newHomework, allTabOrder };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
-  // ── 구매/물물교환 삭제 (현재 서버 전체 캐릭터 동기화) ──
+  // ── 구매/물물교환 삭제 (전체 서버/캐릭터 동기화) ──
   const deleteShopItem = useCallback(
     (itemId: string, type: "purchase" | "trade") => {
       if (!selectedCharId) return;
       const key = type === "purchase" ? "purchaseItems" : "tradeItems";
       const stateKey = type === "purchase" ? "purchase" : "trade";
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const currentList = prev[key][selectedCharId] ?? [];
         const idx = currentList.findIndex((item) => item.id === itemId);
         if (idx === -1) return prev;
         const target = currentList[idx];
-        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, stateKey, target.defaultKey ?? target.itemName) : prev.deletedDefaultItems;
-        const charIds = getSameServerCharIds(prev);
+        const deletedDefaultItems = markDeletedDefault(prev, stateKey, getShopDefaultDeleteKey(target, type, runtimeDefaults));
+        const charIds = getAllCharIds(prev);
 
         // 삭제 전 모든 캐릭터의 상태 저장
         const savedStates = { ...(prev.savedItemStates ?? {}) };
@@ -763,20 +1064,21 @@ export function useAppState(uid?: string | null) {
         return { ...prev, [key]: newItems, savedItemStates: savedStates, deletedDefaultItems, allTabOrder };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds]
   );
 
-  // ── 구매/물물교환 추가 (현재 서버 전체 캐릭터 동기화) ──
+  // ── 구매/물물교환 추가 (전체 서버/캐릭터 동기화) ──
   const addShopItem = useCallback(
     (type: "purchase" | "trade", item: { itemName: string; region: RegionName; npcName: string; period: PeriodType; scope: ScopeType }) => {
       if (!selectedCharId) return;
       const key = type === "purchase" ? "purchaseItems" : "tradeItems";
       const prefix = type === "purchase" ? "pur" : "trd";
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const newItems = { ...prev[key] };
         const allTabOrder = { ...(prev.allTabOrder ?? {}) };
         const ts = Date.now();
-        for (const charId of getSameServerCharIds(prev)) {
+        for (const charId of getAllCharIds(prev)) {
           const list = newItems[charId] ?? [];
           const newItem: ShopItem = {
             id: `${charId}_${prefix}_${ts}`,
@@ -794,16 +1096,17 @@ export function useAppState(uid?: string | null) {
         return { ...prev, [key]: newItems, allTabOrder };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds]
   );
 
-  // ── 숙제 순서 변경 (현재 서버 전체 캐릭터 동기화) ──
+  // ── 숙제 순서 변경 (전체 서버/캐릭터 동기화) ──
   const reorderHomework = useCallback(
     (oldIndex: number, newIndex: number) => {
       if (!selectedCharId) return;
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const newHomework = { ...prev.homework };
-        for (const charId of getSameServerCharIds(prev)) {
+        for (const charId of getAllCharIds(prev)) {
           const list = [...(newHomework[charId] ?? [])];
           if (oldIndex < list.length && newIndex < list.length) {
             const [moved] = list.splice(oldIndex, 1);
@@ -814,17 +1117,18 @@ export function useAppState(uid?: string | null) {
         return { ...prev, homework: newHomework };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds]
   );
 
-  // ── 구매/물물교환 순서 변경 (현재 서버 전체 캐릭터 동기화) ──
+  // ── 구매/물물교환 순서 변경 (전체 서버/캐릭터 동기화) ──
   const reorderShopItem = useCallback(
     (type: "purchase" | "trade", oldIndex: number, newIndex: number) => {
       if (!selectedCharId) return;
       const key = type === "purchase" ? "purchaseItems" : "tradeItems";
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const newItems = { ...prev[key] };
-        for (const charId of getSameServerCharIds(prev)) {
+        for (const charId of getAllCharIds(prev)) {
           const list = [...(newItems[charId] ?? [])];
           if (oldIndex < list.length && newIndex < list.length) {
             const [moved] = list.splice(oldIndex, 1);
@@ -835,7 +1139,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, [key]: newItems };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds]
   );
 
   // ── 캐릭터 순서 변경 ──
@@ -885,10 +1189,11 @@ export function useAppState(uid?: string | null) {
     (item: { title: string; scrollType: ScrollType; period: PeriodType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => {
       if (!selectedCharId) return;
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const scrollItems = { ...(prev.scrollItems ?? {}) };
         const allTabOrder = { ...(prev.allTabOrder ?? {}) };
         const ts = Date.now();
-        for (const charId of getSameServerCharIds(prev)) {
+        for (const charId of getAllCharIds(prev)) {
           const list = scrollItems[charId] ?? [];
           const newItem: ScrollItem = {
             id: `${charId}_scroll_${ts}`,
@@ -909,7 +1214,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, scrollItems, allTabOrder };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds]
   );
 
   const toggleScrollItem = useCallback(
@@ -957,31 +1262,36 @@ export function useAppState(uid?: string | null) {
     (itemId: string) => {
       if (!selectedCharId) return;
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const scrollItems = { ...(prev.scrollItems ?? {}) };
         const currentList = scrollItems[selectedCharId] ?? [];
         const idx = currentList.findIndex((s) => s.id === itemId);
         if (idx === -1) return prev;
+        const isFavorite = !currentList[idx].isFavorite;
 
-        scrollItems[selectedCharId] = currentList.map((s, i) =>
-          i === idx ? { ...s, isFavorite: !s.isFavorite } : s
-        );
+        for (const charId of getAllCharIds(prev)) {
+          scrollItems[charId] = (scrollItems[charId] ?? []).map((s, i) =>
+            i === idx ? { ...s, isFavorite } : s
+          );
+        }
         return { ...prev, scrollItems };
-      });
+      }, { immediate: true });
     },
-    [persist, selectedCharId]
+    [persist, selectedCharId, getAllCharIds]
   );
 
   const updateScrollItem = useCallback(
     (itemId: string, updates: Partial<Pick<ScrollItem, "title" | "scrollType" | "period" | "totalCount" | "materials" | "reward" | "region" | "tags">>) => {
       if (!selectedCharId) return;
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const scrollItems = { ...(prev.scrollItems ?? {}) };
         const currentList = scrollItems[selectedCharId] ?? [];
         const idx = currentList.findIndex((s) => s.id === itemId);
         if (idx === -1) return prev;
         const target = currentList[idx];
 
-        for (const charId of getSameServerCharIds(prev)) {
+        for (const charId of getAllCharIds(prev)) {
           scrollItems[charId] = (scrollItems[charId] ?? []).map((s, i) => {
             if (i !== idx) return s;
             const updated = { ...s, ...updates, ...(target.isDefault ? { isModifiedDefault: true, defaultKey: target.defaultKey ?? target.title } : {}) };
@@ -994,20 +1304,21 @@ export function useAppState(uid?: string | null) {
         return { ...prev, scrollItems };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds]
   );
 
   const deleteScrollItem = useCallback(
     (itemId: string) => {
       if (!selectedCharId) return;
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const scrollItems = { ...(prev.scrollItems ?? {}) };
         const currentList = scrollItems[selectedCharId] ?? [];
         const idx = currentList.findIndex((s) => s.id === itemId);
         if (idx === -1) return prev;
         const target = currentList[idx];
-        const deletedDefaultItems = target.isDefault ? markDeletedDefault(prev, "scroll", target.defaultKey ?? target.title) : prev.deletedDefaultItems;
-        const charIds = getSameServerCharIds(prev);
+        const deletedDefaultItems = markDeletedDefault(prev, "scroll", getScrollDefaultDeleteKey(target, runtimeDefaults));
+        const charIds = getAllCharIds(prev);
 
         const allTabOrder = { ...(prev.allTabOrder ?? {}) };
         for (const charId of charIds) {
@@ -1019,15 +1330,16 @@ export function useAppState(uid?: string | null) {
         return { ...prev, scrollItems, deletedDefaultItems, allTabOrder };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds]
   );
 
   const reorderScrollItem = useCallback(
     (oldIndex: number, newIndex: number) => {
       if (!selectedCharId) return;
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const scrollItems = { ...(prev.scrollItems ?? {}) };
-        for (const charId of getSameServerCharIds(prev)) {
+        for (const charId of getAllCharIds(prev)) {
           const list = [...(scrollItems[charId] ?? [])];
           if (oldIndex < list.length && newIndex < list.length) {
             const [moved] = list.splice(oldIndex, 1);
@@ -1038,7 +1350,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, scrollItems };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds]
   );
 
   const reorderAllTabItem = useCallback(
@@ -1049,6 +1361,7 @@ export function useAppState(uid?: string | null) {
       if (!activeId || !overId || activeId === overId) return;
 
       persist((prev) => {
+        prev = syncAllCardListsFromTemplate(prev, selectedCharId);
         const charId = selectedCharId;
         const allIds = getAllTabIds(prev, charId);
         const existingOrder = (prev.allTabOrder?.[charId] ?? []).filter((id) => allIds.includes(id));
@@ -1083,7 +1396,7 @@ export function useAppState(uid?: string | null) {
         }).filter((descriptor): descriptor is NonNullable<typeof descriptor> => descriptor !== null);
 
         const allTabOrder = { ...(prev.allTabOrder ?? {}) };
-        for (const targetCharId of getSameServerCharIds(prev)) {
+        for (const targetCharId of getAllCharIds(prev)) {
           const targetLists = {
             homework: prev.homework[targetCharId] ?? [],
             purchase: prev.purchaseItems[targetCharId] ?? [],
@@ -1106,14 +1419,15 @@ export function useAppState(uid?: string | null) {
         };
       });
     },
-    [persist, selectedCharId, getSameServerCharIds]
+    [persist, selectedCharId, getAllCharIds]
   );
 
-  // ── 숙제 초기화 (현재 서버 전체 체크 상태 해제) ──
+  // ── 숙제 초기화 (전체 서버/캐릭터 체크 상태 해제) ──
   const resetHomework = useCallback(() => {
     if (!selectedCharId) return;
     persist((prev) => {
-      const charIds = getSameServerCharIds(prev);
+      prev = addAutoBackupIfUseful(prev, "체크박스 초기화 전");
+      const charIds = getAllCharIds(prev);
       if (charIds.length === 0) return prev;
 
       const normalizedHomework = normalizeRecordByTemplate(
@@ -1196,12 +1510,13 @@ export function useAppState(uid?: string | null) {
       }
 
       return next;
-    });
-  }, [persist, selectedCharId, getSameServerCharIds]);
+    }, { immediate: true });
+  }, [persist, selectedCharId, getAllCharIds]);
 
   const createEmptyHomeworkList = useCallback(() => {
     if (!selectedCharId) return;
     persist((prev) => {
+      prev = addAutoBackupIfUseful(prev, "빈 리스트로 시작 전");
       const savedStates = { ...(prev.savedItemStates ?? {}) };
       const allTabOrder = { ...(prev.allTabOrder ?? {}) };
       for (const char of prev.characters) {
@@ -1218,7 +1533,7 @@ export function useAppState(uid?: string | null) {
         savedItemStates: savedStates,
         allTabOrder,
       };
-    });
+    }, { immediate: true });
   }, [persist, selectedCharId]);
 
   const hasAnyCard = useMemo(() => {
@@ -1308,6 +1623,7 @@ export function useAppState(uid?: string | null) {
       }
       if (!preset) return;
       persist((prev) => {
+        prev = addAutoBackupIfUseful(prev, presetId === "__default__" ? "기본 숙제 설정 불러오기 전" : "저장한 리스트 불러오기 전");
         const savedStates = { ...(prev.savedItemStates ?? {}) };
         const nextHomework = { ...prev.homework };
         const nextPurchase = { ...prev.purchaseItems };
@@ -1341,7 +1657,7 @@ export function useAppState(uid?: string | null) {
               isFavorite: saved?.isFavorite ?? false,
               totalCount,
             };
-          });
+      }, { immediate: true });
           nextPurchase[charId] = preset!.purchaseItems.map((item, i) => {
             const saved = mergedPur[item.itemName];
             return {
@@ -1372,7 +1688,7 @@ export function useAppState(uid?: string | null) {
           });
         }
 
-        return {
+        const next = {
           ...prev,
           savedItemStates: savedStates,
           homework: nextHomework,
@@ -1381,7 +1697,8 @@ export function useAppState(uid?: string | null) {
           scrollItems: nextScroll,
           allTabOrder,
         };
-      });
+        return normalizeCharacterCardLists(next).data;
+      }, { immediate: true });
     },
     [persist, selectedCharId, data, defaultPreset]
   );
@@ -1423,66 +1740,83 @@ export function useAppState(uid?: string | null) {
     (preset: HomeworkPreset) => {
       if (!selectedCharId) return;
       persist((prev) => {
-        // 1. 현재 상태를 savedItemStates에 저장 (기존 저장분과 병합)
-        const prevHw = prev.homework[selectedCharId] ?? [];
-        const prevPur = prev.purchaseItems[selectedCharId] ?? [];
-        const prevTrd = prev.tradeItems[selectedCharId] ?? [];
-
+        prev = addAutoBackupIfUseful(prev, "백업 파일 가져오기 전");
         const savedStates = { ...(prev.savedItemStates ?? {}) };
-        const charStates = savedStates[selectedCharId] ?? { homework: {}, purchase: {}, trade: {} };
+        const nextHomework = { ...prev.homework };
+        const nextPurchase = { ...prev.purchaseItems };
+        const nextTrade = { ...prev.tradeItems };
+        const nextScroll = { ...(prev.scrollItems ?? {}) };
+        const allTabOrder = { ...(prev.allTabOrder ?? {}) };
 
-        const mergedHw = { ...charStates.homework };
-        for (const h of prevHw) { mergedHw[h.title] = { completedCount: h.completedCount, isFavorite: h.isFavorite }; }
-        const mergedPur = { ...charStates.purchase };
-        for (const p of prevPur) { mergedPur[p.itemName] = { completed: p.completed, isFavorite: p.isFavorite }; }
-        const mergedTrd = { ...charStates.trade };
-        for (const t of prevTrd) { mergedTrd[t.itemName] = { completed: t.completed, isFavorite: t.isFavorite }; }
+        for (const char of prev.characters) {
+          const charId = char.id;
+          const prevHw = prev.homework[charId] ?? [];
+          const prevPur = prev.purchaseItems[charId] ?? [];
+          const prevTrd = prev.tradeItems[charId] ?? [];
+          const charStates = savedStates[charId] ?? { homework: {}, purchase: {}, trade: {} };
 
-        savedStates[selectedCharId] = { homework: mergedHw, purchase: mergedPur, trade: mergedTrd };
+          const mergedHw = { ...charStates.homework };
+          for (const h of prevHw) { mergedHw[h.title] = { completedCount: h.completedCount, isFavorite: h.isFavorite }; }
+          const mergedPur = { ...charStates.purchase };
+          for (const p of prevPur) { mergedPur[p.itemName] = { completed: p.completed, isFavorite: p.isFavorite }; }
+          const mergedTrd = { ...charStates.trade };
+          for (const t of prevTrd) { mergedTrd[t.itemName] = { completed: t.completed, isFavorite: t.isFavorite }; }
 
-        // 2. 프리셋 아이템 생성 + savedItemStates에서 매칭되는 상태 복원
-        return {
+          savedStates[charId] = { homework: mergedHw, purchase: mergedPur, trade: mergedTrd };
+          delete allTabOrder[charId];
+
+          nextHomework[charId] = preset.homework.map((hw, i) => {
+            const saved = mergedHw[hw.title];
+            const totalCount = hw.totalCount || parseTotalCount(hw.title);
+            return {
+              ...hw,
+              id: `${charId}_hw_${i}`,
+              completedCount: Math.min(saved?.completedCount ?? 0, totalCount),
+              isFavorite: saved?.isFavorite ?? false,
+              totalCount,
+            };
+          });
+          nextPurchase[charId] = preset.purchaseItems.map((item, i) => {
+            const saved = mergedPur[item.itemName];
+            return {
+              ...item,
+              id: `${charId}_pur_${i}`,
+              completed: saved?.completed ?? false,
+              isFavorite: saved?.isFavorite ?? false,
+            };
+          });
+          nextTrade[charId] = preset.tradeItems.map((item, i) => {
+            const saved = mergedTrd[item.itemName];
+            return {
+              ...item,
+              id: `${charId}_trd_${i}`,
+              completed: saved?.completed ?? false,
+              isFavorite: saved?.isFavorite ?? false,
+            };
+          });
+          nextScroll[charId] = (preset.scrollItems ?? []).map((item, i) => {
+            const totalCount = item.totalCount || 3;
+            return {
+              ...item,
+              id: `${charId}_scroll_${i}`,
+              completedCount: 0,
+              isFavorite: false,
+              totalCount,
+            };
+          });
+        }
+
+        const next = {
           ...prev,
           savedItemStates: savedStates,
-          homework: {
-            ...prev.homework,
-            [selectedCharId]: preset.homework.map((hw, i) => {
-              const saved = mergedHw[hw.title];
-              return {
-                ...hw,
-                id: `${selectedCharId}_hw_${i}`,
-                completedCount: saved?.completedCount ?? 0,
-                isFavorite: saved?.isFavorite ?? false,
-                totalCount: hw.totalCount || parseTotalCount(hw.title),
-              };
-            }),
-          },
-          purchaseItems: {
-            ...prev.purchaseItems,
-            [selectedCharId]: preset.purchaseItems.map((item, i) => {
-              const saved = mergedPur[item.itemName];
-              return {
-                ...item,
-                id: `${selectedCharId}_pur_${i}`,
-                completed: saved?.completed ?? false,
-                isFavorite: saved?.isFavorite ?? false,
-              };
-            }),
-          },
-          tradeItems: {
-            ...prev.tradeItems,
-            [selectedCharId]: preset.tradeItems.map((item, i) => {
-              const saved = mergedTrd[item.itemName];
-              return {
-                ...item,
-                id: `${selectedCharId}_trd_${i}`,
-                completed: saved?.completed ?? false,
-                isFavorite: saved?.isFavorite ?? false,
-              };
-            }),
-          },
+          homework: nextHomework,
+          purchaseItems: nextPurchase,
+          tradeItems: nextTrade,
+          scrollItems: nextScroll,
+          allTabOrder,
         };
-      });
+        return normalizeCharacterCardLists(next).data;
+      }, { immediate: true });
     },
     [persist, selectedCharId]
   );
@@ -1507,13 +1841,26 @@ export function useAppState(uid?: string | null) {
 
   const selectedChar = characters.find((c) => c.id === selectedCharId) ?? null;
 
+  const handleCharacterChange = useCallback(
+    (charId: string) => {
+      if (selectedCharId && charId !== selectedCharId) {
+        persist((prev) => syncAllCardListsFromTemplate(prev, selectedCharId), { immediate: true });
+      }
+      setSelectedCharId(charId);
+    },
+    [persist, selectedCharId]
+  );
+
   const handleServerChange = useCallback(
     (server: ServerName) => {
+      if (selectedCharId) {
+        persist((prev) => syncAllCardListsFromTemplate(prev, selectedCharId), { immediate: true });
+      }
       setSelectedServer(server);
       const first = characters.find((c) => c.server === server);
       if (first) setSelectedCharId(first.id);
     },
-    [characters]
+    [characters, persist, selectedCharId]
   );
 
   const allHomework = useMemo(() => {
@@ -1640,7 +1987,7 @@ export function useAppState(uid?: string | null) {
           delete membership[server];
         }
         return { ...prev, membership };
-      });
+      }, { immediate: true });
     },
     [persist]
   );
@@ -1653,6 +2000,63 @@ export function useAppState(uid?: string | null) {
     [persist]
   );
 
+  const createAutoBackupForImport = useCallback((reason: string): AutoBackupSnapshot | null => {
+    if (!data || (!hasStoredCards(data) && data.characters.length === 0)) return null;
+    return createBackupSnapshot(data, reason);
+  }, [data]);
+
+  const importAccountData = useCallback((importedData: AppData) => {
+    if (!importedData.characters || !importedData.homework) return;
+    const backup = createAutoBackupForImport("백업 파일 가져오기 전");
+    const now = new Date().toISOString();
+    const next: AppData = {
+      ...importedData,
+      automaticBackups: [
+        ...(backup ? [backup] : []),
+        ...(importedData.automaticBackups ?? []),
+      ].slice(0, MAX_AUTO_BACKUPS),
+      clientUpdatedAt: now,
+    };
+
+    saveData(next);
+    if (uid) saveUserData(uid, next);
+    setData(next);
+    setBackupNotice(backup ? "가져오기 전 상태가 자동 백업됐어." : "백업 파일을 가져왔어.");
+    const first = next.characters[0];
+    setSelectedServer(first?.server ?? null);
+    setSelectedCharId(first?.id ?? null);
+  }, [createAutoBackupForImport, uid]);
+
+  const restoreAutoBackup = useCallback((backupId: string) => {
+    let nextSelection: { server: ServerName | null; charId: string | null } | null = null;
+    persist((prev) => {
+      const backup = (prev.automaticBackups ?? []).find((item) => item.id === backupId);
+      if (!backup) return prev;
+
+      const beforeRestore = createBackupSnapshot(prev, "이전 데이터 복구 전");
+      const restored: AppData = {
+        ...backup.data,
+        automaticBackups: [
+          beforeRestore,
+          ...(prev.automaticBackups ?? []).filter((item) => item.id !== beforeRestore.id),
+        ].slice(0, MAX_AUTO_BACKUPS),
+      };
+      const first = restored.characters[0];
+      nextSelection = first ? { server: first.server, charId: first.id } : { server: null, charId: null };
+      return restored;
+    }, { immediate: true });
+
+    window.setTimeout(() => {
+      if (!nextSelection) return;
+      setSelectedServer(nextSelection.server);
+      setSelectedCharId(nextSelection.charId);
+    }, 0);
+  }, [persist]);
+
+  const dismissBackupNotice = useCallback(() => {
+    setBackupNotice(null);
+  }, []);
+
   return {
     isLoaded: data !== null,
     activeServers,
@@ -1662,7 +2066,7 @@ export function useAppState(uid?: string | null) {
     serverChars,
     selectedChar,
     selectedCharId,
-    setSelectedCharId,
+    setSelectedCharId: handleCharacterChange,
     addCharacter,
     updateCharacter,
     deleteCharacter,
@@ -1733,5 +2137,12 @@ export function useAppState(uid?: string | null) {
     // 메모
     memo: data?.memo ?? "",
     saveMemo,
+    // 자동 백업
+    automaticBackups: data?.automaticBackups ?? [],
+    backupNotice,
+    dismissBackupNotice,
+    createAutoBackupForImport,
+    importAccountData,
+    restoreAutoBackup,
   };
 }

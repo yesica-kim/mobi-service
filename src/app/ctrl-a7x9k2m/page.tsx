@@ -67,7 +67,7 @@ const ADMIN_REGION_BADGES: Record<string, AdminBadge> = {
 
 const ADMIN_SCROLL_TYPE_BADGES: Record<ScrollType, AdminBadge> = {
   "제작": { label: "제작", className: "bg-indigo-600/20 text-indigo-400" },
-  "채집": { label: "채집", className: "bg-emerald-600/20 text-emerald-400" },
+  "채집": { label: "채집", className: "bg-lime-600/20 text-lime-400" },
   "요리": { label: "요리", className: "bg-amber-600/20 text-amber-400" },
   "토벌": { label: "토벌", className: "bg-red-600/20 text-red-400" },
 };
