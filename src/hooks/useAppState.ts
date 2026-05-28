@@ -429,10 +429,6 @@ function createSyncRevision(prefix = "sync"): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function hasNewSyncRevision(cloudData: AppData, currentData: AppData): boolean {
-  return Boolean(cloudData.syncRevision && cloudData.syncRevision !== currentData.syncRevision);
-}
-
 function hasNewRestoreSync(cloudData: AppData, currentData: AppData): boolean {
   return Boolean(cloudData.restoreSyncId && cloudData.restoreSyncId !== currentData.restoreSyncId);
 }
@@ -619,11 +615,9 @@ export function useAppState(uid?: string | null) {
 
         setData((prev) => {
           if (!prev) return prev;
-          if (
-            !hasNewSyncRevision(cloudData, prev) &&
-            !hasNewRestoreSync(cloudData, prev) &&
-            getDataUpdatedMs(cloudData) <= getDataUpdatedMs(prev)
-          ) {
+          const isRestoreSync = hasNewRestoreSync(cloudData, prev);
+          const cloudIsNewer = getDataUpdatedMs(cloudData) > getDataUpdatedMs(prev);
+          if (!isRestoreSync && !cloudIsNewer) {
             return prev;
           }
 
