@@ -910,7 +910,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, homework: newHomework };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
+    [persist, selectedCharId, getAllCharIds]
   );
 
   // ── 숙제 수정 (전체 서버/캐릭터 동기화) ──
@@ -923,22 +923,25 @@ export function useAppState(uid?: string | null) {
         const idx = currentList.findIndex((hw) => hw.id === hwId);
         if (idx === -1) return prev;
         const target = currentList[idx];
+        const deletedDefaultItems = target.isDefault
+          ? markDeletedDefault(prev, "homework", getHomeworkDefaultDeleteKey(target, runtimeDefaults))
+          : prev.deletedDefaultItems;
 
         const newHomework = { ...prev.homework };
         for (const charId of getAllCharIds(prev)) {
           newHomework[charId] = (newHomework[charId] ?? []).map((hw, i) => {
             if (i !== idx) return hw;
-            const updated = { ...hw, ...updates, ...(target.isDefault ? { isModifiedDefault: true, defaultKey: target.defaultKey ?? target.title } : {}) };
+            const updated = { ...hw, ...updates, ...(target.isDefault ? { isDefault: false, isModifiedDefault: false } : {}) };
             if (updates.totalCount !== undefined && updated.completedCount > updates.totalCount) {
               updated.completedCount = updates.totalCount;
             }
             return updated;
           });
         }
-        return { ...prev, homework: newHomework };
+        return { ...prev, homework: newHomework, deletedDefaultItems };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
+    [persist, selectedCharId, getAllCharIds]
   );
 
   // ── 구매/물물교환 토글 ──
@@ -1049,14 +1052,17 @@ export function useAppState(uid?: string | null) {
         const idx = currentList.findIndex((item) => item.id === itemId);
         if (idx === -1) return prev;
         const target = currentList[idx];
+        const deletedDefaultItems = target.isDefault
+          ? markDeletedDefault(prev, type === "purchase" ? "purchase" : "trade", getShopDefaultDeleteKey(target, type, runtimeDefaults))
+          : prev.deletedDefaultItems;
 
         const newItems = { ...prev[key] };
         for (const charId of getAllCharIds(prev)) {
           newItems[charId] = (newItems[charId] ?? []).map((item, i) =>
-            i === idx ? { ...item, ...updates, ...(target.isDefault ? { isModifiedDefault: true, defaultKey: target.defaultKey ?? target.itemName } : {}) } : item
+            i === idx ? { ...item, ...updates, ...(target.isDefault ? { isDefault: false, isModifiedDefault: false } : {}) } : item
           );
         }
-        return { ...prev, [key]: newItems };
+        return { ...prev, [key]: newItems, deletedDefaultItems };
       }, { immediate: true });
     },
     [persist, selectedCharId, getAllCharIds, runtimeDefaults]
@@ -1165,7 +1171,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, [key]: newItems, savedItemStates: savedStates, deletedDefaultItems, allTabOrder };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getAllCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
   // ── 구매/물물교환 추가 (전체 서버/캐릭터 동기화) ──
@@ -1240,7 +1246,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, [key]: newItems };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getAllCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
   // ── 캐릭터 순서 변경 ──
@@ -1391,21 +1397,24 @@ export function useAppState(uid?: string | null) {
         const idx = currentList.findIndex((s) => s.id === itemId);
         if (idx === -1) return prev;
         const target = currentList[idx];
+        const deletedDefaultItems = target.isDefault
+          ? markDeletedDefault(prev, "scroll", getScrollDefaultDeleteKey(target, runtimeDefaults))
+          : prev.deletedDefaultItems;
 
         for (const charId of getAllCharIds(prev)) {
           scrollItems[charId] = (scrollItems[charId] ?? []).map((s, i) => {
             if (i !== idx) return s;
-            const updated = { ...s, ...updates, ...(target.isDefault ? { isModifiedDefault: true, defaultKey: target.defaultKey ?? target.title } : {}) };
+            const updated = { ...s, ...updates, ...(target.isDefault ? { isDefault: false, isModifiedDefault: false } : {}) };
             if (updates.totalCount !== undefined && updated.completedCount > updates.totalCount) {
               updated.completedCount = updates.totalCount;
             }
             return updated;
           });
         }
-        return { ...prev, scrollItems };
+        return { ...prev, scrollItems, deletedDefaultItems };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getAllCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
   const deleteScrollItem = useCallback(

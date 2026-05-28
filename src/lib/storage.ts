@@ -239,13 +239,13 @@ function syncDefaultItems<Current extends { isDefault?: boolean; isModifiedDefau
     const key = getCurrentKey(item);
     const defaultItem = defaultsByKey.get(key);
     if (!defaultItem) {
-      if (item.isModifiedDefault) items.push({ ...item, isDefault: false });
+      if (item.isModifiedDefault) items.push({ ...item, isDefault: false, isModifiedDefault: false });
       return items;
     }
 
     seenDefaultKeys.add(key);
     if (item.isModifiedDefault) {
-      items.push({ ...item, defaultKey: key, isDefault: true });
+      items.push({ ...item, defaultKey: key, isDefault: false, isModifiedDefault: false });
     } else {
       items.push(buildDefault(defaultItem, item));
     }
