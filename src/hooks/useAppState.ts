@@ -42,6 +42,39 @@ function pickTemplateList<T>(records: Record<string, T[]>, charIds: string[]): T
   }, []);
 }
 
+function shouldLogLoadPerformance(): boolean {
+  if (typeof window === "undefined") return false;
+  const hostname = window.location.hostname;
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname.includes("-git-dev-");
+}
+
+function createLoadPerformanceLogger(label: string) {
+  if (!shouldLogLoadPerformance()) {
+    return {
+      mark: (_name: string) => {},
+      finish: (_extra?: Record<string, unknown>) => {},
+    };
+  }
+
+  const startedAt = performance.now();
+  const marks: Record<string, number> = {};
+
+  return {
+    mark(name: string) {
+      marks[name] = Math.round(performance.now() - startedAt);
+    },
+    finish(extra: Record<string, unknown> = {}) {
+      const total = Math.round(performance.now() - startedAt);
+      console.table({
+        label,
+        ...marks,
+        total,
+        ...extra,
+      });
+    },
+  };
+}
+
 function markDeletedDefault(prev: AppData, type: "homework" | "purchase" | "trade" | "scroll", key?: string): AppData["deletedDefaultItems"] {
   if (!key) return prev.deletedDefaultItems;
   const deletedDefaultItems = { ...(prev.deletedDefaultItems ?? {}) };
@@ -527,6 +560,7 @@ export function useAppState(uid?: string | null) {
   useEffect(() => {
     let cancelled = false;
     async function init() {
+      const perf = createLoadPerformanceLogger("mobimobi initial load");
       setData(null);
       let loaded: AppData;
       let loadedSyncedWithCloud = false;
@@ -537,13 +571,17 @@ export function useAppState(uid?: string | null) {
         return null;
       }) : Promise.resolve<AppData | null>(null);
       const defaults = await defaultsPromise;
+      perf.mark("defaultCardsLoadedMs");
 
       if (uid) {
         // Firestore에서 로드 시도
         const cloudData = await cloudDataPromise;
+        perf.mark("userDataLoadedMs");
         const localData = loadData(defaults);
+        perf.mark("localDataLoadedMs");
         if (cloudData) {
           const resetCloudData = applyResets(cloudData, defaults);
+          perf.mark("cloudResetsAppliedMs");
           loaded = resetCloudData;
           loadedFromExistingCloud = true;
           loadedSyncedWithCloud = true;
@@ -562,6 +600,7 @@ export function useAppState(uid?: string | null) {
         }
       } else {
         loaded = applyResets(loadData(defaults), defaults);
+        perf.mark("guestDataLoadedMs");
       }
 
       // 기존 캐릭터에 scrollItems 필드 자체가 없으면 기본 스크롤 추가
@@ -582,12 +621,14 @@ export function useAppState(uid?: string | null) {
       }
 
       const normalized = normalizeCharacterCardLists(loaded);
+      perf.mark("normalizedMs");
       if (normalized.changed) {
         loaded = normalized.data;
         shouldSaveNormalizedData = true;
       }
       if (loaded.characters.length > 0) {
         loaded = syncAllCardListsFromTemplate(loaded, loaded.characters[0].id);
+        perf.mark("syncedTemplateMs");
       }
       if (shouldSaveNormalizedData) {
         if (uid && !loadedFromExistingCloud) {
@@ -608,6 +649,10 @@ export function useAppState(uid?: string | null) {
       runtimeDefaultsFingerprintRef.current = getDefaultCardsFingerprint(defaults);
       setRuntimeDefaults(defaults);
       setData(loaded);
+      perf.finish({
+        characters: loaded.characters.length,
+        cloud: loadedFromExistingCloud,
+      });
       if (loaded.characters.length > 0) {
         // SERVERS 순서 기준으로 첫 서버의 첫 캐릭터 선택
         const charServers = new Set(loaded.characters.map((c) => c.server));

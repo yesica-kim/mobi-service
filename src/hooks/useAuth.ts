@@ -11,6 +11,12 @@ import {
 import { doc, deleteDoc } from "firebase/firestore";
 import { auth, googleProvider, db } from "@/lib/firebase";
 
+function shouldLogAuthPerformance(): boolean {
+  if (typeof window === "undefined") return false;
+  const hostname = window.location.hostname;
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname.includes("-git-dev-");
+}
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,6 +26,7 @@ export function useAuth() {
   const signingInRef = useRef(false);
 
   useEffect(() => {
+    const startedAt = typeof performance !== "undefined" ? performance.now() : 0;
     // 게스트 모드 체크
     const guest = typeof window !== "undefined" && localStorage.getItem("mobimobi_guest") === "true";
     if (guest) {
@@ -28,6 +35,13 @@ export function useAuth() {
     }
     // 항상 auth 리스너 등록 (게스트→로그인 전환 감지)
     const unsub = onAuthStateChanged(auth, (u) => {
+      if (shouldLogAuthPerformance()) {
+        console.table({
+          label: "mobimobi auth ready",
+          authReadyMs: Math.round(performance.now() - startedAt),
+          signedIn: Boolean(u),
+        });
+      }
       if (!u && signingInRef.current) return;
       setUser(u);
       if (u) {
