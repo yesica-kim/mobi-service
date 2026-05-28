@@ -471,6 +471,7 @@ export function useAppState(uid?: string | null) {
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const saveInFlightRef = useRef(false);
   const pendingUserDataSaveRef = useRef<{ data: AppData; syncBackups: boolean } | null>(null);
+  const latestDataRef = useRef<AppData | null>(null);
   const runtimeDefaultsFingerprintRef = useRef<string>("");
   const selectedServerRef = useRef<ServerName | null>(null);
   const selectedCharIdRef = useRef<string | null>(null);
@@ -489,6 +490,18 @@ export function useAppState(uid?: string | null) {
       console.error("사용자 데이터 저장 실패:", error);
     } finally {
       saveInFlightRef.current = false;
+      const latest = latestDataRef.current;
+      const queued = pendingUserDataSaveRef.current as { data: AppData; syncBackups: boolean } | null;
+      if (
+        latest?.syncRevision &&
+        latest.syncRevision !== pending.data.syncRevision &&
+        getLocalSyncedRevision(uid) !== latest.syncRevision
+      ) {
+        pendingUserDataSaveRef.current = {
+          data: latest,
+          syncBackups: Boolean(pending.syncBackups || queued?.syncBackups),
+        };
+      }
       if (pendingUserDataSaveRef.current) void flushUserDataSave();
     }
   }, [uid]);
@@ -590,6 +603,7 @@ export function useAppState(uid?: string | null) {
 
       if (cancelled) return;
       saveData(loaded);
+      latestDataRef.current = loaded;
       if (uid && loadedSyncedWithCloud) markLocalSyncedRevision(uid, loaded);
       runtimeDefaultsFingerprintRef.current = getDefaultCardsFingerprint(defaults);
       setRuntimeDefaults(defaults);
@@ -629,6 +643,7 @@ export function useAppState(uid?: string | null) {
           if (JSON.stringify(next) === before) return prev;
 
           saveData(next);
+          latestDataRef.current = next;
           return next;
         });
       },
@@ -658,6 +673,7 @@ export function useAppState(uid?: string | null) {
 
           const next = applyResets(cloudData, runtimeDefaults ?? undefined);
           saveData(next);
+          latestDataRef.current = next;
           markLocalSyncedRevision(uid, next);
 
           const selectedCharStillExists = selectedCharIdRef.current
@@ -694,6 +710,7 @@ export function useAppState(uid?: string | null) {
           if (!prev) return prev;
           const next = applyResets({ ...prev }, runtimeDefaults ?? undefined);
           saveData(next);
+          latestDataRef.current = next;
           queueUserDataSave(next);
           return next;
         });
@@ -708,6 +725,7 @@ export function useAppState(uid?: string | null) {
           if (!prev) return prev;
           const next = applyResets({ ...prev }, runtimeDefaults ?? undefined);
           saveData(next);
+          latestDataRef.current = next;
           queueUserDataSave(next);
           return next;
         });
@@ -736,6 +754,7 @@ export function useAppState(uid?: string | null) {
       }
       // localStorage에 즉시 저장
       saveData(next);
+      latestDataRef.current = next;
       // 로그인 상태에서는 다른 기기와의 차이를 줄이기 위해 모든 변경을 빠르게 Firestore에 저장한다.
       if (uid) {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -2184,6 +2203,7 @@ export function useAppState(uid?: string | null) {
     };
 
     saveData(next);
+    latestDataRef.current = next;
     queueUserDataSave(next, { syncBackups: true });
     setData(next);
     setBackupNotice(backup ? "데이터가 자동백업 되었습니다.\n설정 > 이전 데이터 복구에서 확인하실 수 있습니다." : "백업 파일을 가져왔습니다.");
@@ -2200,6 +2220,7 @@ export function useAppState(uid?: string | null) {
         if (!prev) return prev;
         const next = { ...prev, automaticBackups: backups };
         saveData(next);
+        latestDataRef.current = next;
         return next;
       });
     } catch (error) {
