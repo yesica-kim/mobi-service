@@ -703,6 +703,7 @@ export function useAppState(uid?: string | null) {
       const id = `char_${Date.now()}`;
       const newChar: Character = { id, ...char };
       persist((prev) => {
+        prev = addAutoBackupIfUseful(prev, `'${char.name}' 캐릭터 추가 전`);
         const sourceCharId = selectedCharId ?? prev.characters[0]?.id;
         const sourceHomework = sourceCharId ? prev.homework[sourceCharId] ?? [] : [];
         const sourcePurchase = sourceCharId ? prev.purchaseItems[sourceCharId] ?? [] : [];
@@ -742,7 +743,7 @@ export function useAppState(uid?: string | null) {
           scrollItems: { ...(prev.scrollItems ?? {}), [id]: scrollItems },
           allTabOrder,
         };
-        return addAutoBackupIfUseful(next, `'${char.name}' 캐릭터 추가 후`);
+        return next;
       }, { immediate: true });
       setSelectedServer(char.server);
       setSelectedCharId(id);
