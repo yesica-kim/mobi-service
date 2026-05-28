@@ -351,7 +351,7 @@ function hasStoredCards(data: AppData): boolean {
   return hasItems(data.homework) || hasItems(data.purchaseItems) || hasItems(data.tradeItems) || hasItems(data.scrollItems);
 }
 
-const MAX_AUTO_BACKUPS = 20;
+const MAX_AUTO_BACKUPS = 15;
 
 function stripAutomaticBackups(data: AppData): Omit<AppData, "automaticBackups"> {
   const { automaticBackups, ...snapshot } = data;

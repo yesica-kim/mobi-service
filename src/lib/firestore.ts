@@ -15,7 +15,7 @@ import { db } from "./firebase";
 import type { AppData, AutoBackupSnapshot } from "@/types";
 import { parseTotalCount } from "@/types";
 
-const MAX_CLOUD_BACKUPS = 20;
+const MAX_CLOUD_BACKUPS = 15;
 
 function createSyncRevision(): string {
   return `sync_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
