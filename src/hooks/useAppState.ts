@@ -2159,7 +2159,7 @@ export function useAppState(uid?: string | null) {
   // ── 메모 ──
   const saveMemo = useCallback(
     (memo: string) => {
-      persist((prev) => ({ ...prev, memo }));
+      persist((prev) => ({ ...prev, memo }), { immediate: true });
     },
     [persist]
   );
