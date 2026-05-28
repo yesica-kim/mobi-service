@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { CharacterTabs } from "@/components/CharacterTabs";
-import { CharacterCreateModal } from "@/components/CharacterCreateModal";
-import { CharacterEditModal } from "@/components/CharacterEditModal";
 import { HomeworkCard } from "@/components/HomeworkCard";
 import { HomeworkToolbar } from "@/components/HomeworkToolbar";
 import { PeriodToggle } from "@/components/PeriodToggle";
@@ -12,13 +11,10 @@ import { ServerTabs } from "@/components/ServerTabs";
 import { WeeklyCountdown } from "@/components/WeeklyCountdown";
 import { ShopCard } from "@/components/ShopCard";
 import { ScrollCard } from "@/components/ScrollCard";
-import { AddCardModal, type EditCard } from "@/components/AddCardModal";
-import { AppConfirmModal } from "@/components/AppConfirmModal";
+import type { EditCard } from "@/components/AddCardModal";
 import { SearchFilterBar } from "@/components/SearchFilterBar";
 import { MembershipBanner } from "@/components/MembershipBanner";
 import { MemoSection } from "@/components/MemoSection";
-import { UpdateNotesModal } from "@/components/UpdateNotesModal";
-import { ProfileModal } from "@/components/ProfileModal";
 import { SortableList } from "@/components/SortableList";
 import { useAppState } from "@/hooks/useAppState";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,6 +29,13 @@ type ViewMode = "character" | "list";
 type Badge = { label: string; className: string; plain?: boolean };
 type CategoryProgress = { label: string; done: number; total: number; pct: number; color: string };
 type ProgressSummary = { done: number; total: number; pct: number; categories: CategoryProgress[] };
+
+const CharacterCreateModal = dynamic(() => import("@/components/CharacterCreateModal").then((mod) => mod.CharacterCreateModal), { ssr: false });
+const CharacterEditModal = dynamic(() => import("@/components/CharacterEditModal").then((mod) => mod.CharacterEditModal), { ssr: false });
+const AddCardModal = dynamic(() => import("@/components/AddCardModal").then((mod) => mod.AddCardModal), { ssr: false });
+const AppConfirmModal = dynamic(() => import("@/components/AppConfirmModal").then((mod) => mod.AppConfirmModal), { ssr: false });
+const ProfileModal = dynamic(() => import("@/components/ProfileModal").then((mod) => mod.ProfileModal), { ssr: false });
+const UpdateNotesModal = dynamic(() => import("@/components/UpdateNotesModal").then((mod) => mod.UpdateNotesModal), { ssr: false });
 
 const PERIOD_BADGES: Record<"daily" | "weekly", Badge> = {
   daily: { label: "일간", className: "bg-orange-600/20 text-orange-400" },
