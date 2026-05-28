@@ -60,6 +60,7 @@ async function loadAutomaticBackups(uid: string): Promise<AutoBackupSnapshot[]> 
  */
 export async function saveUserData(uid: string, data: AppData): Promise<void> {
   const updatedAt = new Date().toISOString();
+  const clientUpdatedAt = data.clientUpdatedAt ?? updatedAt;
   const backups = (data.automaticBackups ?? []).slice(0, MAX_CLOUD_BACKUPS);
   const { automaticBackups, ...dataWithoutBackups } = data;
   const userRef = doc(db, "users", uid);
@@ -72,7 +73,7 @@ export async function saveUserData(uid: string, data: AppData): Promise<void> {
 
     batch.set(userRef, removeUndefinedValues({
       ...dataWithoutBackups,
-      clientUpdatedAt: updatedAt,
+      clientUpdatedAt,
       syncRevision: data.syncRevision ?? createSyncRevision(),
       updatedAt,
     }));
@@ -89,7 +90,7 @@ export async function saveUserData(uid: string, data: AppData): Promise<void> {
     console.warn("자동백업 하위 컬렉션 저장 실패:", error);
     await setDoc(userRef, removeUndefinedValues({
       ...dataWithoutBackups,
-      clientUpdatedAt: updatedAt,
+      clientUpdatedAt,
       syncRevision: data.syncRevision ?? createSyncRevision(),
       updatedAt,
     }));
@@ -102,7 +103,7 @@ export async function saveUserData(uid: string, data: AppData): Promise<void> {
 function normalizeUserData(rawData: AppData & { updatedAt?: string }): AppData {
   const raw = rawData;
   const { updatedAt, ...appData } = raw;
-  appData.clientUpdatedAt = updatedAt ?? appData.clientUpdatedAt;
+  appData.clientUpdatedAt = appData.clientUpdatedAt ?? updatedAt;
 
   // 마이그레이션: homework totalCount / scope 보정
   if (appData.homework) {
