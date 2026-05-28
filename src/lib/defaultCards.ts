@@ -42,8 +42,7 @@ export async function loadRuntimeDefaultCards(): Promise<DefaultCardsData> {
   const codeDefaults = getCodeDefaultCards();
 
   if (isDraftDefaultHost()) {
-    const published = await getPublishedCards();
-    const draft = await getDraftCards();
+    const [published, draft] = await Promise.all([getPublishedCards(), getDraftCards()]);
     if (shouldUseDraftCards(draft, published)) return draft;
     return published ?? codeDefaults;
   }

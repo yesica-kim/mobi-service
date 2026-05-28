@@ -443,10 +443,6 @@ function markLocalSyncedRevision(uid: string, data: AppData): void {
   localStorage.setItem(getSyncedRevisionKey(uid), data.syncRevision);
 }
 
-function hasUnsyncedLocalData(uid: string, data: AppData): boolean {
-  return Boolean(data.syncRevision && getLocalSyncedRevision(uid) !== data.syncRevision);
-}
-
 function hasAutomaticBackups(data: AppData): boolean {
   return Boolean(data.automaticBackups?.length);
 }
@@ -521,42 +517,23 @@ export function useAppState(uid?: string | null) {
       setData(null);
       let loaded: AppData;
       let loadedSyncedWithCloud = false;
-      const defaults = await loadRuntimeDefaultCards();
+      let loadedFromExistingCloud = false;
+      const defaultsPromise = loadRuntimeDefaultCards();
+      const cloudDataPromise = uid ? loadUserData(uid).catch((error) => {
+        console.error("사용자 데이터 로드 실패:", error);
+        return null;
+      }) : Promise.resolve<AppData | null>(null);
+      const defaults = await defaultsPromise;
 
       if (uid) {
         // Firestore에서 로드 시도
-        let cloudData: AppData | null = null;
-        try {
-          cloudData = await loadUserData(uid);
-        } catch (error) {
-          console.error("사용자 데이터 로드 실패:", error);
-        }
+        const cloudData = await cloudDataPromise;
         const localData = loadData(defaults);
         if (cloudData) {
           const resetCloudData = applyResets(cloudData, defaults);
-          const resetLocalData = applyResets(localData, defaults);
-          if (hasUnsyncedLocalData(uid, resetLocalData) && getDataUpdatedMs(resetLocalData) > getDataUpdatedMs(resetCloudData)) {
-            loaded = resetLocalData;
-            try {
-              await saveUserData(uid, loaded, { syncBackups: hasAutomaticBackups(loaded) });
-              markLocalSyncedRevision(uid, loaded);
-              loadedSyncedWithCloud = true;
-            } catch (error) {
-              console.error("사용자 데이터 최신 로컬 저장 실패:", error);
-            }
-          } else if (!hasStoredCards(resetCloudData) && hasStoredCards(resetLocalData)) {
-            loaded = resetLocalData;
-            try {
-              await saveUserData(uid, loaded, { syncBackups: hasAutomaticBackups(loaded) });
-              markLocalSyncedRevision(uid, loaded);
-              loadedSyncedWithCloud = true;
-            } catch (error) {
-              console.error("사용자 데이터 초기 저장 실패:", error);
-            }
-          } else {
-            loaded = resetCloudData;
-            loadedSyncedWithCloud = true;
-          }
+          loaded = resetCloudData;
+          loadedFromExistingCloud = true;
+          loadedSyncedWithCloud = true;
         } else {
           // Firestore에 없으면 새 계정은 빈 리스트에서 시작한다.
           // 단, 같은 브라우저에 게스트/로컬 카드가 1개라도 있으면 그 데이터를 초기 클라우드 데이터로 승격한다.
@@ -600,7 +577,7 @@ export function useAppState(uid?: string | null) {
         loaded = syncAllCardListsFromTemplate(loaded, loaded.characters[0].id);
       }
       if (shouldSaveNormalizedData) {
-        if (uid) {
+        if (uid && !loadedFromExistingCloud) {
           try {
             await saveUserData(uid, loaded);
             markLocalSyncedRevision(uid, loaded);
