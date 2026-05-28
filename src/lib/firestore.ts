@@ -1,7 +1,58 @@
-import { doc, getDoc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  setDoc,
+  writeBatch,
+  type Unsubscribe,
+} from "firebase/firestore";
 import { db } from "./firebase";
-import type { AppData } from "@/types";
+import type { AppData, AutoBackupSnapshot } from "@/types";
 import { parseTotalCount } from "@/types";
+
+const MAX_CLOUD_BACKUPS = 20;
+
+function createSyncRevision(): string {
+  return `sync_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function removeUndefinedValues<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => removeUndefinedValues(item)) as T;
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, entry]) => entry !== undefined)
+        .map(([key, entry]) => [key, removeUndefinedValues(entry)])
+    ) as T;
+  }
+  return value;
+}
+
+function getBackupCollection(uid: string) {
+  return collection(db, "users", uid, "automaticBackups");
+}
+
+async function loadAutomaticBackups(uid: string): Promise<AutoBackupSnapshot[]> {
+  try {
+    const backupQuery = query(
+      getBackupCollection(uid),
+      orderBy("createdAt", "desc"),
+      limit(MAX_CLOUD_BACKUPS)
+    );
+    const snap = await getDocs(backupQuery);
+    return snap.docs.map((backupDoc) => backupDoc.data() as AutoBackupSnapshot);
+  } catch (error) {
+    console.warn("자동백업 하위 컬렉션 로드 실패:", error);
+    return [];
+  }
+}
 
 /**
  * Firestore에 유저 데이터 저장
@@ -9,12 +60,34 @@ import { parseTotalCount } from "@/types";
  */
 export async function saveUserData(uid: string, data: AppData): Promise<void> {
   const updatedAt = new Date().toISOString();
-  await setDoc(doc(db, "users", uid), {
-    ...data,
+  const backups = (data.automaticBackups ?? []).slice(0, MAX_CLOUD_BACKUPS);
+  const { automaticBackups, ...dataWithoutBackups } = data;
+  const batch = writeBatch(db);
+  const userRef = doc(db, "users", uid);
+  const backupCollection = getBackupCollection(uid);
+
+  await setDoc(userRef, removeUndefinedValues({
+    ...dataWithoutBackups,
     clientUpdatedAt: updatedAt,
-    syncRevision: data.syncRevision ?? `sync_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    syncRevision: data.syncRevision ?? createSyncRevision(),
     updatedAt,
-  });
+  }));
+
+  try {
+    const existingBackups = await getDocs(backupCollection);
+    const keepBackupIds = new Set(backups.map((backup) => backup.id));
+    backups.forEach((backup) => {
+      batch.set(doc(backupCollection, backup.id), removeUndefinedValues(backup));
+    });
+    existingBackups.docs.forEach((backupDoc) => {
+      if (!keepBackupIds.has(backupDoc.id)) {
+        batch.delete(backupDoc.ref);
+      }
+    });
+    await batch.commit();
+  } catch (error) {
+    console.warn("자동백업 하위 컬렉션 저장 실패:", error);
+  }
 }
 
 /**
@@ -73,7 +146,11 @@ export async function loadUserData(uid: string): Promise<AppData | null> {
   const snap = await getDoc(doc(db, "users", uid));
   if (!snap.exists()) return null;
   const raw = snap.data() as AppData & { updatedAt?: string };
-  return normalizeUserData(raw);
+  const cloudBackups = await loadAutomaticBackups(uid);
+  return normalizeUserData({
+    ...raw,
+    automaticBackups: cloudBackups.length > 0 ? cloudBackups : raw.automaticBackups,
+  });
 }
 
 /**
@@ -86,12 +163,21 @@ export function subscribeUserData(
 ): Unsubscribe {
   return onSnapshot(
     doc(db, "users", uid),
-    (snap) => {
+    async (snap) => {
       if (!snap.exists()) {
         onData(null);
         return;
       }
-      onData(normalizeUserData(snap.data() as AppData & { updatedAt?: string }));
+      try {
+        const raw = snap.data() as AppData & { updatedAt?: string };
+        const cloudBackups = await loadAutomaticBackups(uid);
+        onData(normalizeUserData({
+          ...raw,
+          automaticBackups: cloudBackups.length > 0 ? cloudBackups : raw.automaticBackups,
+        }));
+      } catch (error) {
+        onError?.(error as Error);
+      }
     },
     (error) => onError?.(error)
   );
