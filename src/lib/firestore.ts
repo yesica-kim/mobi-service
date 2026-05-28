@@ -39,7 +39,7 @@ function getBackupCollection(uid: string) {
   return collection(db, "users", uid, "automaticBackups");
 }
 
-async function loadAutomaticBackups(uid: string): Promise<AutoBackupSnapshot[]> {
+export async function loadUserBackups(uid: string): Promise<AutoBackupSnapshot[]> {
   try {
     const backupQuery = query(
       getBackupCollection(uid),
@@ -58,7 +58,11 @@ async function loadAutomaticBackups(uid: string): Promise<AutoBackupSnapshot[]> 
  * Firestore에 유저 데이터 저장
  * 경로: users/{uid}
  */
-export async function saveUserData(uid: string, data: AppData): Promise<void> {
+export async function saveUserData(
+  uid: string,
+  data: AppData,
+  options: { syncBackups?: boolean } = {}
+): Promise<void> {
   const updatedAt = new Date().toISOString();
   const clientUpdatedAt = data.clientUpdatedAt ?? updatedAt;
   const backups = (data.automaticBackups ?? []).slice(0, MAX_CLOUD_BACKUPS);
@@ -67,6 +71,16 @@ export async function saveUserData(uid: string, data: AppData): Promise<void> {
   const backupCollection = getBackupCollection(uid);
 
   try {
+    if (!options.syncBackups) {
+      await setDoc(userRef, removeUndefinedValues({
+        ...dataWithoutBackups,
+        clientUpdatedAt,
+        syncRevision: data.syncRevision ?? createSyncRevision(),
+        updatedAt,
+      }));
+      return;
+    }
+
     const batch = writeBatch(db);
     const existingBackups = await getDocs(backupCollection);
     const keepBackupIds = new Set(backups.map((backup) => backup.id));
@@ -153,11 +167,7 @@ export async function loadUserData(uid: string): Promise<AppData | null> {
   const snap = await getDoc(doc(db, "users", uid));
   if (!snap.exists()) return null;
   const raw = snap.data() as AppData & { updatedAt?: string };
-  const cloudBackups = await loadAutomaticBackups(uid);
-  return normalizeUserData({
-    ...raw,
-    automaticBackups: cloudBackups.length > 0 ? cloudBackups : raw.automaticBackups,
-  });
+  return normalizeUserData(raw);
 }
 
 /**
@@ -177,11 +187,7 @@ export function subscribeUserData(
       }
       try {
         const raw = snap.data() as AppData & { updatedAt?: string };
-        const cloudBackups = await loadAutomaticBackups(uid);
-        onData(normalizeUserData({
-          ...raw,
-          automaticBackups: cloudBackups.length > 0 ? cloudBackups : raw.automaticBackups,
-        }));
+        onData(normalizeUserData(raw));
       } catch (error) {
         onError?.(error as Error);
       }

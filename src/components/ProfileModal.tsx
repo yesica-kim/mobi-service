@@ -19,6 +19,7 @@ interface Props {
   onSignInWithGoogle?: () => Promise<void>;
   onImportData?: (data: any) => void;
   automaticBackups?: AutoBackupSnapshot[];
+  onLoadBackups?: () => void;
   onRestoreBackup?: (backupId: string) => void;
   initialPage?: "menu" | "terms" | "privacy" | "restore";
 }
@@ -46,6 +47,7 @@ export function ProfileModal({
   onSignInWithGoogle,
   onImportData,
   automaticBackups = [],
+  onLoadBackups,
   onRestoreBackup,
   initialPage = "menu",
 }: Props) {
@@ -70,6 +72,10 @@ export function ProfileModal({
   useEffect(() => {
     if (open) setPage(initialPage);
   }, [open, initialPage]);
+
+  useEffect(() => {
+    if (open && page === "restore") onLoadBackups?.();
+  }, [open, page, onLoadBackups]);
 
   if (!open) return null;
 
@@ -403,7 +409,7 @@ export function ProfileModal({
                 <h3 className="text-white text-sm font-semibold">이전 데이터 복구</h3>
               </div>
               <p className="mb-3 text-xs leading-relaxed text-slate-400">
-                자동 백업은 최근 20개까지만 보관됩니다. 복구 전 현재 상태도 한 번 더 백업됩니다.
+                자동 백업은 최근 15개까지만 보관됩니다. 복구 전 현재 상태도 한 번 더 백업됩니다.
               </p>
               {backupList.length === 0 ? (
                 <div className="rounded-2xl bg-slate-900/60 px-4 py-6 text-center text-xs text-slate-500">

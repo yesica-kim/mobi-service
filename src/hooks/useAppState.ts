@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyResets, createScrollForChar, getNextDailyResetMs, getNextWeeklyResetMs, loadData, saveData } from "@/lib/storage";
-import { loadUserData, saveUserData, subscribeUserData } from "@/lib/firestore";
+import { loadUserBackups, loadUserData, saveUserData, subscribeUserData } from "@/lib/firestore";
 import { loadRuntimeDefaultCards, subscribeRuntimeDefaultCards } from "@/lib/defaultCards";
 import type { DefaultCardsData } from "@/lib/adminFirestore";
 import type { AppData, AutoBackupSnapshot, Character, HomeworkItem, HomeworkPreset, MembershipInfo, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType} from "@/types";
@@ -447,6 +447,10 @@ function hasUnsyncedLocalData(uid: string, data: AppData): boolean {
   return Boolean(data.syncRevision && getLocalSyncedRevision(uid) !== data.syncRevision);
 }
 
+function hasAutomaticBackups(data: AppData): boolean {
+  return Boolean(data.automaticBackups?.length);
+}
+
 function hasNewRestoreSync(cloudData: AppData, currentData: AppData): boolean {
   return Boolean(cloudData.restoreSyncId && cloudData.restoreSyncId !== currentData.restoreSyncId);
 }
@@ -470,21 +474,21 @@ export function useAppState(uid?: string | null) {
   const [backupNotice, setBackupNotice] = useState<string | null>(null);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const saveInFlightRef = useRef(false);
-  const pendingUserDataSaveRef = useRef<AppData | null>(null);
+  const pendingUserDataSaveRef = useRef<{ data: AppData; syncBackups: boolean } | null>(null);
   const runtimeDefaultsFingerprintRef = useRef<string>("");
   const selectedServerRef = useRef<ServerName | null>(null);
   const selectedCharIdRef = useRef<string | null>(null);
 
   const flushUserDataSave = useCallback(async () => {
     if (!uid || saveInFlightRef.current) return;
-    const next = pendingUserDataSaveRef.current;
-    if (!next) return;
+    const pending = pendingUserDataSaveRef.current;
+    if (!pending) return;
 
     pendingUserDataSaveRef.current = null;
     saveInFlightRef.current = true;
     try {
-      await saveUserData(uid, next);
-      markLocalSyncedRevision(uid, next);
+      await saveUserData(uid, pending.data, { syncBackups: pending.syncBackups });
+      markLocalSyncedRevision(uid, pending.data);
     } catch (error) {
       console.error("사용자 데이터 저장 실패:", error);
     } finally {
@@ -493,9 +497,12 @@ export function useAppState(uid?: string | null) {
     }
   }, [uid]);
 
-  const queueUserDataSave = useCallback((next: AppData) => {
+  const queueUserDataSave = useCallback((next: AppData, options: { syncBackups?: boolean } = {}) => {
     if (!uid) return;
-    pendingUserDataSaveRef.current = next;
+    pendingUserDataSaveRef.current = {
+      data: next,
+      syncBackups: Boolean(options.syncBackups || pendingUserDataSaveRef.current?.syncBackups),
+    };
     void flushUserDataSave();
   }, [flushUserDataSave, uid]);
 
@@ -531,7 +538,7 @@ export function useAppState(uid?: string | null) {
           if (hasUnsyncedLocalData(uid, resetLocalData) && getDataUpdatedMs(resetLocalData) > getDataUpdatedMs(resetCloudData)) {
             loaded = resetLocalData;
             try {
-              await saveUserData(uid, loaded);
+              await saveUserData(uid, loaded, { syncBackups: hasAutomaticBackups(loaded) });
               markLocalSyncedRevision(uid, loaded);
               loadedSyncedWithCloud = true;
             } catch (error) {
@@ -540,7 +547,7 @@ export function useAppState(uid?: string | null) {
           } else if (!hasStoredCards(resetCloudData) && hasStoredCards(resetLocalData)) {
             loaded = resetLocalData;
             try {
-              await saveUserData(uid, loaded);
+              await saveUserData(uid, loaded, { syncBackups: hasAutomaticBackups(loaded) });
               markLocalSyncedRevision(uid, loaded);
               loadedSyncedWithCloud = true;
             } catch (error) {
@@ -556,7 +563,7 @@ export function useAppState(uid?: string | null) {
           loaded = applyResets(localData, defaults);
           // 클라우드에 초기 저장
           try {
-            await saveUserData(uid, loaded);
+            await saveUserData(uid, loaded, { syncBackups: hasAutomaticBackups(loaded) });
             markLocalSyncedRevision(uid, loaded);
             loadedSyncedWithCloud = true;
           } catch (error) {
@@ -746,7 +753,8 @@ export function useAppState(uid?: string | null) {
       if (!prev) return prev;
       const previousBackupId = prev.automaticBackups?.[0]?.id;
       const next = { ...updater(prev), clientUpdatedAt: new Date().toISOString(), syncRevision: createSyncRevision() };
-      if (next.automaticBackups?.[0]?.id && next.automaticBackups[0].id !== previousBackupId) {
+      const backupChanged = Boolean(next.automaticBackups?.[0]?.id && next.automaticBackups[0].id !== previousBackupId);
+      if (backupChanged) {
         setBackupNotice("데이터가 자동백업 되었습니다.\n설정 > 이전 데이터 복구에서 확인하실 수 있습니다.");
       }
       // localStorage에 즉시 저장
@@ -755,10 +763,10 @@ export function useAppState(uid?: string | null) {
       if (uid) {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         if (options?.immediate) {
-          queueUserDataSave(next);
+          queueUserDataSave(next, { syncBackups: backupChanged });
         } else {
           saveTimerRef.current = setTimeout(() => {
-            queueUserDataSave(next);
+            queueUserDataSave(next, { syncBackups: backupChanged });
           }, 300);
         }
       }
@@ -2199,13 +2207,28 @@ export function useAppState(uid?: string | null) {
     };
 
     saveData(next);
-    queueUserDataSave(next);
+    queueUserDataSave(next, { syncBackups: true });
     setData(next);
     setBackupNotice(backup ? "데이터가 자동백업 되었습니다.\n설정 > 이전 데이터 복구에서 확인하실 수 있습니다." : "백업 파일을 가져왔습니다.");
     const first = next.characters[0];
     setSelectedServer(first?.server ?? null);
     setSelectedCharId(first?.id ?? null);
   }, [createAutoBackupForImport, queueUserDataSave]);
+
+  const loadAutomaticBackups = useCallback(async () => {
+    if (!uid) return;
+    try {
+      const backups = await loadUserBackups(uid);
+      setData((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev, automaticBackups: backups };
+        saveData(next);
+        return next;
+      });
+    } catch (error) {
+      console.error("자동백업 로드 실패:", error);
+    }
+  }, [uid]);
 
   const restoreAutoBackup = useCallback((backupId: string) => {
     let nextSelection: { server: ServerName | null; charId: string | null } | null = null;
@@ -2333,6 +2356,7 @@ export function useAppState(uid?: string | null) {
     dismissBackupNotice,
     createAutoBackupForImport,
     importAccountData,
+    loadAutomaticBackups,
     restoreAutoBackup,
   };
 }

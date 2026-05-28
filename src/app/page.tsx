@@ -877,6 +877,7 @@ export default function Home() {
         onSignInWithGoogle={isGuest ? signInWithGoogle : undefined}
         authError={authError}
         automaticBackups={state.automaticBackups}
+        onLoadBackups={state.loadAutomaticBackups}
         onRestoreBackup={state.restoreAutoBackup}
         initialPage={profileInitialPage}
         onImportData={(importedData) => {
