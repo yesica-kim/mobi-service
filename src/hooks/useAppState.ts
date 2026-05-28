@@ -358,21 +358,16 @@ function stripAutomaticBackups(data: AppData): Omit<AppData, "automaticBackups">
   return snapshot;
 }
 
-function getKstDateKey(value: string | Date = new Date()): string {
-  const date = typeof value === "string" ? new Date(value) : value;
-  return new Date(date.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
-
-function countRecordItems(records: Record<string, unknown[]> | undefined): number {
-  return Object.values(records ?? {}).reduce((sum, items) => sum + items.length, 0);
+function countUniqueRecordItems(records: Record<string, unknown[]> | undefined): number {
+  return Math.max(0, ...Object.values(records ?? {}).map((items) => items.length));
 }
 
 function getBackupSummary(data: AppData): string {
   const cardCount =
-    countRecordItems(data.homework) +
-    countRecordItems(data.purchaseItems) +
-    countRecordItems(data.tradeItems) +
-    countRecordItems(data.scrollItems);
+    countUniqueRecordItems(data.homework) +
+    countUniqueRecordItems(data.purchaseItems) +
+    countUniqueRecordItems(data.tradeItems) +
+    countUniqueRecordItems(data.scrollItems);
   return `캐릭터 ${data.characters.length}명 / 카드 ${cardCount}개`;
 }
 
@@ -398,14 +393,6 @@ function addAutoBackup(data: AppData, reason: string): AppData {
 
 function addAutoBackupIfUseful(data: AppData, reason: string): AppData {
   return hasStoredCards(data) || data.characters.length > 0 ? addAutoBackup(data, reason) : data;
-}
-
-function shouldCreateDailyBackup(data: AppData): boolean {
-  if (!hasStoredCards(data)) return false;
-  const today = getKstDateKey();
-  return !(data.automaticBackups ?? []).some((backup) =>
-    backup.reason === "하루 첫 접속" && getKstDateKey(backup.createdAt) === today
-  );
 }
 
 export function useAppState(uid?: string | null) {
@@ -490,11 +477,6 @@ export function useAppState(uid?: string | null) {
       if (loaded.characters.length > 0) {
         loaded = syncAllCardListsFromTemplate(loaded, loaded.characters[0].id);
       }
-      let createdDailyBackup = false;
-      if (shouldCreateDailyBackup(loaded)) {
-        loaded = addAutoBackup(loaded, "하루 첫 접속");
-        createdDailyBackup = true;
-      }
       if (normalized.changed || loaded.characters.length > 0) {
         saveData(loaded);
         if (uid) {
@@ -509,9 +491,6 @@ export function useAppState(uid?: string | null) {
       if (cancelled) return;
       setRuntimeDefaults(defaults);
       setData(loaded);
-      if (createdDailyBackup) {
-        setBackupNotice("하루 첫 접속 백업이 저장됐어.");
-      }
       if (loaded.characters.length > 0) {
         // SERVERS 순서 기준으로 첫 서버의 첫 캐릭터 선택
         const charServers = new Set(loaded.characters.map((c) => c.server));
@@ -579,7 +558,7 @@ export function useAppState(uid?: string | null) {
       const previousBackupId = prev.automaticBackups?.[0]?.id;
       const next = { ...updater(prev), clientUpdatedAt: new Date().toISOString() };
       if (next.automaticBackups?.[0]?.id && next.automaticBackups[0].id !== previousBackupId) {
-        setBackupNotice("이전 상태가 자동 백업됐어.");
+        setBackupNotice("현재 데이터가 자동백업 됐습니다.");
       }
       // localStorage에 즉시 저장
       saveData(next);
@@ -644,7 +623,7 @@ export function useAppState(uid?: string | null) {
           allTabOrder,
         };
       }, { immediate: true });
-      persist((prev) => addAutoBackupIfUseful(prev, "캐릭터 추가 후"), { immediate: true });
+      persist((prev) => addAutoBackupIfUseful(prev, `${char.name} 캐릭터 추가 후`), { immediate: true });
       setSelectedServer(char.server);
       setSelectedCharId(id);
     },
@@ -667,7 +646,8 @@ export function useAppState(uid?: string | null) {
   const deleteCharacter = useCallback(
     (charId: string) => {
       persist((prev) => {
-        prev = addAutoBackupIfUseful(prev, "캐릭터 삭제 전");
+        const targetChar = prev.characters.find((char) => char.id === charId);
+        prev = addAutoBackupIfUseful(prev, `${targetChar?.name ?? "선택한"} 캐릭터 삭제 전`);
         const chars = prev.characters.filter((c) => c.id !== charId);
         const hw = { ...prev.homework };
         const pur = { ...prev.purchaseItems };
@@ -2021,7 +2001,7 @@ export function useAppState(uid?: string | null) {
     saveData(next);
     if (uid) saveUserData(uid, next);
     setData(next);
-    setBackupNotice(backup ? "가져오기 전 상태가 자동 백업됐어." : "백업 파일을 가져왔어.");
+    setBackupNotice(backup ? "현재 데이터가 자동백업 됐습니다." : "백업 파일을 가져왔습니다.");
     const first = next.characters[0];
     setSelectedServer(first?.server ?? null);
     setSelectedCharId(first?.id ?? null);

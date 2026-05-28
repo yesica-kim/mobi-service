@@ -76,6 +76,7 @@ export function ProfileModal({
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
+      second: "2-digit",
     }).format(new Date(value));
 
   const handleExport = () => {
@@ -396,11 +397,11 @@ export function ProfileModal({
                 <h3 className="text-white text-sm font-semibold">이전 데이터 복구</h3>
               </div>
               <p className="mb-3 text-xs leading-relaxed text-slate-400">
-                자동 백업은 최근 20개까지만 보관돼. 복구 전 현재 상태도 한 번 더 백업돼.
+                자동 백업은 최근 20개까지만 보관됩니다. 복구 전 현재 상태도 한 번 더 백업됩니다.
               </p>
               {backupList.length === 0 ? (
                 <div className="rounded-2xl bg-slate-900/60 px-4 py-6 text-center text-xs text-slate-500">
-                  저장된 자동 백업이 없어.
+                  저장된 자동 백업이 없습니다.
                 </div>
               ) : (
                 <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-1">
@@ -441,8 +442,8 @@ export function ProfileModal({
               <div className="w-80 rounded-2xl bg-slate-800 p-6">
                 <p className="mb-2 text-center text-sm font-semibold text-white">이 백업으로 복구할까?</p>
                 <p className="mb-6 text-center text-xs leading-relaxed text-slate-400">
-                  {formatBackupTime(restoreTarget.createdAt)} 상태로 되돌아가.<br />
-                  현재 상태도 먼저 자동 백업돼.
+                  {formatBackupTime(restoreTarget.createdAt)} 상태로 되돌아갑니다.<br />
+                  현재 상태도 먼저 자동 백업됩니다.
                 </p>
                 <div className="flex gap-3">
                   <button
