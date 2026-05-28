@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
 import { db } from "./firebase";
 import type { AppData } from "@/types";
 import { parseTotalCount } from "@/types";
@@ -17,16 +17,13 @@ export async function saveUserData(uid: string, data: AppData): Promise<void> {
 }
 
 /**
- * Firestore에서 유저 데이터 로드
- * 없으면 null 반환
+ * Firestore 원본 데이터를 앱 데이터로 보정
  */
-export async function loadUserData(uid: string): Promise<AppData | null> {
-  const snap = await getDoc(doc(db, "users", uid));
-  if (!snap.exists()) return null;
-  const raw = snap.data() as AppData & { updatedAt?: string };
-  // updatedAt 필드 제거 후 반환
+function normalizeUserData(rawData: AppData & { updatedAt?: string }): AppData {
+  const raw = rawData;
   const { updatedAt, ...appData } = raw;
   appData.clientUpdatedAt = appData.clientUpdatedAt ?? updatedAt;
+
   // 마이그레이션: homework totalCount / scope 보정
   if (appData.homework) {
     for (const charId of Object.keys(appData.homework)) {
@@ -65,4 +62,36 @@ export async function loadUserData(uid: string): Promise<AppData | null> {
     }
   }
   return appData as AppData;
+}
+
+/**
+ * Firestore에서 유저 데이터 로드
+ * 없으면 null 반환
+ */
+export async function loadUserData(uid: string): Promise<AppData | null> {
+  const snap = await getDoc(doc(db, "users", uid));
+  if (!snap.exists()) return null;
+  const raw = snap.data() as AppData & { updatedAt?: string };
+  return normalizeUserData(raw);
+}
+
+/**
+ * Firestore 유저 데이터 실시간 구독
+ */
+export function subscribeUserData(
+  uid: string,
+  onData: (data: AppData | null) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  return onSnapshot(
+    doc(db, "users", uid),
+    (snap) => {
+      if (!snap.exists()) {
+        onData(null);
+        return;
+      }
+      onData(normalizeUserData(snap.data() as AppData & { updatedAt?: string }));
+    },
+    (error) => onError?.(error)
+  );
 }

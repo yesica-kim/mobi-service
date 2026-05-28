@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyResets, createScrollForChar, getNextDailyResetMs, getNextWeeklyResetMs, loadData, saveData } from "@/lib/storage";
-import { loadUserData, saveUserData } from "@/lib/firestore";
+import { loadUserData, saveUserData, subscribeUserData } from "@/lib/firestore";
 import { loadRuntimeDefaultCards } from "@/lib/defaultCards";
 import type { DefaultCardsData } from "@/lib/adminFirestore";
 import type { AppData, AutoBackupSnapshot, Character, HomeworkItem, HomeworkPreset, MembershipInfo, ServerName, ShopItem, ScrollItem, TabType, PeriodType, ScopeType, RegionName, ScrollType} from "@/types";
@@ -395,6 +395,13 @@ function addAutoBackupIfUseful(data: AppData, reason: string): AppData {
   return hasStoredCards(data) || data.characters.length > 0 ? addAutoBackup(data, reason) : data;
 }
 
+function getDataUpdatedMs(data?: AppData | null): number {
+  const value = data?.clientUpdatedAt;
+  if (!value) return 0;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function useAppState(uid?: string | null) {
   const [data, setData] = useState<AppData | null>(null);
   const [runtimeDefaults, setRuntimeDefaults] = useState<DefaultCardsData | null>(null);
@@ -409,6 +416,16 @@ export function useAppState(uid?: string | null) {
   const [scrollTypeFilter, setScrollTypeFilter] = useState<ScrollType | "all">("all");
   const [backupNotice, setBackupNotice] = useState<string | null>(null);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const selectedServerRef = useRef<ServerName | null>(null);
+  const selectedCharIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    selectedServerRef.current = selectedServer;
+  }, [selectedServer]);
+
+  useEffect(() => {
+    selectedCharIdRef.current = selectedCharId;
+  }, [selectedCharId]);
 
   // 초기 로드: Firestore 우선, 없으면 localStorage
   useEffect(() => {
@@ -456,6 +473,7 @@ export function useAppState(uid?: string | null) {
       }
 
       // 기존 캐릭터에 scrollItems 필드 자체가 없으면 기본 스크롤 추가
+      let shouldSaveNormalizedData = false;
       if (loaded.characters.length > 0) {
         const scrollItems = loaded.scrollItems ?? {};
         let updated = false;
@@ -467,17 +485,19 @@ export function useAppState(uid?: string | null) {
         }
         if (updated) {
           loaded = { ...loaded, scrollItems };
+          shouldSaveNormalizedData = true;
         }
       }
 
       const normalized = normalizeCharacterCardLists(loaded);
       if (normalized.changed) {
         loaded = normalized.data;
+        shouldSaveNormalizedData = true;
       }
       if (loaded.characters.length > 0) {
         loaded = syncAllCardListsFromTemplate(loaded, loaded.characters[0].id);
       }
-      if (normalized.changed || loaded.characters.length > 0) {
+      if (shouldSaveNormalizedData) {
         saveData(loaded);
         if (uid) {
           try {
@@ -509,6 +529,44 @@ export function useAppState(uid?: string | null) {
     init();
     return () => { cancelled = true; };
   }, [uid]);
+
+  useEffect(() => {
+    if (!uid || !data) return;
+
+    const unsubscribe = subscribeUserData(
+      uid,
+      (cloudData) => {
+        if (!cloudData) return;
+
+        setData((prev) => {
+          if (!prev) return prev;
+          if (getDataUpdatedMs(cloudData) <= getDataUpdatedMs(prev)) return prev;
+
+          const next = applyResets(cloudData, runtimeDefaults ?? undefined);
+          saveData(next);
+
+          const selectedCharStillExists = selectedCharIdRef.current
+            ? next.characters.some((char) => char.id === selectedCharIdRef.current)
+            : false;
+          if (!selectedCharStillExists) {
+            const sameServerChar = selectedServerRef.current
+              ? next.characters.find((char) => char.server === selectedServerRef.current)
+              : null;
+            const nextChar = sameServerChar ?? next.characters[0];
+            setSelectedServer(nextChar?.server ?? null);
+            setSelectedCharId(nextChar?.id ?? null);
+          }
+
+          return next;
+        });
+      },
+      (error) => {
+        console.error("사용자 데이터 실시간 동기화 실패:", error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [uid, data !== null, runtimeDefaults]);
 
   // 일간/주간 리셋 타이머: 앱이 열려 있는 동안 자동 리셋
   useEffect(() => {
