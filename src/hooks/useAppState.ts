@@ -88,6 +88,24 @@ function getScrollDefaultDeleteKey(item: ScrollItem, defaultCards?: DefaultCards
   return indexed ?? (item.isDefault ? item.title : undefined);
 }
 
+function getHomeworkSyncKey(item: HomeworkItem): string {
+  return item.defaultKey
+    ? `default|${item.defaultKey}`
+    : `custom|${item.period}|${item.scope ?? "character"}|${item.title}|${item.reward}`;
+}
+
+function getShopSyncKey(item: ShopItem): string {
+  return item.defaultKey
+    ? `default|${item.defaultKey}`
+    : `custom|${item.period}|${item.scope ?? "character"}|${item.region}|${item.npcName}|${item.itemName}`;
+}
+
+function getScrollSyncKey(item: ScrollItem): string {
+  return item.defaultKey
+    ? `default|${item.defaultKey}`
+    : `custom|${item.period}|${item.scope ?? "character"}|${item.region}|${item.scrollType}|${item.title}|${item.reward}`;
+}
+
 function normalizeRecordByTemplate<T>(
   records: Record<string, T[]>,
   charIds: string[],
@@ -157,25 +175,25 @@ function normalizeCharacterCardLists(data: AppData): { data: AppData; changed: b
   const homework = normalizeRecordByTemplate(
     data.homework,
     charIds,
-    (item) => `${item.period}|${item.scope ?? "character"}|${item.title}|${item.reward}`,
+    getHomeworkSyncKey,
     cloneHomeworkForChar
   );
   const purchaseItems = normalizeRecordByTemplate(
     data.purchaseItems,
     charIds,
-    (item) => `${item.period}|${item.scope ?? "character"}|${item.region}|${item.npcName}|${item.itemName}`,
+    getShopSyncKey,
     (charId, item, index) => cloneShopForChar(charId, item, "pur", index)
   );
   const tradeItems = normalizeRecordByTemplate(
     data.tradeItems,
     charIds,
-    (item) => `${item.period}|${item.scope ?? "character"}|${item.region}|${item.npcName}|${item.itemName}`,
+    getShopSyncKey,
     (charId, item, index) => cloneShopForChar(charId, item, "trd", index)
   );
   const scrollItems = normalizeRecordByTemplate(
     data.scrollItems ?? {},
     charIds,
-    (item) => `${item.period}|${item.scope ?? "character"}|${item.region}|${item.scrollType}|${item.title}|${item.reward}`,
+    getScrollSyncKey,
     cloneScrollForChar
   );
 
@@ -283,7 +301,7 @@ function syncAllCardListsFromTemplate(data: AppData, templateCharId: string): Ap
     data.homework,
     charIds,
     templateCharId,
-    (item) => `${item.defaultKey ?? ""}|${item.period}|${item.scope ?? "character"}|${item.title}|${item.reward}`,
+    getHomeworkSyncKey,
     cloneHomeworkForChar,
     (templateItem, existingItem) => ({
       ...templateItem,
@@ -295,7 +313,7 @@ function syncAllCardListsFromTemplate(data: AppData, templateCharId: string): Ap
     data.purchaseItems,
     charIds,
     templateCharId,
-    (item) => `${item.defaultKey ?? ""}|${item.period}|${item.scope ?? "character"}|${item.region}|${item.npcName}|${item.itemName}`,
+    getShopSyncKey,
     (charId, item, index) => cloneShopForChar(charId, item, "pur", index),
     (templateItem, existingItem) => ({
       ...templateItem,
@@ -307,7 +325,7 @@ function syncAllCardListsFromTemplate(data: AppData, templateCharId: string): Ap
     data.tradeItems,
     charIds,
     templateCharId,
-    (item) => `${item.defaultKey ?? ""}|${item.period}|${item.scope ?? "character"}|${item.region}|${item.npcName}|${item.itemName}`,
+    getShopSyncKey,
     (charId, item, index) => cloneShopForChar(charId, item, "trd", index),
     (templateItem, existingItem) => ({
       ...templateItem,
@@ -319,7 +337,7 @@ function syncAllCardListsFromTemplate(data: AppData, templateCharId: string): Ap
     data.scrollItems ?? {},
     charIds,
     templateCharId,
-    (item) => `${item.defaultKey ?? ""}|${item.period}|${item.scope ?? "character"}|${item.region}|${item.scrollType}|${item.title}|${item.reward}`,
+    getScrollSyncKey,
     cloneScrollForChar,
     (templateItem, existingItem) => ({
       ...templateItem,
@@ -856,7 +874,7 @@ export function useAppState(uid?: string | null) {
             ),
           },
         };
-      });
+      }, { immediate: true });
     },
     [persist, selectedCharId, getSameServerCharIds]
   );
@@ -891,7 +909,7 @@ export function useAppState(uid?: string | null) {
             ),
           },
         };
-      });
+      }, { immediate: true });
     },
     [persist, getCharServerCharIds]
   );
@@ -946,7 +964,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, homework: newHomework, deletedDefaultItems };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getAllCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
   // ── 구매/물물교환 토글 ──
@@ -982,7 +1000,7 @@ export function useAppState(uid?: string | null) {
             ),
           },
         };
-      });
+      }, { immediate: true });
     },
     [persist, selectedCharId, getSameServerCharIds]
   );
@@ -1018,7 +1036,7 @@ export function useAppState(uid?: string | null) {
             ),
           },
         };
-      });
+      }, { immediate: true });
     },
     [persist, getCharServerCharIds]
   );
@@ -1208,7 +1226,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, [key]: newItems, allTabOrder };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getAllCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
   // ── 숙제 순서 변경 (전체 서버/캐릭터 동기화) ──
@@ -1229,7 +1247,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, homework: newHomework };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getAllCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
   // ── 구매/물물교환 순서 변경 (전체 서버/캐릭터 동기화) ──
@@ -1326,7 +1344,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, scrollItems, allTabOrder };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getAllCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
   const toggleScrollItem = useCallback(
@@ -1445,7 +1463,7 @@ export function useAppState(uid?: string | null) {
         return { ...prev, scrollItems, deletedDefaultItems, allTabOrder };
       }, { immediate: true });
     },
-    [persist, selectedCharId, getAllCharIds]
+    [persist, selectedCharId, getAllCharIds, runtimeDefaults]
   );
 
   const reorderScrollItem = useCallback(
