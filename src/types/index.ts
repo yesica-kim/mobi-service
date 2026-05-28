@@ -337,6 +337,8 @@ export const UPDATE_NOTES: UpdateNote[] = [
 export interface AppData {
   /** 사용자 데이터 최종 수정 시각. 저장/백업 표시와 동기화 보조 정보로 사용 */
   clientUpdatedAt?: string;
+  /** 이전 데이터 복원 작업을 다른 기기에서 시간 비교와 별개로 감지하기 위한 식별값 */
+  restoreSyncId?: string;
   characters: Character[];
   homework: Record<string, HomeworkItem[]>;
   /** charId -> ShopItem[] */

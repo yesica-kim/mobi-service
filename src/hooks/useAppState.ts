@@ -402,6 +402,10 @@ function getDataUpdatedMs(data?: AppData | null): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function hasNewRestoreSync(cloudData: AppData, currentData: AppData): boolean {
+  return Boolean(cloudData.restoreSyncId && cloudData.restoreSyncId !== currentData.restoreSyncId);
+}
+
 export function useAppState(uid?: string | null) {
   const [data, setData] = useState<AppData | null>(null);
   const [runtimeDefaults, setRuntimeDefaults] = useState<DefaultCardsData | null>(null);
@@ -551,7 +555,7 @@ export function useAppState(uid?: string | null) {
 
         setData((prev) => {
           if (!prev) return prev;
-          if (getDataUpdatedMs(cloudData) <= getDataUpdatedMs(prev)) return prev;
+          if (!hasNewRestoreSync(cloudData, prev) && getDataUpdatedMs(cloudData) <= getDataUpdatedMs(prev)) return prev;
 
           const next = applyResets(cloudData, runtimeDefaults ?? undefined);
           saveData(next);
@@ -2085,6 +2089,7 @@ export function useAppState(uid?: string | null) {
       const beforeRestore = createBackupSnapshot(prev, "이전 데이터 복구 전");
       const restored: AppData = {
         ...backup.data,
+        restoreSyncId: `restore_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         automaticBackups: [
           beforeRestore,
           ...(prev.automaticBackups ?? []).filter((item) => item.id !== beforeRestore.id),
