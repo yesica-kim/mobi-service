@@ -896,7 +896,7 @@ export default function Home() {
         >
           <span className="whitespace-pre-line leading-relaxed">{state.backupNotice}</span>
           <span className="shrink-0 rounded-xl bg-blue-600/20 px-2.5 py-1 text-xs font-semibold text-blue-300">
-            바로가기 &gt;
+            바로가기
           </span>
         </button>
       )}
