@@ -2021,8 +2021,16 @@ export function useAppState(uid?: string | null) {
           ...(prev.automaticBackups ?? []).filter((item) => item.id !== beforeRestore.id),
         ].slice(0, MAX_AUTO_BACKUPS),
       };
-      const first = restored.characters[0];
-      nextSelection = first ? { server: first.server, charId: first.id } : { server: null, charId: null };
+      const sameCharacter = selectedCharId
+        ? restored.characters.find((char) => char.id === selectedCharId)
+        : null;
+      const sameServerCharacter = selectedServer
+        ? restored.characters.find((char) => char.server === selectedServer)
+        : null;
+      const nextCharacter = sameCharacter ?? sameServerCharacter ?? restored.characters[0];
+      nextSelection = nextCharacter
+        ? { server: nextCharacter.server, charId: nextCharacter.id }
+        : { server: null, charId: null };
       return restored;
     }, { immediate: true });
 
@@ -2031,7 +2039,7 @@ export function useAppState(uid?: string | null) {
       setSelectedServer(nextSelection.server);
       setSelectedCharId(nextSelection.charId);
     }, 0);
-  }, [persist]);
+  }, [persist, selectedCharId, selectedServer]);
 
   const dismissBackupNotice = useCallback(() => {
     setBackupNotice(null);
