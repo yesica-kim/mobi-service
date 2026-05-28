@@ -65,12 +65,17 @@ function createLoadPerformanceLogger(label: string) {
     },
     finish(extra: Record<string, unknown> = {}) {
       const total = Math.round(performance.now() - startedAt);
-      console.table({
+      const metrics = {
         label,
         ...marks,
         total,
         ...extra,
-      });
+      };
+      (window as typeof window & { __mobimobiLoadMetrics?: unknown[] }).__mobimobiLoadMetrics = [
+        ...(((window as typeof window & { __mobimobiLoadMetrics?: unknown[] }).__mobimobiLoadMetrics ?? [])),
+        metrics,
+      ];
+      console.log("[mobimobi-load]", JSON.stringify(metrics));
     },
   };
 }

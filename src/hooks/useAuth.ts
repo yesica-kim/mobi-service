@@ -36,11 +36,16 @@ export function useAuth() {
     // 항상 auth 리스너 등록 (게스트→로그인 전환 감지)
     const unsub = onAuthStateChanged(auth, (u) => {
       if (shouldLogAuthPerformance()) {
-        console.table({
+        const metrics = {
           label: "mobimobi auth ready",
           authReadyMs: Math.round(performance.now() - startedAt),
           signedIn: Boolean(u),
-        });
+        };
+        (window as typeof window & { __mobimobiAuthMetrics?: unknown[] }).__mobimobiAuthMetrics = [
+          ...(((window as typeof window & { __mobimobiAuthMetrics?: unknown[] }).__mobimobiAuthMetrics ?? [])),
+          metrics,
+        ];
+        console.log("[mobimobi-auth]", JSON.stringify(metrics));
       }
       if (!u && signingInRef.current) return;
       setUser(u);
