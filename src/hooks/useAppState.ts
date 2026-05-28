@@ -451,20 +451,34 @@ export function useAppState(uid?: string | null) {
   const [scrollTypeFilter, setScrollTypeFilter] = useState<ScrollType | "all">("all");
   const [backupNotice, setBackupNotice] = useState<string | null>(null);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const saveInFlightRef = useRef(false);
+  const pendingUserDataSaveRef = useRef<AppData | null>(null);
   const runtimeDefaultsFingerprintRef = useRef<string>("");
   const selectedServerRef = useRef<ServerName | null>(null);
   const selectedCharIdRef = useRef<string | null>(null);
 
+  const flushUserDataSave = useCallback(async () => {
+    if (!uid || saveInFlightRef.current) return;
+    const next = pendingUserDataSaveRef.current;
+    if (!next) return;
+
+    pendingUserDataSaveRef.current = null;
+    saveInFlightRef.current = true;
+    try {
+      await saveUserData(uid, next);
+    } catch (error) {
+      console.error("사용자 데이터 저장 실패:", error);
+    } finally {
+      saveInFlightRef.current = false;
+      if (pendingUserDataSaveRef.current) void flushUserDataSave();
+    }
+  }, [uid]);
+
   const queueUserDataSave = useCallback((next: AppData) => {
     if (!uid) return;
-    saveChainRef.current = saveChainRef.current
-      .catch(() => undefined)
-      .then(() => saveUserData(uid, next))
-      .catch((error) => {
-        console.error("사용자 데이터 저장 실패:", error);
-      });
-  }, [uid]);
+    pendingUserDataSaveRef.current = next;
+    void flushUserDataSave();
+  }, [flushUserDataSave, uid]);
 
   useEffect(() => {
     selectedServerRef.current = selectedServer;
@@ -494,7 +508,14 @@ export function useAppState(uid?: string | null) {
         if (cloudData) {
           const resetCloudData = applyResets(cloudData, defaults);
           const resetLocalData = applyResets(localData, defaults);
-          if (!hasStoredCards(resetCloudData) && hasStoredCards(resetLocalData)) {
+          if (getDataUpdatedMs(resetLocalData) > getDataUpdatedMs(resetCloudData)) {
+            loaded = resetLocalData;
+            try {
+              await saveUserData(uid, loaded);
+            } catch (error) {
+              console.error("사용자 데이터 최신 로컬 저장 실패:", error);
+            }
+          } else if (!hasStoredCards(resetCloudData) && hasStoredCards(resetLocalData)) {
             loaded = resetLocalData;
             try {
               await saveUserData(uid, loaded);
