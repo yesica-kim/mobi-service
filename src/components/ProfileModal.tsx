@@ -220,7 +220,9 @@ export function ProfileModal({
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm text-slate-300 hover:bg-slate-700 transition-colors"
                 >
                   <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a6 6 0 016 6v1m0 0l-3-3m3 3l3-3M3 4v6h6" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.05 11a9 9 0 11.64 4.74" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16v-5h5" />
                   </svg>
                   이전 데이터 복구
                 </button>
