@@ -402,6 +402,14 @@ function getDataUpdatedMs(data?: AppData | null): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function createSyncRevision(prefix = "sync"): string {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function hasNewSyncRevision(cloudData: AppData, currentData: AppData): boolean {
+  return Boolean(cloudData.syncRevision && cloudData.syncRevision !== currentData.syncRevision);
+}
+
 function hasNewRestoreSync(cloudData: AppData, currentData: AppData): boolean {
   return Boolean(cloudData.restoreSyncId && cloudData.restoreSyncId !== currentData.restoreSyncId);
 }
@@ -555,7 +563,13 @@ export function useAppState(uid?: string | null) {
 
         setData((prev) => {
           if (!prev) return prev;
-          if (!hasNewRestoreSync(cloudData, prev) && getDataUpdatedMs(cloudData) <= getDataUpdatedMs(prev)) return prev;
+          if (
+            !hasNewSyncRevision(cloudData, prev) &&
+            !hasNewRestoreSync(cloudData, prev) &&
+            getDataUpdatedMs(cloudData) <= getDataUpdatedMs(prev)
+          ) {
+            return prev;
+          }
 
           const next = applyResets(cloudData, runtimeDefaults ?? undefined);
           saveData(next);
@@ -629,7 +643,7 @@ export function useAppState(uid?: string | null) {
     setData((prev) => {
       if (!prev) return prev;
       const previousBackupId = prev.automaticBackups?.[0]?.id;
-      const next = { ...updater(prev), clientUpdatedAt: new Date().toISOString() };
+      const next = { ...updater(prev), clientUpdatedAt: new Date().toISOString(), syncRevision: createSyncRevision() };
       if (next.automaticBackups?.[0]?.id && next.automaticBackups[0].id !== previousBackupId) {
         setBackupNotice("데이터가 자동백업 되었습니다.\n설정 > 이전 데이터 복구에서 확인하실 수 있습니다.");
       }
@@ -2064,6 +2078,7 @@ export function useAppState(uid?: string | null) {
     const now = new Date().toISOString();
     const next: AppData = {
       ...importedData,
+      syncRevision: createSyncRevision("import"),
       automaticBackups: [
         ...(backup ? [backup] : []),
         ...(importedData.automaticBackups ?? []),
@@ -2089,6 +2104,7 @@ export function useAppState(uid?: string | null) {
       const beforeRestore = createBackupSnapshot(prev, "이전 데이터 복구 전");
       const restored: AppData = {
         ...backup.data,
+        syncRevision: createSyncRevision("restore"),
         restoreSyncId: `restore_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         automaticBackups: [
           beforeRestore,

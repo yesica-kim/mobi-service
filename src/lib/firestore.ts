@@ -12,6 +12,7 @@ export async function saveUserData(uid: string, data: AppData): Promise<void> {
   await setDoc(doc(db, "users", uid), {
     ...data,
     clientUpdatedAt: updatedAt,
+    syncRevision: data.syncRevision ?? `sync_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     updatedAt,
   });
 }
