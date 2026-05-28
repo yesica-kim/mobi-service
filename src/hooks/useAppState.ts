@@ -429,6 +429,24 @@ function createSyncRevision(prefix = "sync"): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function getSyncedRevisionKey(uid: string): string {
+  return `mabimobi_synced_revision_${uid}`;
+}
+
+function getLocalSyncedRevision(uid: string): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(getSyncedRevisionKey(uid));
+}
+
+function markLocalSyncedRevision(uid: string, data: AppData): void {
+  if (typeof window === "undefined" || !data.syncRevision) return;
+  localStorage.setItem(getSyncedRevisionKey(uid), data.syncRevision);
+}
+
+function hasUnsyncedLocalData(uid: string, data: AppData): boolean {
+  return Boolean(data.syncRevision && getLocalSyncedRevision(uid) !== data.syncRevision);
+}
+
 function hasNewRestoreSync(cloudData: AppData, currentData: AppData): boolean {
   return Boolean(cloudData.restoreSyncId && cloudData.restoreSyncId !== currentData.restoreSyncId);
 }
@@ -466,6 +484,7 @@ export function useAppState(uid?: string | null) {
     saveInFlightRef.current = true;
     try {
       await saveUserData(uid, next);
+      markLocalSyncedRevision(uid, next);
     } catch (error) {
       console.error("사용자 데이터 저장 실패:", error);
     } finally {
@@ -494,6 +513,7 @@ export function useAppState(uid?: string | null) {
     async function init() {
       setData(null);
       let loaded: AppData;
+      let loadedSyncedWithCloud = false;
       const defaults = await loadRuntimeDefaultCards();
 
       if (uid) {
@@ -508,10 +528,12 @@ export function useAppState(uid?: string | null) {
         if (cloudData) {
           const resetCloudData = applyResets(cloudData, defaults);
           const resetLocalData = applyResets(localData, defaults);
-          if (getDataUpdatedMs(resetLocalData) > getDataUpdatedMs(resetCloudData)) {
+          if (hasUnsyncedLocalData(uid, resetLocalData) && getDataUpdatedMs(resetLocalData) > getDataUpdatedMs(resetCloudData)) {
             loaded = resetLocalData;
             try {
               await saveUserData(uid, loaded);
+              markLocalSyncedRevision(uid, loaded);
+              loadedSyncedWithCloud = true;
             } catch (error) {
               console.error("사용자 데이터 최신 로컬 저장 실패:", error);
             }
@@ -519,11 +541,14 @@ export function useAppState(uid?: string | null) {
             loaded = resetLocalData;
             try {
               await saveUserData(uid, loaded);
+              markLocalSyncedRevision(uid, loaded);
+              loadedSyncedWithCloud = true;
             } catch (error) {
               console.error("사용자 데이터 초기 저장 실패:", error);
             }
           } else {
             loaded = resetCloudData;
+            loadedSyncedWithCloud = true;
           }
         } else {
           // Firestore에 없으면 새 계정은 빈 리스트에서 시작한다.
@@ -532,6 +557,8 @@ export function useAppState(uid?: string | null) {
           // 클라우드에 초기 저장
           try {
             await saveUserData(uid, loaded);
+            markLocalSyncedRevision(uid, loaded);
+            loadedSyncedWithCloud = true;
           } catch (error) {
             console.error("사용자 데이터 초기 저장 실패:", error);
           }
@@ -566,10 +593,11 @@ export function useAppState(uid?: string | null) {
         loaded = syncAllCardListsFromTemplate(loaded, loaded.characters[0].id);
       }
       if (shouldSaveNormalizedData) {
-        saveData(loaded);
         if (uid) {
           try {
             await saveUserData(uid, loaded);
+            markLocalSyncedRevision(uid, loaded);
+            loadedSyncedWithCloud = true;
           } catch (error) {
             console.error("사용자 데이터 정규화 저장 실패:", error);
           }
@@ -577,6 +605,8 @@ export function useAppState(uid?: string | null) {
       }
 
       if (cancelled) return;
+      saveData(loaded);
+      if (uid && loadedSyncedWithCloud) markLocalSyncedRevision(uid, loaded);
       runtimeDefaultsFingerprintRef.current = getDefaultCardsFingerprint(defaults);
       setRuntimeDefaults(defaults);
       setData(loaded);
@@ -644,6 +674,7 @@ export function useAppState(uid?: string | null) {
 
           const next = applyResets(cloudData, runtimeDefaults ?? undefined);
           saveData(next);
+          markLocalSyncedRevision(uid, next);
 
           const selectedCharStillExists = selectedCharIdRef.current
             ? next.characters.some((char) => char.id === selectedCharIdRef.current)
