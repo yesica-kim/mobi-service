@@ -62,20 +62,20 @@ export async function saveUserData(uid: string, data: AppData): Promise<void> {
   const updatedAt = new Date().toISOString();
   const backups = (data.automaticBackups ?? []).slice(0, MAX_CLOUD_BACKUPS);
   const { automaticBackups, ...dataWithoutBackups } = data;
-  const batch = writeBatch(db);
   const userRef = doc(db, "users", uid);
   const backupCollection = getBackupCollection(uid);
 
-  await setDoc(userRef, removeUndefinedValues({
-    ...dataWithoutBackups,
-    clientUpdatedAt: updatedAt,
-    syncRevision: data.syncRevision ?? createSyncRevision(),
-    updatedAt,
-  }));
-
   try {
+    const batch = writeBatch(db);
     const existingBackups = await getDocs(backupCollection);
     const keepBackupIds = new Set(backups.map((backup) => backup.id));
+
+    batch.set(userRef, removeUndefinedValues({
+      ...dataWithoutBackups,
+      clientUpdatedAt: updatedAt,
+      syncRevision: data.syncRevision ?? createSyncRevision(),
+      updatedAt,
+    }));
     backups.forEach((backup) => {
       batch.set(doc(backupCollection, backup.id), removeUndefinedValues(backup));
     });
@@ -87,6 +87,12 @@ export async function saveUserData(uid: string, data: AppData): Promise<void> {
     await batch.commit();
   } catch (error) {
     console.warn("자동백업 하위 컬렉션 저장 실패:", error);
+    await setDoc(userRef, removeUndefinedValues({
+      ...dataWithoutBackups,
+      clientUpdatedAt: updatedAt,
+      syncRevision: data.syncRevision ?? createSyncRevision(),
+      updatedAt,
+    }));
   }
 }
 
