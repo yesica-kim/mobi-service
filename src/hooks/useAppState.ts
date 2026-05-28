@@ -416,8 +416,19 @@ export function useAppState(uid?: string | null) {
   const [scrollTypeFilter, setScrollTypeFilter] = useState<ScrollType | "all">("all");
   const [backupNotice, setBackupNotice] = useState<string | null>(null);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
   const selectedServerRef = useRef<ServerName | null>(null);
   const selectedCharIdRef = useRef<string | null>(null);
+
+  const queueUserDataSave = useCallback((next: AppData) => {
+    if (!uid) return;
+    saveChainRef.current = saveChainRef.current
+      .catch(() => undefined)
+      .then(() => saveUserData(uid, next))
+      .catch((error) => {
+        console.error("사용자 데이터 저장 실패:", error);
+      });
+  }, [uid]);
 
   useEffect(() => {
     selectedServerRef.current = selectedServer;
@@ -579,7 +590,7 @@ export function useAppState(uid?: string | null) {
           if (!prev) return prev;
           const next = applyResets({ ...prev }, runtimeDefaults ?? undefined);
           saveData(next);
-          if (uid) saveUserData(uid, next);
+          queueUserDataSave(next);
           return next;
         });
         dailyTimer = scheduleDailyReset();
@@ -593,7 +604,7 @@ export function useAppState(uid?: string | null) {
           if (!prev) return prev;
           const next = applyResets({ ...prev }, runtimeDefaults ?? undefined);
           saveData(next);
-          if (uid) saveUserData(uid, next);
+          queueUserDataSave(next);
           return next;
         });
         weeklyTimer = scheduleWeeklyReset();
@@ -607,7 +618,7 @@ export function useAppState(uid?: string | null) {
       clearTimeout(dailyTimer);
       clearTimeout(weeklyTimer);
     };
-  }, [data !== null, uid, runtimeDefaults]); // data가 로드된 후 한 번만 설정
+  }, [data !== null, queueUserDataSave, runtimeDefaults]); // data가 로드된 후 한 번만 설정
 
   // 데이터 변경 시 저장 (debounce)
   const persist = useCallback((updater: (prev: AppData) => AppData, options?: { immediate?: boolean }) => {
@@ -624,16 +635,16 @@ export function useAppState(uid?: string | null) {
       if (uid) {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         if (options?.immediate) {
-          saveUserData(uid, next);
+          queueUserDataSave(next);
         } else {
           saveTimerRef.current = setTimeout(() => {
-            saveUserData(uid, next);
+            queueUserDataSave(next);
           }, 300);
         }
       }
       return next;
     });
-  }, [uid]);
+  }, [queueUserDataSave, uid]);
 
   // ── 캐릭터 CRUD ──
   const addCharacter = useCallback(
@@ -671,7 +682,7 @@ export function useAppState(uid?: string | null) {
           allTabOrder[id] = [...mappedOrder, ...allIds.filter((itemId) => !mappedOrder.includes(itemId))];
         }
 
-        return {
+        const next = {
           ...prev,
           characters: [...prev.characters, newChar],
           homework: { ...prev.homework, [id]: homework },
@@ -680,8 +691,8 @@ export function useAppState(uid?: string | null) {
           scrollItems: { ...(prev.scrollItems ?? {}), [id]: scrollItems },
           allTabOrder,
         };
+        return addAutoBackupIfUseful(next, `'${char.name}' 캐릭터 추가 후`);
       }, { immediate: true });
-      persist((prev) => addAutoBackupIfUseful(prev, `'${char.name}' 캐릭터 추가 후`), { immediate: true });
       setSelectedServer(char.server);
       setSelectedCharId(id);
     },
@@ -2057,13 +2068,13 @@ export function useAppState(uid?: string | null) {
     };
 
     saveData(next);
-    if (uid) saveUserData(uid, next);
+    queueUserDataSave(next);
     setData(next);
     setBackupNotice(backup ? "데이터가 자동백업 되었습니다.\n설정 > 이전 데이터 복구에서 확인하실 수 있습니다." : "백업 파일을 가져왔습니다.");
     const first = next.characters[0];
     setSelectedServer(first?.server ?? null);
     setSelectedCharId(first?.id ?? null);
-  }, [createAutoBackupForImport, uid]);
+  }, [createAutoBackupForImport, queueUserDataSave]);
 
   const restoreAutoBackup = useCallback((backupId: string) => {
     let nextSelection: { server: ServerName | null; charId: string | null } | null = null;
