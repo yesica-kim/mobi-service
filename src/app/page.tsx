@@ -622,6 +622,9 @@ export default function Home() {
                   const nextIndex = item.completedCount >= item.totalCount ? 0 : item.completedCount;
                   state.toggleScrollItemForChar(charId, item.id, nextIndex);
                 }}
+                onToggleRowCompleted={(row) => {
+                  state.setMatrixRowCompleted(row.type, row.sourceItem.id, !isMatrixRowDone(row));
+                }}
                 onToggleFavorite={(row) => {
                   if (row.type === "homework") state.toggleFavorite(row.sourceItem.id);
                   if (row.type === "scroll") state.toggleScrollFavorite(row.sourceItem.id);
@@ -935,6 +938,7 @@ function ListMatrixView({
   onToggleHomework,
   onToggleShop,
   onToggleScroll,
+  onToggleRowCompleted,
   onToggleFavorite,
   onQuickEdit,
   onDeleteRow,
@@ -946,6 +950,7 @@ function ListMatrixView({
   onToggleHomework: (charId: string, item: HomeworkItem) => void;
   onToggleShop: (charId: string, item: ShopItem, type: "purchase" | "trade") => void;
   onToggleScroll: (charId: string, item: ScrollItem) => void;
+  onToggleRowCompleted: (row: MatrixRow) => void;
   onToggleFavorite: (row: MatrixRow) => void;
   onQuickEdit: (row: MatrixRow) => void;
   onDeleteRow: (row: MatrixRow) => void;
@@ -971,6 +976,7 @@ function ListMatrixView({
               onToggleHomework={onToggleHomework}
               onToggleShop={onToggleShop}
               onToggleScroll={onToggleScroll}
+              onToggleRowCompleted={onToggleRowCompleted}
               onToggleFavorite={onToggleFavorite}
               onQuickEdit={onQuickEdit}
               onDeleteRow={onDeleteRow}
@@ -1012,6 +1018,7 @@ function ListMatrixView({
                 onToggleHomework={onToggleHomework}
                 onToggleShop={onToggleShop}
                 onToggleScroll={onToggleScroll}
+                onToggleRowCompleted={onToggleRowCompleted}
                 onToggleFavorite={onToggleFavorite}
                 onQuickEdit={onQuickEdit}
                 onDeleteRow={onDeleteRow}
@@ -1029,6 +1036,7 @@ function ListMatrixMobileCard({
   onToggleHomework,
   onToggleShop,
   onToggleScroll,
+  onToggleRowCompleted,
   onToggleFavorite,
   onQuickEdit,
   onDeleteRow,
@@ -1037,6 +1045,7 @@ function ListMatrixMobileCard({
   onToggleHomework: (charId: string, item: HomeworkItem) => void;
   onToggleShop: (charId: string, item: ShopItem, type: "purchase" | "trade") => void;
   onToggleScroll: (charId: string, item: ScrollItem) => void;
+  onToggleRowCompleted: (row: MatrixRow) => void;
   onToggleFavorite: (row: MatrixRow) => void;
   onQuickEdit: (row: MatrixRow) => void;
   onDeleteRow: (row: MatrixRow) => void;
@@ -1087,6 +1096,18 @@ function ListMatrixMobileCard({
             </button>
           </div>
           <div className="flex flex-shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onToggleRowCompleted(row)}
+              className={`flex h-11 flex-shrink-0 items-center justify-center rounded-lg px-3 text-xs font-bold transition-colors ${
+                rowDone
+                  ? "border border-red-500/40 text-red-300 hover:bg-red-500/10"
+                  : "border border-blue-500/40 text-blue-300 hover:bg-blue-500/10"
+              }`}
+              title={rowDone ? "이 숙제 전체 해제" : "이 숙제 전체 체크"}
+            >
+              {rowDone ? "전체 해제" : "전체 체크"}
+            </button>
             <button
               type="button"
               onClick={() => onQuickEdit(row)}
@@ -1216,6 +1237,7 @@ function ListMatrixRow({
   onToggleHomework,
   onToggleShop,
   onToggleScroll,
+  onToggleRowCompleted,
   onToggleFavorite,
   onQuickEdit,
   onDeleteRow,
@@ -1225,6 +1247,7 @@ function ListMatrixRow({
   onToggleHomework: (charId: string, item: HomeworkItem) => void;
   onToggleShop: (charId: string, item: ShopItem, type: "purchase" | "trade") => void;
   onToggleScroll: (charId: string, item: ScrollItem) => void;
+  onToggleRowCompleted: (row: MatrixRow) => void;
   onToggleFavorite: (row: MatrixRow) => void;
   onQuickEdit: (row: MatrixRow) => void;
   onDeleteRow: (row: MatrixRow) => void;
@@ -1289,6 +1312,18 @@ function ListMatrixRow({
                 <div className="mt-1.5 whitespace-normal break-keep text-[15px] font-semibold leading-snug text-slate-100">{row.label}</div>
               </div>
               <div className="flex flex-shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onToggleRowCompleted(row)}
+                  className={`flex h-9 flex-shrink-0 items-center justify-center rounded-md px-2 text-[11px] font-bold transition-colors ${
+                    rowDone
+                      ? "border border-red-500/40 text-red-300 hover:bg-red-500/10"
+                      : "border border-blue-500/40 text-blue-300 hover:bg-blue-500/10"
+                  }`}
+                  title={rowDone ? "이 숙제 전체 해제" : "이 숙제 전체 체크"}
+                >
+                  {rowDone ? "전체 해제" : "전체 체크"}
+                </button>
                 <button
                   type="button"
                   onClick={() => onQuickEdit(row)}
