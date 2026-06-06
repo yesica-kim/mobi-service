@@ -576,9 +576,6 @@ export default function Home() {
               favoriteOnly={state.favoriteOnly}
               onFavoriteToggle={state.setFavoriteOnly}
               onReset={state.resetHomework}
-              visibleAllDone={state.visibleItemProgress.allDone}
-              visibleToggleDisabled={viewMode !== "character" || state.visibleItemProgress.total === 0}
-              onSetVisibleCompleted={viewMode === "character" ? state.setVisibleItemsCompleted : undefined}
             />
 
             <PeriodToggle active={state.activeTab} onChange={state.setActiveTab} />
