@@ -1415,6 +1415,118 @@ export function useAppState(uid?: string | null) {
     return items;
   }, [allScrollItems, favoriteOnly, periodFilter, scopeFilter, scrollTypeFilter, regionFilter, searchQuery]);
 
+  const setVisibleItemsCompleted = useCallback(
+    (completed: boolean) => {
+      if (!selectedCharId) return;
+
+      persist((prev) => {
+        const base = syncAllCardListsFromTemplate(prev, selectedCharId);
+        const sameServerCharIds = getSameServerCharIds(base);
+        const matchesHomework = (item: HomeworkItem) => {
+          if (activeTab === "daily" && item.period !== "daily") return false;
+          if (activeTab === "weekly" && item.period !== "weekly") return false;
+          if (activeTab !== "all" && activeTab !== "daily" && activeTab !== "weekly") return false;
+          if (favoriteOnly && !item.isFavorite) return false;
+          if (periodFilter !== "all" && item.period !== periodFilter) return false;
+          if (scopeFilter !== "all" && (item.scope || "character") !== scopeFilter) return false;
+          if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            return item.title.toLowerCase().includes(q) || item.reward.toLowerCase().includes(q);
+          }
+          return true;
+        };
+        const matchesShop = (item: ShopItem, type: "purchase" | "trade") => {
+          if (activeTab !== "all" && activeTab !== type) return false;
+          if (favoriteOnly && !item.isFavorite) return false;
+          if (periodFilter !== "all" && (item.period ?? "daily") !== periodFilter) return false;
+          if (scopeFilter !== "all" && (item.scope || "character") !== scopeFilter) return false;
+          if (regionFilter.length > 0 && !regionFilter.includes(item.region)) return false;
+          if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            return item.itemName.toLowerCase().includes(q) || item.npcName.toLowerCase().includes(q);
+          }
+          return true;
+        };
+        const matchesScroll = (item: ScrollItem) => {
+          if (activeTab !== "all" && activeTab !== "scroll") return false;
+          if (favoriteOnly && !item.isFavorite) return false;
+          if (periodFilter !== "all" && (item.period ?? "weekly") !== periodFilter) return false;
+          if (scopeFilter !== "all" && (item.scope || "character") !== scopeFilter) return false;
+          if (scrollTypeFilter !== "all" && item.scrollType !== scrollTypeFilter) return false;
+          if (regionFilter.length > 0 && !regionFilter.includes(item.region)) return false;
+          if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            return item.title.toLowerCase().includes(q) || item.reward.toLowerCase().includes(q);
+          }
+          return true;
+        };
+        const splitIndexesByScope = <T extends { scope?: ScopeType }>(items: T[], predicate: (item: T) => boolean) => {
+          const character = new Set<number>();
+          const server = new Set<number>();
+          items.forEach((item, index) => {
+            if (!predicate(item)) return;
+            if ((item.scope || "character") === "server") server.add(index);
+            else character.add(index);
+          });
+          return { character, server };
+        };
+        const updateHomeworkList = (list: HomeworkItem[] = [], indexes: Set<number>) =>
+          list.map((item, index) =>
+            indexes.has(index) ? { ...item, completedCount: completed ? item.totalCount : 0 } : item
+          );
+        const updateShopList = (list: ShopItem[] = [], indexes: Set<number>) =>
+          list.map((item, index) => (indexes.has(index) ? { ...item, completed } : item));
+        const updateScrollList = (list: ScrollItem[] = [], indexes: Set<number>) =>
+          list.map((item, index) =>
+            indexes.has(index) ? { ...item, completedCount: completed ? item.totalCount : 0 } : item
+          );
+
+        const homeworkIndexes = splitIndexesByScope(base.homework[selectedCharId] ?? [], matchesHomework);
+        const purchaseIndexes = splitIndexesByScope(base.purchaseItems[selectedCharId] ?? [], (item) => matchesShop(item, "purchase"));
+        const tradeIndexes = splitIndexesByScope(base.tradeItems[selectedCharId] ?? [], (item) => matchesShop(item, "trade"));
+        const scrollIndexes = splitIndexesByScope((base.scrollItems ?? {})[selectedCharId] ?? [], matchesScroll);
+        const hasVisibleItems = [
+          homeworkIndexes,
+          purchaseIndexes,
+          tradeIndexes,
+          scrollIndexes,
+        ].some((group) => group.character.size > 0 || group.server.size > 0);
+        if (!hasVisibleItems) return prev;
+
+        const homework = { ...base.homework };
+        const purchaseItems = { ...base.purchaseItems };
+        const tradeItems = { ...base.tradeItems };
+        const scrollItems = { ...(base.scrollItems ?? {}) };
+
+        homework[selectedCharId] = updateHomeworkList(homework[selectedCharId], homeworkIndexes.character);
+        purchaseItems[selectedCharId] = updateShopList(purchaseItems[selectedCharId], purchaseIndexes.character);
+        tradeItems[selectedCharId] = updateShopList(tradeItems[selectedCharId], tradeIndexes.character);
+        scrollItems[selectedCharId] = updateScrollList(scrollItems[selectedCharId], scrollIndexes.character);
+
+        for (const charId of sameServerCharIds) {
+          homework[charId] = updateHomeworkList(homework[charId], homeworkIndexes.server);
+          purchaseItems[charId] = updateShopList(purchaseItems[charId], purchaseIndexes.server);
+          tradeItems[charId] = updateShopList(tradeItems[charId], tradeIndexes.server);
+          scrollItems[charId] = updateScrollList(scrollItems[charId], scrollIndexes.server);
+        }
+
+        return { ...base, homework, purchaseItems, tradeItems, scrollItems };
+      }, { immediate: true });
+    },
+    [
+      activeTab,
+      favoriteOnly,
+      getSameServerCharIds,
+      periodFilter,
+      persist,
+      regionFilter,
+      scopeFilter,
+      scrollTypeFilter,
+      searchQuery,
+      selectedCharId,
+    ]
+  );
+
   const addScrollItem = useCallback(
     (item: { title: string; scrollType: ScrollType; period: PeriodType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => {
       if (!selectedCharId) return;
@@ -2157,6 +2269,72 @@ export function useAppState(uid?: string | null) {
     return items;
   }, [allPurchaseItems, allTradeItems, activeTab, favoriteOnly, periodFilter, scopeFilter, regionFilter, searchQuery]);
 
+  const visibleItemProgress = useMemo(() => {
+    const matchesHomework = (item: HomeworkItem) => {
+      if (activeTab === "daily" && item.period !== "daily") return false;
+      if (activeTab === "weekly" && item.period !== "weekly") return false;
+      if (activeTab !== "all" && activeTab !== "daily" && activeTab !== "weekly") return false;
+      if (favoriteOnly && !item.isFavorite) return false;
+      if (periodFilter !== "all" && item.period !== periodFilter) return false;
+      if (scopeFilter !== "all" && (item.scope || "character") !== scopeFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return item.title.toLowerCase().includes(q) || item.reward.toLowerCase().includes(q);
+      }
+      return true;
+    };
+    const matchesShop = (item: ShopItem, type: "purchase" | "trade") => {
+      if (activeTab !== "all" && activeTab !== type) return false;
+      if (favoriteOnly && !item.isFavorite) return false;
+      if (periodFilter !== "all" && (item.period ?? "daily") !== periodFilter) return false;
+      if (scopeFilter !== "all" && (item.scope || "character") !== scopeFilter) return false;
+      if (regionFilter.length > 0 && !regionFilter.includes(item.region)) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return item.itemName.toLowerCase().includes(q) || item.npcName.toLowerCase().includes(q);
+      }
+      return true;
+    };
+    const matchesScroll = (item: ScrollItem) => {
+      if (activeTab !== "all" && activeTab !== "scroll") return false;
+      if (favoriteOnly && !item.isFavorite) return false;
+      if (periodFilter !== "all" && (item.period ?? "weekly") !== periodFilter) return false;
+      if (scopeFilter !== "all" && (item.scope || "character") !== scopeFilter) return false;
+      if (scrollTypeFilter !== "all" && item.scrollType !== scrollTypeFilter) return false;
+      if (regionFilter.length > 0 && !regionFilter.includes(item.region)) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return item.title.toLowerCase().includes(q) || item.reward.toLowerCase().includes(q);
+      }
+      return true;
+    };
+
+    const homework = allHomework.filter(matchesHomework);
+    const purchase = allPurchaseItems.filter((item) => matchesShop(item, "purchase"));
+    const trade = allTradeItems.filter((item) => matchesShop(item, "trade"));
+    const scroll = allScrollItems.filter(matchesScroll);
+    const done =
+      homework.filter((item) => item.completedCount >= item.totalCount).length +
+      purchase.filter((item) => item.completed).length +
+      trade.filter((item) => item.completed).length +
+      scroll.filter((item) => item.completedCount >= item.totalCount).length;
+    const total = homework.length + purchase.length + trade.length + scroll.length;
+
+    return { done, total, allDone: total > 0 && done >= total };
+  }, [
+    activeTab,
+    allHomework,
+    allPurchaseItems,
+    allScrollItems,
+    allTradeItems,
+    favoriteOnly,
+    periodFilter,
+    regionFilter,
+    scopeFilter,
+    scrollTypeFilter,
+    searchQuery,
+  ]);
+
   const progress = useMemo(() => {
     const hwSource = favoriteOnly ? allHomework.filter((hw) => hw.isFavorite) : allHomework;
     const purSource = favoriteOnly ? allPurchaseItems.filter((i) => i.isFavorite) : allPurchaseItems;
@@ -2353,6 +2531,8 @@ export function useAppState(uid?: string | null) {
     scrollTypeFilter,
     setScrollTypeFilter,
     progress,
+    visibleItemProgress,
+    setVisibleItemsCompleted,
     allPurchaseItems,
     allTradeItems,
     allTabOrder,

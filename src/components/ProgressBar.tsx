@@ -18,16 +18,33 @@ interface Props {
   favoriteOnly: boolean;
   onFavoriteToggle: (v: boolean) => void;
   onReset: () => void;
+  visibleAllDone?: boolean;
+  visibleToggleDisabled?: boolean;
+  onSetVisibleCompleted?: (completed: boolean) => void;
   categories?: CategoryProgress[];
 }
 
-export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, onReset, categories }: Props) {
+export function ProgressBar({
+  done,
+  total,
+  pct,
+  favoriteOnly,
+  onFavoriteToggle,
+  onReset,
+  visibleAllDone = false,
+  visibleToggleDisabled = false,
+  onSetVisibleCompleted,
+  categories,
+}: Props) {
   const [expanded, setExpanded] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showVisibleConfirm, setShowVisibleConfirm] = useState(false);
+  const nextVisibleCompleted = !visibleAllDone;
+  const visibleToggleLabel = visibleAllDone ? "전체 해제" : "전체 체크";
 
   return (
     <div className="px-4 py-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <button
           onClick={() => setExpanded(!expanded)}
           className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-white"
@@ -43,7 +60,7 @@ export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, 
           </svg>
           전체 진행도
         </button>
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <span className="text-sm font-bold text-blue-400">
             {done} / {total} ({pct}%)
           </span>
@@ -68,6 +85,16 @@ export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, 
               />
             </div>
           </button>
+          {onSetVisibleCompleted && (
+            <button
+              type="button"
+              onClick={() => setShowVisibleConfirm(true)}
+              disabled={visibleToggleDisabled}
+              className="flex h-10 items-center rounded-lg border border-blue-500/50 px-2.5 text-xs font-semibold text-blue-300 transition-colors hover:border-blue-400 hover:text-blue-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+            >
+              {visibleToggleLabel}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setShowResetConfirm(true)}
@@ -116,6 +143,24 @@ export function ProgressBar({ done, total, pct, favoriteOnly, onFavoriteToggle, 
           onConfirm={() => {
             onReset();
             setShowResetConfirm(false);
+          }}
+        />
+      )}
+
+      {showVisibleConfirm && onSetVisibleCompleted && (
+        <AppConfirmModal
+          open={showVisibleConfirm}
+          title={
+            nextVisibleCompleted
+              ? "현재 화면의 체크박스를 모두 완료 처리하시겠습니까?"
+              : "현재 화면의 체크박스를 모두 해제하시겠습니까?"
+          }
+          confirmLabel={nextVisibleCompleted ? "전체 체크" : "전체 해제"}
+          variant={nextVisibleCompleted ? "primary" : "danger"}
+          onCancel={() => setShowVisibleConfirm(false)}
+          onConfirm={() => {
+            onSetVisibleCompleted(nextVisibleCompleted);
+            setShowVisibleConfirm(false);
           }}
         />
       )}
