@@ -1527,56 +1527,6 @@ export function useAppState(uid?: string | null) {
     ]
   );
 
-  const setMatrixRowCompleted = useCallback(
-    (type: "homework" | "purchase" | "trade" | "scroll", itemId: string, completed: boolean) => {
-      if (!selectedCharId) return;
-
-      persist((prev) => {
-        const charIds = getSameServerCharIds(prev);
-        if (charIds.length === 0) return prev;
-
-        if (type === "homework") {
-          const source = prev.homework[selectedCharId] ?? [];
-          const index = source.findIndex((item) => item.id === itemId);
-          if (index === -1) return prev;
-          const homework = { ...prev.homework };
-          for (const charId of charIds) {
-            homework[charId] = (homework[charId] ?? []).map((item, itemIndex) =>
-              itemIndex === index ? { ...item, completedCount: completed ? item.totalCount : 0 } : item
-            );
-          }
-          return { ...prev, homework };
-        }
-
-        if (type === "scroll") {
-          const scrollItems = { ...(prev.scrollItems ?? {}) };
-          const source = scrollItems[selectedCharId] ?? [];
-          const index = source.findIndex((item) => item.id === itemId);
-          if (index === -1) return prev;
-          for (const charId of charIds) {
-            scrollItems[charId] = (scrollItems[charId] ?? []).map((item, itemIndex) =>
-              itemIndex === index ? { ...item, completedCount: completed ? item.totalCount : 0 } : item
-            );
-          }
-          return { ...prev, scrollItems };
-        }
-
-        const key = type === "purchase" ? "purchaseItems" : "tradeItems";
-        const source = prev[key][selectedCharId] ?? [];
-        const index = source.findIndex((item) => item.id === itemId);
-        if (index === -1) return prev;
-        const items = { ...prev[key] };
-        for (const charId of charIds) {
-          items[charId] = (items[charId] ?? []).map((item, itemIndex) =>
-            itemIndex === index ? { ...item, completed } : item
-          );
-        }
-        return { ...prev, [key]: items };
-      }, { immediate: true });
-    },
-    [getSameServerCharIds, persist, selectedCharId]
-  );
-
   const addScrollItem = useCallback(
     (item: { title: string; scrollType: ScrollType; period: PeriodType; totalCount: number; materials: string[]; region: RegionName; reward: string }) => {
       if (!selectedCharId) return;
@@ -2583,7 +2533,6 @@ export function useAppState(uid?: string | null) {
     progress,
     visibleItemProgress,
     setVisibleItemsCompleted,
-    setMatrixRowCompleted,
     allPurchaseItems,
     allTradeItems,
     allTabOrder,
